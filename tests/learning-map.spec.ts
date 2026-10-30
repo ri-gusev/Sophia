@@ -65,10 +65,11 @@ test("era navigation scrolls the map and exposes the selected era", async ({ pag
   const viewport = page.getByTestId("course-map-viewport");
   for (const era of eras) {
     await page.getByRole("button", { name: era, exact: true }).click();
+    await viewport.scrollIntoViewIfNeeded();
     for (const candidate of eras) {
       await expect(page.getByRole("button", { name: candidate, exact: true })).toHaveAttribute("aria-pressed", String(candidate === era));
     }
-    await expect(viewport.getByRole("button", { name: new RegExp(`^${era}: шаг 3 —`) })).toBeInViewport();
+    await expect(viewport.getByRole("button", { name: new RegExp(`^${era}: шаг 1 —`) })).toBeInViewport();
   }
   await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
   await page.getByRole("button", { name: eras[0], exact: true }).click();
@@ -95,18 +96,26 @@ test("restored map keeps the reference scale and loads all era and transition im
   }
 });
 
-test("horizontal wheel updates the active era after an era navigation click", async ({ page }) => {
+test("wheel over the map scrolls the page and never moves the map", async ({ page }) => {
   await page.goto("/learn");
-  const antiquity = page.getByRole("button", { name: eras[0], exact: true });
   const viewport = page.getByTestId("course-map-viewport");
-  await antiquity.click();
-  await viewport.hover();
+  const box = await viewport.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + 60);
+  const beforeMap = await viewport.evaluate((node) => node.scrollLeft);
+  const beforePage = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(0, 240);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(beforePage);
+  expect(await viewport.evaluate((node) => node.scrollLeft)).toBe(beforeMap);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + 60);
   await page.mouse.wheel(650, 0);
-  await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
-  await expect(antiquity).toHaveAttribute("aria-pressed", "false");
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(await viewport.evaluate((node) => node.scrollLeft)).toBe(beforeMap);
 });
 
-test("keyboard, mouse drag and wheel move the map horizontally", async ({ page }) => {
+test("keyboard, mouse drag and bottom scrollbar move the map horizontally", async ({ page }) => {
   await page.goto("/learn");
   const viewport = page.getByTestId("course-map-viewport");
   await viewport.focus();
@@ -126,10 +135,18 @@ test("keyboard, mouse drag and wheel move the map horizontally", async ({ page }
   await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  const beforeWheel = await viewport.evaluate((node) => node.scrollLeft);
-  await viewport.hover();
-  await page.mouse.wheel(0, 240);
-  await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeGreaterThan(beforeWheel);
+  await page.getByRole("button", { name: eras[0], exact: true }).click();
+  const scrollbar = page.getByRole("slider", { name: "Прокрутка карты", exact: true });
+  await expect(scrollbar).toBeVisible();
+  await scrollbar.scrollIntoViewIfNeeded();
+  const scrollbarBox = await scrollbar.boundingBox();
+  expect(scrollbarBox).not.toBeNull();
+  await page.mouse.click(scrollbarBox!.x + scrollbarBox!.width * 0.8, scrollbarBox!.y + scrollbarBox!.height / 2);
+  await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+  await scrollbar.press("End");
+  await expect(viewport.getByTestId("course-step").last()).toBeInViewport();
+  await scrollbar.press("Home");
+  await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeLessThanOrEqual(1);
 });
 
 test("the map scrolls inside its viewport without overflowing narrow or wide pages", async ({ page }) => {
@@ -139,6 +156,29 @@ test("the map scrolls inside its viewport without overflowing narrow or wide pag
     await page.evaluate(() => document.fonts.ready);
     const viewport = page.getByTestId("course-map-viewport");
     await expect(viewport).toBeVisible();
+    const frameBox = await page.getByTestId("course-map-frame").boundingBox();
+    const mapBox = await viewport.boundingBox();
+    const headerBox = await page.locator("header .container").boundingBox();
+    const logoBox = await page.getByRole("link", { name: "Sophia — на главную", exact: true }).boundingBox();
+    const scrollbarBox = await page.getByRole("slider", { name: "Прокрутка карты", exact: true }).boundingBox();
+    expect(frameBox).not.toBeNull();
+    expect(mapBox).not.toBeNull();
+    expect(headerBox).not.toBeNull();
+    expect(logoBox).not.toBeNull();
+    expect(scrollbarBox).not.toBeNull();
+    const gaps = [mapBox!.x - frameBox!.x, mapBox!.y - frameBox!.y,
+      frameBox!.x + frameBox!.width - mapBox!.x - mapBox!.width,
+      frameBox!.y + frameBox!.height - scrollbarBox!.y - scrollbarBox!.height];
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(8);
+    expect(Math.max(...gaps)).toBeLessThanOrEqual(12);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(1);
+    expect(Math.abs(frameBox!.x - logoBox!.x)).toBeLessThan(1);
+    expect(Math.abs(frameBox!.width - headerBox!.width)).toBeLessThan(1);
+    expect(mapBox!.height).toBeLessThanOrEqual(480);
+    expect(scrollbarBox!.y - mapBox!.y - mapBox!.height).toBeGreaterThanOrEqual(0);
+    expect(scrollbarBox!.y - mapBox!.y - mapBox!.height).toBeLessThanOrEqual(4);
+    expect(Math.abs(scrollbarBox!.x - mapBox!.x)).toBeLessThan(1);
+    expect(Math.abs(scrollbarBox!.width - mapBox!.width)).toBeLessThan(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await viewport.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
     await page.getByRole("button", { name: eras[4], exact: true }).click();
