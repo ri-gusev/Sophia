@@ -1,0 +1,3 @@
+export function Footer() {
+  return <footer className="site-footer container"><div className="footer-main"><div><a className="wordmark" href="#top" aria-label="Sophia — наверх">sophia<span>.</span></a><p>Большие идеи становятся ближе.</p></div><nav aria-label="Навигация в подвале"><a href="#how-it-works">Как это работает</a><a href="#learning">Обучение</a><a href="#atlas">Атлас</a><a href="#exercise">Попробовать</a></nav></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sophia</span><span>Learn to think, not what to think.</span><span>Создано для любопытных <span aria-hidden="true">↗</span></span></div></footer>;
+}
