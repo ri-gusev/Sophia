@@ -1,0 +1,101 @@
+.page { min-width:0; padding-top:25px; }
+.pageHeading { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:20px; }
+.pageTitle { font-size:22px; line-height:1.4; font-weight:600; letter-spacing:-.035em; }
+.pageHeading p { margin-top:5px; font-size:11px; color:var(--muted); }
+.returnLink { flex-shrink:0; }
+.courseMap { min-width:0; }
+.eraNavigation { display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:min(1180px,calc(100% - 96px)); margin:0 auto 18px; }
+.eraButton { border:1px solid #cbd9d0; border-radius:40px; background:#fff; color:#43574b; font:inherit; font-size:11px; padding:10px 15px; min-height:40px; transition:background .18s,color .18s; }
+.eraButton[aria-pressed=true] { background:#3e6351; color:white; border-color:#3e6351; }
+.eraButton:hover:not([aria-pressed=true]) { background:#e8f0e6; }
+.viewport { width:100%; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; scrollbar-color:#6e9580 #e6eee8; cursor:grab; touch-action:pan-x pinch-zoom; overscroll-behavior-x:contain; }
+.viewport:focus-visible { outline-offset:-4px; }
+.dragging { cursor:grabbing; user-select:none; }
+.scene { position:relative; isolation:isolate; background:#dce9db; }
+.terrain { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; user-select:none; }
+.scenery,.terrainTransition { position:absolute; top:0; width:760px; height:650px; object-fit:cover; max-width:none; }
+.terrainTransition { z-index:1; mask-image:linear-gradient(to right,transparent,#000 16%,#000 84%,transparent); }
+.route { position:absolute; width:100%; height:100%; inset:0; z-index:1; pointer-events:none; filter:drop-shadow(0 3px 3px #26362630); }
+.route path { fill:none; stroke-linecap:round; }
+.routeShadow { stroke:#665c4247; stroke-width:29px; }
+.routeSurface { stroke-width:23px; opacity:.92; }
+.routeMarks { stroke:#8a7c625c; stroke-width:2px; stroke-dasharray:3 12; }
+.stepPosition { position:absolute; z-index:2; width:124px; display:flex; flex-direction:column; align-items:center; transform:translate(-50%,-47px); gap:9px; }
+
+/* A physical base stays grounded while the beveled face moves on press. */
+.step { position:relative; isolation:isolate; flex-shrink:0; width:94px; height:94px; padding:0; border:0; border-radius:50%; background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.stepShadow { position:absolute; z-index:0; top:61px; left:2px; width:94px; height:37px; border-radius:50%; background:radial-gradient(ellipse,#14291f80 10%,#14291f38 45%,transparent 72%); filter:blur(3px); transform:translate(3px,6px); }
+.stepBase { position:absolute; z-index:1; top:18px; left:4px; width:86px; height:73px; border-radius:50%; background:linear-gradient(90deg,var(--side-dark),var(--side-light) 21%,var(--side) 50%,var(--side-dark)); box-shadow:inset 0 -2px 1px #0004,inset 0 2px 0 #fff8,0 3px 1px #19231c4d,0 9px 13px -4px #182a2566; }
+.stepBase::after { content:""; position:absolute; inset:11px 5px 5px; border-radius:50%; border-bottom:2px solid #ffffff38; box-shadow:0 3px 0 #0002; }
+.stepFace { position:absolute; z-index:2; top:0; left:4px; width:86px; height:73px; border:4px solid var(--rim); border-radius:50%; display:grid; place-items:center; color:var(--icon); background:var(--surface); box-shadow:inset 0 3px 3px #ffffffe0,inset 0 -5px 8px #281e2438,0 2px 0 #fff8,0 5px 3px #171b2440; transition:transform .16s,box-shadow .16s; }
+.stepFace::before,.stepFace::after { content:""; position:absolute; border-radius:50%; pointer-events:none; }
+.stepFace::before { z-index:0; inset:5px; border:2px solid var(--inner); box-shadow:0 1px 0 #fff8,inset 0 2px 3px #1c171e33; }
+.stepFace::after { z-index:1; inset:12px; }
+.stepFace svg { position:relative; z-index:2; stroke-width:2.2; filter:drop-shadow(0 1px 0 #fff9) drop-shadow(0 -1px 0 #392a254d); }
+.step:hover .stepFace { transform:translateY(-3px); box-shadow:inset 0 3px 3px #ffffffe0,inset 0 -5px 8px #281e2438,0 2px 0 #fff8,0 8px 5px #171b2438; }
+.step:active .stepFace { transform:translateY(11px); box-shadow:inset 0 2px 3px #ffffffe0,inset 0 -3px 5px #281e2438,0 2px 1px #171b2440; }
+.step:focus-visible { outline:none; }
+.step:focus-visible .stepFace,.step[aria-pressed=true] .stepFace { outline:3px solid #fff9dc; outline-offset:6px; box-shadow:0 0 0 10px #304f46b3,inset 0 3px 3px #ffffffe0,inset 0 -5px 8px #281e2438; }
+.stepNumber { position:absolute; top:-7px; right:-6px; z-index:3; width:23px; height:23px; display:grid; place-items:center; border-radius:50%; font-size:10px; font-weight:750; color:var(--label-ink); background:var(--label-bg); border:1px solid var(--rim); box-shadow:inset 0 1px 1px #fffd,0 2px 2px #17231f3b; }
+.stepLabel { max-width:124px; padding:6px 10px; border:1px solid var(--label-edge); border-radius:8px; font-size:11px; font-weight:650; line-height:1.45; text-align:center; color:var(--label-ink); background:var(--label-bg); box-shadow:inset 0 1px 0 #fff9,0 3px 0 #233a252b,0 6px 10px #1b302a30; }
+
+/* Marble and bronze: fine veining, carved inner ring, fluted stone edge. */
+.antiquity { --side-light:#e1d0a9; --side:#bba171; --side-dark:#8a7044; --rim:#ad8d50; --inner:#b99e65; --icon:#80632e; --surface:repeating-linear-gradient(128deg,transparent 0 17px,#9b927927 18px,transparent 20px 31px),radial-gradient(ellipse at 28% 18%,#fffdf1,#eadfc6 65%,#c9b894); --label-bg:#f6ecd4; --label-ink:#66502b; --label-edge:#c9b284; }
+.antiquity .stepBase { background:repeating-linear-gradient(90deg,transparent 0 9px,#75603938 10px,transparent 12px 17px),linear-gradient(90deg,var(--side-dark),var(--side-light) 21%,var(--side) 50%,var(--side-dark)); }
+.antiquity .stepFace::before { border-style:dotted; box-shadow:0 0 0 2px #f4e6c6,inset 0 0 0 2px #a9966938; }
+.antiquity .stepFace::after { background:repeating-linear-gradient(35deg,transparent 0 15px,#a29b8f22 16px,transparent 18px 26px); }
+
+/* Oak bound with forged iron: broad band, rivets and a recessed wooden face. */
+.medieval { --side-light:#8c987f; --side:#515f4f; --side-dark:#303d32; --rim:#69766b; --inner:#b7b99b; --icon:#f2dfb6; --surface:repeating-linear-gradient(92deg,#ffffff05 0 3px,#35241440 4px,#ffffff05 6px 12px),radial-gradient(ellipse at 30% 16%,#b18a59,#765437 65%,#4b3527); --label-bg:#ead8af; --label-ink:#4d3b23; --label-edge:#a98b58; }
+.medieval .stepFace { border-width:5px; }
+.medieval .stepFace::before { inset:3px; border:1px solid #c0c5a6; background:radial-gradient(circle at 14% 17%,#eee4c2 0 2px,#3e4e42 3px,transparent 4px),radial-gradient(circle at 86% 17%,#eee4c2 0 2px,#3e4e42 3px,transparent 4px),radial-gradient(circle at 14% 83%,#eee4c2 0 2px,#3e4e42 3px,transparent 4px),radial-gradient(circle at 86% 83%,#eee4c2 0 2px,#3e4e42 3px,transparent 4px); }
+.medieval .stepFace::after { border:1px solid #c49c5b6b; box-shadow:inset 1px 1px 6px #31271d80; }
+.medieval .stepLabel { border-radius:4px; background:linear-gradient(100deg,#e7d4a7,#f2e3c0,#dfc791); }
+.medieval .stepFace svg,.german .stepFace svg { filter:drop-shadow(0 2px 1px #20180fb3) drop-shadow(0 -1px 0 #fff5); }
+
+/* Brass instrument face on a copper cylinder, with engraved compass ticks. */
+.early-modern { --side-light:#cf9450; --side:#a36530; --side-dark:#714423; --rim:#b78045; --inner:#936332; --icon:#68472d; --surface:radial-gradient(ellipse at 29% 18%,#fff0b4,#d7aa61 62%,#a57039); --label-bg:#f2e1be; --label-ink:#674325; --label-edge:#b28751; }
+.early-modern .stepBase { background:repeating-linear-gradient(0deg,transparent 0 4px,#6f422d33 5px,transparent 6px),linear-gradient(90deg,var(--side-dark),var(--side-light) 21%,var(--side) 50%,var(--side-dark)); }
+.early-modern .stepFace::before { border-width:1px; background:repeating-conic-gradient(#75562a 0deg 1deg,transparent 1deg 15deg); box-shadow:0 0 0 1px #ffeab3; }
+.early-modern .stepFace::after { background:radial-gradient(ellipse at 35% 20%,#f4d89d,#dbb777); border:1px solid #a97a3b; box-shadow:inset 0 2px 3px #fff3; }
+
+/* Turned walnut, antique silver and a domed lavender enamel inlay. */
+.german { --side-light:#95767c; --side:#59414d; --side-dark:#342837; --rim:#867d86; --inner:#b4a58d; --icon:#f1e5c6; --surface:repeating-linear-gradient(82deg,transparent 0 4px,#241b244d 5px,transparent 7px 12px),radial-gradient(ellipse at 28% 15%,#866b6d,#493b46 70%,#342b33); --label-bg:#eee5d3; --label-ink:#4c3b54; --label-edge:#9c8d8f; }
+.german .stepFace::before { box-shadow:0 0 0 1px #403549,inset 0 0 0 1px #d8c9a0; }
+.german .stepFace::after { inset:11px; background:radial-gradient(ellipse at 29% 18%,#b8aacd,#756380 60%,#4f3d5e); border:1px solid #c2b2cf; box-shadow:inset 0 3px 4px #e4d6f280,inset 0 -3px 5px #30253e80; }
+
+/* Brushed alloy body under a translucent glass lens. */
+.contemporary { --side-light:#c7e2eb; --side:#7f9eae; --side-dark:#496a7c; --rim:#adc6d2; --inner:#d6ffff; --icon:#255669; --surface:linear-gradient(145deg,#f7fffff2,#96bfcecc 53%,#e7f9fcf2); --label-bg:#effaff; --label-ink:#2e5366; --label-edge:#9dbecb; }
+.contemporary .stepBase { background:repeating-linear-gradient(0deg,transparent 0 2px,#e8f7ff33 3px,transparent 4px),linear-gradient(90deg,var(--side-dark),var(--side-light) 21%,var(--side) 50%,var(--side-dark)); }
+.contemporary .stepFace { border-color:transparent; background:var(--surface) padding-box,conic-gradient(from 20deg,#f2fcff,#748c9a,#f6fdff,#a3b9c5,#eaf5fa,#829aa8,#f1fbff) border-box; }
+.contemporary .stepFace::before { border-width:1px; box-shadow:0 0 7px #9ef3f1a6,inset 0 1px 3px #fff; }
+.contemporary .stepFace::after { background:linear-gradient(135deg,#ffffffa6,transparent 45%,#8ab6ce22); border:1px solid #efffff85; }
+
+.mapFooter { display:flex; justify-content:space-between; align-items:center; gap:20px; width:min(1180px,calc(100% - 96px)); margin:18px auto 24px; }
+.mapFooter p { font-size:11px; line-height:1.8; color:#586b5f; }
+.mapArrows { display:flex; gap:8px; }
+.mapArrows button { display:grid; place-items:center; border:1px solid #bfd0c4; background:#fff; color:#3e6351; width:42px; height:40px; border-radius:12px; }
+.dialog { width:min(440px,calc(100% - 32px)); max-height:calc(100svh - 40px); padding:0; margin:auto; border:1px solid #e4eadd; border-radius:24px; color:var(--ink); background:#fbfdf8; box-shadow:0 25px 90px #142d3c3d; }
+.dialog::backdrop { background:#19352e70; backdrop-filter:blur(5px); }
+.dialogContent { position:relative; padding:32px; }
+.dialogContent h2 { font-size:27px; line-height:1.3; margin:12px 0 18px; }
+.dialogEra { display:block; padding-right:24px; font-size:10px; line-height:1.8; color:#546b5a; }
+.dialogContent p { font-size:13px; line-height:1.9; }
+.dialogContent .previewNotice { margin-top:16px; padding-top:16px; border-top:1px solid #dce6d9; color:#596b5e; font-size:12px; }
+.dialogContent > :last-child { margin-top:23px; }
+.closeIcon { position:absolute; top:13px; right:13px; width:34px; height:34px; display:grid; place-items:center; border:0; border-radius:50%; background:#edf2e9; color:#4c6454; }
+@media(max-width:1100px) { .eraNavigation,.mapFooter { width:calc(100% - 64px); } }
+@media(max-width:800px) { .eraNavigation,.mapFooter { width:calc(100% - 40px); } .pageHeading { flex-wrap:wrap; gap:14px; } }
+@media(max-width:550px) {
+  .page { padding-top:20px; }
+  .pageTitle { font-size:20px; }
+  .pageHeading p { font-size:10px; }
+  .pageHeading { padding-bottom:18px; }
+  .eraNavigation { gap:6px; }
+  .eraButton { font-size:10px; padding:9px 11px; min-height:38px; }
+  .mapFooter { gap:12px; align-items:flex-start; }
+  .mapFooter p { font-size:10px; }
+  .mapArrows button { width:38px; height:38px; }
+  .dialogContent { padding:27px 23px; }
+}
+@media(prefers-reduced-motion:reduce) { .stepFace,.eraButton { transition:none; } }

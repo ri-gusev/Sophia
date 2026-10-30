@@ -127,9 +127,6 @@ h2 span { color: #708873; }
 .how-section { border-top: 1px solid var(--line); padding-top: 66px; }
 .learning-nav { font-size: 12px; font-weight: 600; }
 .learning-nav a { display: inline-block; padding-block: 12px; }
-.learn-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 24px; min-height: calc(100svh - 90px); padding-block: 65px; }
-.learn-placeholder h1 { max-width: 800px; font-size: clamp(36px, 5vw, 58px); font-weight: 550; letter-spacing: -.045em; line-height: 1.2; }
-.learn-placeholder p { color: var(--muted); font-size: 14px; line-height: 1.8; }
 
 /* A path, not another grid of cards */
 .learning-section { padding-block: 66px 95px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; border-top: 1px solid var(--line); }

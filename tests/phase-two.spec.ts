@@ -54,8 +54,8 @@ test("all course entry points lead to learn and return navigation works", async 
     await page.getByRole("link", { name: label, exact: true }).click();
     await expect(page).toHaveURL(/\/learn$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Основной курс философии");
-    await expect(page.getByRole("main")).toContainText("Раздел находится в разработке");
-    await expect(page.getByRole("main").getByRole("link")).toHaveCount(1);
+    await expect(page.getByRole("region", { name: "Карта основного курса", exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: "Вернуться на главную", exact: true })).toHaveAttribute("href", "/");
     await page.getByRole("link", { name: "Вернуться на главную" }).click();
     await expect(page).toHaveURL(/\/$/);
   }
