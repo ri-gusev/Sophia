@@ -76,23 +76,39 @@ test("era navigation scrolls the map and exposes the selected era", async ({ pag
   await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeLessThanOrEqual(1);
 });
 
-test("restored map keeps the reference scale and loads all era and transition images", async ({ page }) => {
+test("detailed world uses one full-width era per frame and a sufficiently large source", async ({ page }) => {
   await page.goto("/learn");
   const viewport = page.getByTestId("course-map-viewport");
   const scene = viewport.getByTestId("course-map-scene");
-  await expect(scene).toHaveCSS("width", "3800px");
+  await expect(scene).toHaveCSS("width", "5900px");
   await expect(scene).toHaveCSS("height", "650px");
   const scenery = scene.getByTestId("course-map-scenery");
   const transitions = scene.getByTestId("course-map-transition");
   await expect(scenery).toHaveCount(5);
   await expect(transitions).toHaveCount(4);
+  await expect(scene.locator(":scope > svg")).toHaveCount(0);
   for (const era of eras) {
     await page.getByRole("button", { name: era, exact: true }).click();
   }
-  for (const images of [scenery, transitions]) {
-    await expect.poll(() => images.evaluateAll((nodes) => nodes.every((node) =>
-      node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0,
-    ))).toBe(true);
+  await expect.poll(() => scenery.evaluateAll((nodes) => nodes.every(node =>
+    node instanceof HTMLImageElement && node.complete && node.naturalWidth >= 1180 && node.naturalHeight >= 650,
+  ))).toBe(true);
+  await expect.poll(() => transitions.evaluateAll((nodes) => nodes.every(node =>
+    node instanceof HTMLImageElement && node.complete && node.naturalWidth >= 400 && node.naturalHeight >= 650,
+  ))).toBe(true);
+  // Each era is at least as wide as the viewport, including on ultrawide monitors.
+  expect(await viewport.evaluate(node => node.clientWidth)).toBeLessThanOrEqual(1180);
+  const centers = await scene.getByTestId("course-step").evaluateAll((nodes) => nodes.map((node) => {
+    const bounds = node.getBoundingClientRect();
+    const world = node.closest('[data-testid="course-map-scene"]')!.getBoundingClientRect();
+    return [bounds.x + bounds.width / 2 - world.x, bounds.y + bounds.height / 2 - world.y];
+  }));
+  for (const [index, [x, y]] of centers.entries()) {
+    const eraIndex = Math.floor(index / 5);
+    expect(x).toBeGreaterThan(eraIndex * 1180 + 50);
+    expect(x).toBeLessThan((eraIndex + 1) * 1180 - 50);
+    expect(y).toBeGreaterThan(200);
+    expect(y).toBeLessThan(450);
   }
 });
 
@@ -150,7 +166,7 @@ test("keyboard, mouse drag and bottom scrollbar move the map horizontally", asyn
 });
 
 test("the map scrolls inside its viewport without overflowing narrow or wide pages", async ({ page }) => {
-  for (const width of [320, 390, 1440]) {
+  for (const width of [320, 390, 1440, 2560]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/learn");
     await page.evaluate(() => document.fonts.ready);
@@ -181,6 +197,7 @@ test("the map scrolls inside its viewport without overflowing narrow or wide pag
     expect(Math.abs(scrollbarBox!.width - mapBox!.width)).toBeLessThan(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await viewport.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+    expect(frameBox!.x).toBeCloseTo(width - frameBox!.x - frameBox!.width, 0);
     await page.getByRole("button", { name: eras[4], exact: true }).click();
     await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

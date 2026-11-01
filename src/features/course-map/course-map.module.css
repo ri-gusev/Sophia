@@ -20,13 +20,9 @@
 .dragging { cursor:grabbing; user-select:none; }
 .scene { position:relative; top:calc((var(--map-window-height) - 650px) / 2); isolation:isolate; background:#dce9db; }
 .terrain { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; user-select:none; }
-.scenery,.terrainTransition { position:absolute; top:0; width:760px; height:650px; object-fit:cover; max-width:none; }
-.terrainTransition { z-index:1; mask-image:linear-gradient(to right,transparent,#000 16%,#000 84%,transparent); }
-.route { position:absolute; width:100%; height:100%; inset:0; z-index:1; pointer-events:none; filter:drop-shadow(0 3px 3px #26362630); }
-.route path { fill:none; stroke-linecap:round; }
-.routeShadow { stroke:#665c4247; stroke-width:29px; }
-.routeSurface { stroke-width:23px; opacity:.92; }
-.routeMarks { stroke:#8a7c625c; stroke-width:2px; stroke-dasharray:3 12; }
+/* Native-detail tiles and painted transition strips share the node coordinates. */
+.scenery { position:absolute; top:0; width:1180px; height:650px; max-width:none; }
+.terrainTransition { position:absolute; top:0; z-index:1; width:400px; height:650px; max-width:none; }
 .stepPosition { position:absolute; z-index:2; width:124px; display:flex; flex-direction:column; align-items:center; transform:translate(-50%,-47px); gap:9px; }
 
 /* A physical base stays grounded while the beveled face moves on press. */

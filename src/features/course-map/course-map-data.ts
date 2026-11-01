@@ -40,23 +40,23 @@ export const COURSE_ERAS: readonly CourseEra[] = [
   ] },
 ];
 
-export const MAP_WIDTH = 3800;
+export const ERA_WIDTH = 1180;
+export const MAP_WIDTH = ERA_WIDTH * COURSE_ERAS.length;
 export const MAP_HEIGHT = 650;
-export const ERA_WIDTH = 760;
-export const MAP_TRANSITIONS = ["antiquity-medieval", "medieval-modern", "modern-german", "german-contemporary"] as const;
+export const TRANSITION_WIDTH = 400;
 
-// The selected v4 reference keeps the same physical scale on every screen.
-const LOCAL_POINTS = [[94, 376], [229, 285], [374, 386], [518, 292], [664, 381]] as const;
+// Display coordinates follow the painted trail; lesson content and order stay independent.
+// One era fills the desktop container; smaller screens pan within it.
+const LOCAL_X = [146, 356, 581, 804, 1031] as const;
+const TRAIL_Y: Record<EraId, readonly [number, number, number, number, number]> = {
+  antiquity: [331, 241, 336, 246, 338],
+  medieval: [330, 240, 334, 246, 339],
+  "early-modern": [337, 256, 350, 266, 337],
+  german: [356, 260, 376, 263, 343],
+  contemporary: [327, 243, 336, 249, 338],
+};
 export const MAP_STEPS = COURSE_ERAS.flatMap((era, eraIndex) => era.steps.map((step, stepIndex) => ({
   ...step, era, eraIndex, stepIndex,
-  x: eraIndex * ERA_WIDTH + LOCAL_POINTS[stepIndex][0],
-  y: LOCAL_POINTS[stepIndex][1],
+  x: eraIndex * ERA_WIDTH + LOCAL_X[stepIndex],
+  y: TRAIL_Y[era.id][stepIndex],
 })));
-
-const routePoints = [[-40, 430], ...MAP_STEPS.map(({ x, y }) => [x, y]), [MAP_WIDTH + 40, 430]];
-export const MAP_ROUTE = routePoints.slice(0, -1).reduce((path, start, index) => {
-  const previous = routePoints[Math.max(0, index - 1)];
-  const end = routePoints[index + 1];
-  const next = routePoints[Math.min(routePoints.length - 1, index + 2)];
-  return `${path} C ${start[0] + (end[0] - previous[0]) / 6} ${start[1] + (end[1] - previous[1]) / 6}, ${end[0] - (next[0] - start[0]) / 6} ${end[1] - (next[1] - start[1]) / 6}, ${end[0]} ${end[1]}`;
-}, `M ${routePoints[0][0]} ${routePoints[0][1]}`);

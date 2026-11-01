@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import Image from "next/image";
 import { BookOpen, Lightbulb, MessageCircle, Star, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { COURSE_ERAS, ERA_WIDTH, MAP_HEIGHT, MAP_ROUTE, MAP_STEPS, MAP_TRANSITIONS, MAP_WIDTH } from "./course-map-data";
+import { COURSE_ERAS, ERA_WIDTH, MAP_HEIGHT, MAP_STEPS, MAP_WIDTH, TRANSITION_WIDTH } from "./course-map-data";
 import styles from "./course-map.module.css";
 
 const STEP_ICONS = [BookOpen, MessageCircle, Lightbulb, Star, Trophy];
@@ -25,7 +25,6 @@ export function CourseMap() {
   const [isDragging, setIsDragging] = useState(false);
   const titleId = useId();
   const copyId = useId();
-  const gradientId = useId().replace(/:/g, "");
   const mapId = useId();
 
   const scrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
@@ -122,31 +121,23 @@ export function CourseMap() {
             <div className={styles.terrain} aria-hidden="true">
               {COURSE_ERAS.map((era, index) => <Image
                 key={era.id}
-                src={`/images/course-map/era-${era.id}.webp`}
+                src={`/images/course-map/adventure/${era.id}.webp`}
                 alt="" width={ERA_WIDTH} height={MAP_HEIGHT}
                 priority={index === 0} unoptimized draggable={false}
                 className={styles.scenery}
                 style={{ left: index * ERA_WIDTH }}
                 data-testid="course-map-scenery"
               />)}
-              {MAP_TRANSITIONS.map((transition, index) => <Image
-                key={transition}
-                src={`/images/course-map/transition-${transition}.webp`}
-                alt="" width={ERA_WIDTH} height={MAP_HEIGHT}
+              {COURSE_ERAS.slice(1).map((era, index) => <Image
+                key={era.id}
+                src={`/images/course-map/adventure/transition-${COURSE_ERAS[index].id}-${era.id}.webp`}
+                alt="" width={TRANSITION_WIDTH} height={MAP_HEIGHT}
                 unoptimized draggable={false}
                 className={styles.terrainTransition}
-                style={{ left: (index + 1) * ERA_WIDTH - ERA_WIDTH / 2 }}
+                style={{ left: (index + 1) * ERA_WIDTH - TRANSITION_WIDTH / 2 }}
                 data-testid="course-map-transition"
               />)}
             </div>
-            <svg className={styles.route} viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} aria-hidden="true">
-              <defs><linearGradient id={gradientId} x1="0" y1="0" x2={MAP_WIDTH} y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#f0dfbd" /><stop offset="25%" stopColor="#d8caa5" /><stop offset="50%" stopColor="#ead5b9" /><stop offset="75%" stopColor="#e4daeb" /><stop offset="100%" stopColor="#d7e9ec" />
-              </linearGradient></defs>
-              <path className={styles.routeShadow} d={MAP_ROUTE} />
-              <path className={styles.routeSurface} stroke={`url(#${gradientId})`} d={MAP_ROUTE} />
-              <path className={styles.routeMarks} d={MAP_ROUTE} />
-            </svg>
             {MAP_STEPS.map((step) => {
               const Icon = STEP_ICONS[step.stepIndex];
               return <div key={step.id} className={`${styles.stepPosition} ${styles[step.era.id]}`} style={{ left: step.x, top: step.y }}>
