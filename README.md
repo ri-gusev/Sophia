@@ -35,6 +35,8 @@ npm.cmd test
 
 ## Документация
 
+Для локальной базы корпусов используется Node.js 24: `npm.cmd run knowledge:status`, `npm.cmd run knowledge:verify -- --document plato-corpus`, `npm.cmd run test:knowledge`. Импорт новых файлов, связи философов/тем и резервное копирование описаны в [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md). База и исходники в `storage/knowledge/` исключены из Git; приложение и будущий чат пока к ним не подключены.
+
 | Документ | Ответственность |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Порядок работы Codex и ограничения изменений |
@@ -46,6 +48,7 @@ npm.cmd test
 | [TECH_STACK.md](docs/architecture/TECH_STACK.md) | Статусы технологий и окружения |
 | [INVARIANTS.md](docs/architecture/INVARIANTS.md) | Постоянные ограничения и способы проверки |
 | [DECISIONS.md](docs/architecture/DECISIONS.md) | Журнал принятых архитектурных решений |
+| [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md) | Единая база корпусов, импорт, версии и сохранность |
 | [DESIGN_SYSTEM.md](docs/design/DESIGN_SYSTEM.md) | Визуальный язык и палитра |
 | [UX_GUIDELINES.md](docs/design/UX_GUIDELINES.md) | Правила взаимодействия и доступности |
 | [CONVENTIONS.md](docs/development/CONVENTIONS.md) | Именование и организация кода |

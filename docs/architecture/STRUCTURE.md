@@ -24,6 +24,9 @@
 | `public/images/course-map/` | `adventure/{era-id}.webp` и `adventure/transition-{left-id}-{right-id}.webp`; независимые сцены и переходы в одной системе координат, README с происхождением и экспортом |
 | `src/lib/` | Утилита объединения CSS-классов |
 | `tests/` | Браузерные сценарии Playwright и axe |
+| `database/knowledge/` | Версионированная SQL-схема единой базы корпусов |
+| `scripts/knowledge/` | TypeScript CLI, слой доступа и Node unit-тесты хранения; локальная ESM-граница |
+| `storage/knowledge/` | Закрытая локальная SQLite-база и копии исходных файлов; полностью исключено из Git |
 
 На первичном обследовании каталог был пуст; приложение добавлено в Phase 1. После неё пользователь создал Git-репозиторий и коммит `c761f5a`; Phase 2 зафиксирована в `a13a675`. Карта `/learn` реализована поверх Phase 2 в текущих незакоммиченных изменениях. `node_modules/`, `.next/`, `test-results/`, `artifacts/` и отчёты исключены через `.gitignore`.
 

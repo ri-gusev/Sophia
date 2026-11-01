@@ -11,7 +11,11 @@
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:knowledge": "node --test scripts/knowledge/knowledge-store.test.ts",
+    "knowledge:import": "node scripts/knowledge/cli.ts import",
+    "knowledge:status": "node scripts/knowledge/cli.ts status",
+    "knowledge:verify": "node scripts/knowledge/cli.ts verify"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

@@ -13,11 +13,14 @@
 | shadcn/ui | Композиция Button, Radix Slot, cva, cn | Исходник `src/components/ui/button.tsx`; `components.json` |
 | Lucide Icons | Единый набор иконок | `lucide-react` 1.65.0 |
 | Motion | Появление секций с учётом reduced motion | 14.9.0 |
+| SQLite / `node:sqlite` | Единая локальная база исходных корпусов, вне UI | SQLite 3.53.4 в Node.js 24.22.1; без новой зависимости |
 
 Окружение: Node.js >=20.9.0, npm; локально проверяется на Node.js 24.22.1 и npm 11.19.1. Зависимости закреплены точными версиями в `package.json` и `package-lock.json`. ESLint 9.39.5 с `eslint-config-next` 16.4.3 проверяется отдельной командой, поскольку Next.js build не запускает линтер. npm предупреждает об окончании поддержки ветки ESLint 9; обновление на следующий major следует проводить с проверкой совместимости плагинов.
 
 Manrope Variable 5.3.0 поставляется через Fontsource с локальными WOFF2, `font-display: swap` и Unicode ranges: браузер загружает нужные подмножества без Google Fonts. Playwright 1.64.1 и axe-core используются только при разработке для браузерных проверок. Установка завершилась с нулём выявленных npm audit уязвимостей.
 
 ## Кандидаты будущих этапов
+
+Служебные команды `knowledge:*` и `test:knowledge` требуют Node.js 24 для встроенных SQLite и запуска TypeScript. Их локальная ESM-граница — `scripts/knowledge/package.json`; формат модулей приложения не изменён. Подробности — [KNOWLEDGE_STORAGE.md](KNOWLEDGE_STORAGE.md).
 
 PostgreSQL, Prisma, решение для авторизации и картографические библиотеки планируются к рассмотрению, но не утверждены для внедрения и не установлены. Они не входят в текущий MVP. Появление потребности должно предшествовать выбору зависимости и записи решения в [журнал](DECISIONS.md).
