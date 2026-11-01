@@ -24,13 +24,13 @@ Total size of the nine WebP files: 7,866,794 bytes. The first scene is prioritiz
 
 The five paintings and four transition edits were produced with built-in image_gen for Sophia on 2026-10-31/2026-11-01. The project-created path guide and first ancient painting served as composition/style references. No external stock artwork or historical source was used. Landmarks are decorative interpretations, not reconstructions or portraits with verified identities.
 
-The trail is part of the paintings, with no second SVG road. Buttons use calibrated `LOCAL_X` and era-keyed `TRAIL_Y` coordinates in `course-map-data.ts`. Native scene sizes differ, so the displayed 1180 × 650 frame is authoritative for placement.
+The trail is part of the paintings, with no second SVG road. Buttons use explicit node-ID configurations in `course-map-config.ts`, with eraId, position, icon, action and optional parentId. Antiquity now has four main stops and one optional Plato branch; the other scenes retain five main stops. The small branch route is a separate SVG layer; the main trail remains painted into these unchanged resources. Native scene sizes differ, so the displayed 1180 × 650 frame is authoritative for placement.
 
 Seam authoring used a temporary 1475 × 812 downsample of each source to make adjacent 500 × 812 reference crops. The generated edits are shipped at their larger native size; reference crops are not the product images. At export, each transition receives a smooth alpha fade across its outer 19% on each side; its central region is fully opaque. It is placed at the adjacent-era boundary minus 200 CSS pixels. The actual terrain/trail continuity is painted by image editing, not synthesized by the fade. The medieval-to-early-modern house was removed in an additional edit, replaced by creek-bank rocks, reeds and flowers.
 
 To extend the world later:
 
-1. Agree on the new era and content; update `EraId`, `COURSE_ERAS` and its five trail coordinates. No additional era or lesson is implemented in this revision.
+1. Agree on the new era and content; update `EraId`, `COURSE_ERAS` and the explicit node configurations. No additional era or lesson is implemented in this revision.
 2. Paint a new sharp scene, preserving sufficient native pixels for a 1180 × 650 frame and the intended stopping points. Avoid buildings crossing its outer margins.
 3. Add `adventure/{new-id}.webp` and a painted `adventure/transition-{previous-id}-{new-id}.webp` (400 × 650 display footprint, feathered alpha edges). Keep previous source files unchanged.
 4. World width and neighboring transition placement derive from the era list. There is no fixed five-image panorama to regenerate.

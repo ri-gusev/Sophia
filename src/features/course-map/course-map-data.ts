@@ -4,11 +4,10 @@ export type CourseEra = { id: EraId; title: string; steps: readonly CourseStep[]
 
 export const COURSE_ERAS: readonly CourseEra[] = [
   { id: "antiquity", title: "Античность", steps: [
-    { id: "first-thought", title: "Начало мысли", description: "Первые попытки объяснить устройство мира через разум и наблюдение." },
-    { id: "dialogue", title: "Диалог", description: "Вопросы и диалог как способ исследовать собственные убеждения." },
-    { id: "ideas", title: "Мир идей", description: "Размышления о том, что мы знаем и как отличаем знание от мнения." },
-    { id: "virtue", title: "Добродетель", description: "Что значит жить хорошо и как человек формирует свой характер?" },
-    { id: "antiquity-reflection", title: "Итог эпохи", description: "Связи между главными вопросами античной мысли." },
+    { id: "presocratics", title: "Досократики", description: "Знакомство с ранней древнегреческой философией." },
+    { id: "plato", title: "Платон", description: "Знакомство с философией Платона." },
+    { id: "aristotle", title: "Аристотель", description: "Знакомство с философией Аристотеля." },
+    { id: "stoicism", title: "Стоицизм", description: "Знакомство со стоицизмом как философским направлением." },
   ] },
   { id: "medieval", title: "Средневековье", steps: [
     { id: "medieval-context", title: "Войти в эпоху", description: "Исторический контекст средневекового философского поиска." },
@@ -45,18 +44,6 @@ export const MAP_WIDTH = ERA_WIDTH * COURSE_ERAS.length;
 export const MAP_HEIGHT = 650;
 export const TRANSITION_WIDTH = 400;
 
-// Display coordinates follow the painted trail; lesson content and order stay independent.
-// One era fills the desktop container; smaller screens pan within it.
-const LOCAL_X = [146, 356, 581, 804, 1031] as const;
-const TRAIL_Y: Record<EraId, readonly [number, number, number, number, number]> = {
-  antiquity: [331, 241, 336, 246, 338],
-  medieval: [330, 240, 334, 246, 339],
-  "early-modern": [337, 256, 350, 266, 337],
-  german: [356, 260, 376, 263, 343],
-  contemporary: [327, 243, 336, 249, 338],
-};
-export const MAP_STEPS = COURSE_ERAS.flatMap((era, eraIndex) => era.steps.map((step, stepIndex) => ({
-  ...step, era, eraIndex, stepIndex,
-  x: eraIndex * ERA_WIDTH + LOCAL_X[stepIndex],
-  y: TRAIL_Y[era.id][stepIndex],
-})));
+export const COURSE_BRANCHES: readonly CourseStep[] = [
+  { id: "plato-followers", title: "Последователи Платона", description: "Содержание в разработке." },
+];

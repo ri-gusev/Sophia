@@ -4,6 +4,9 @@
 .pageHeading p { margin-top:5px; font-size:11px; color:var(--muted); }
 .returnLink { flex-shrink:0; }
 .courseMap { --map-window-height:clamp(360px,calc(100svh - 300px),480px); min-width:0; }
+.workspace { min-width:0; }
+.mapColumn { min-width:0; }
+@media(min-width:1000px) { .workspace[data-catalog-open=true] { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; gap:16px; } }
 .mapFrame { padding:8px; border:1px solid #dfe7df; border-radius:18px; background:#fff; }
 .eraNavigation { display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:100%; margin:0 0 18px; }
 .eraButton { border:1px solid #cbd9d0; border-radius:40px; background:#fff; color:#43574b; font:inherit; font-size:11px; padding:10px 15px; min-height:40px; transition:background .18s,color .18s; }
@@ -24,6 +27,16 @@
 .scenery { position:absolute; top:0; width:1180px; height:650px; max-width:none; }
 .terrainTransition { position:absolute; top:0; z-index:1; width:400px; height:650px; max-width:none; }
 .stepPosition { position:absolute; z-index:2; width:124px; display:flex; flex-direction:column; align-items:center; transform:translate(-50%,-47px); gap:9px; }
+.branchRoutes { position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
+.branchRoutes path { fill:none; stroke-linecap:round; }
+.branchRouteEdge { stroke:#88765070; stroke-width:14px; }
+.branchRouteSurface { stroke:#e8d9b9; stroke-width:10px; }
+.stepArtwork { position:absolute; top:0; left:0; width:94px; height:94px; transform-origin:top left; }
+.branch { transform:translate(-50%,-33px); }
+.branch .step { width:66px; height:66px; }
+.branch .stepArtwork { transform:scale(.7); }
+.branch .stepLabel { max-width:124px; padding:4px 8px; font-size:10px; line-height:1.3; background:#faf8ed; }
+.branch .stepLabel small { display:block; margin-bottom:3px; font-size:8px; font-weight:500; color:#6b715e; }
 
 /* A physical base stays grounded while the beveled face moves on press. */
 .step { position:relative; isolation:isolate; flex-shrink:0; width:94px; height:94px; padding:0; border:0; border-radius:50%; background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }

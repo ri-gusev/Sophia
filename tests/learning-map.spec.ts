@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
-test("course map exposes five eras with five accessible steps each", async ({ page }) => {
+test("course map exposes five eras with four ancient main nodes and five in each later era", async ({ page }) => {
   await page.goto("/learn");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Основной курс философии");
   const map = page.getByRole("region", { name: "Карта основного курса", exact: true });
@@ -14,8 +14,9 @@ test("course map exposes five eras with five accessible steps each", async ({ pa
   await expect(map.getByTestId("course-step")).toHaveCount(25);
   for (const era of eras) {
     await expect(page.getByRole("button", { name: era, exact: true })).toBeVisible();
-    await expect(map.getByRole("button", { name: new RegExp(`^${era}: шаг [1-5] — .+`) })).toHaveCount(5);
-    for (let number = 1; number <= 5; number += 1) {
+    const count = era === "Античность" ? 4 : 5;
+    await expect(map.getByRole("button", { name: new RegExp(`^${era}: шаг [1-5] — .+`) })).toHaveCount(count);
+    for (let number = 1; number <= count; number += 1) {
       await expect(map.getByRole("button", { name: new RegExp(`^${era}: шаг ${number} — .+`) })).toHaveCount(1);
     }
   }
@@ -86,7 +87,7 @@ test("detailed world uses one full-width era per frame and a sufficiently large 
   const transitions = scene.getByTestId("course-map-transition");
   await expect(scenery).toHaveCount(5);
   await expect(transitions).toHaveCount(4);
-  await expect(scene.locator(":scope > svg")).toHaveCount(0);
+  await expect(scene.getByTestId("course-branch-route")).toHaveCount(1);
   for (const era of eras) {
     await page.getByRole("button", { name: era, exact: true }).click();
   }
@@ -98,13 +99,14 @@ test("detailed world uses one full-width era per frame and a sufficiently large 
   ))).toBe(true);
   // Each era is at least as wide as the viewport, including on ultrawide monitors.
   expect(await viewport.evaluate(node => node.clientWidth)).toBeLessThanOrEqual(1180);
-  const centers = await scene.getByTestId("course-step").evaluateAll((nodes) => nodes.map((node) => {
+  const centers = await scene.locator('[data-node-type="main"]').evaluateAll((nodes) => nodes.map((node) => {
     const bounds = node.getBoundingClientRect();
     const world = node.closest('[data-testid="course-map-scene"]')!.getBoundingClientRect();
-    return [bounds.x + bounds.width / 2 - world.x, bounds.y + bounds.height / 2 - world.y];
+    return { eraId: node.getAttribute("data-era-id"), x: bounds.x + bounds.width / 2 - world.x, y: bounds.y + bounds.height / 2 - world.y };
   }));
-  for (const [index, [x, y]] of centers.entries()) {
-    const eraIndex = Math.floor(index / 5);
+  const eraIds = ["antiquity", "medieval", "early-modern", "german", "contemporary"];
+  for (const { eraId, x, y } of centers) {
+    const eraIndex = eraIds.indexOf(eraId!);
     expect(x).toBeGreaterThan(eraIndex * 1180 + 50);
     expect(x).toBeLessThan((eraIndex + 1) * 1180 - 50);
     expect(y).toBeGreaterThan(200);
@@ -140,10 +142,12 @@ test("keyboard, mouse drag and bottom scrollbar move the map horizontally", asyn
   await page.keyboard.press("ArrowLeft");
   await expect.poll(() => viewport.evaluate((node) => node.scrollLeft)).toBeLessThanOrEqual(1);
 
+  await viewport.scrollIntoViewIfNeeded();
   const box = await viewport.boundingBox();
   expect(box).not.toBeNull();
   const startX = box!.x + box!.width * 0.75;
-  const startY = box!.y + box!.height * 0.12;
+  // The new optional branch occupies the upper route area; drag clear background below it.
+  const startY = box!.y + box!.height * 0.85;
   await page.mouse.move(startX, startY);
   await page.mouse.down();
   await page.mouse.move(startX - 160, startY, { steps: 10 });

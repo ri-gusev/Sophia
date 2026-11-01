@@ -19,7 +19,7 @@
 | `src/components/ui/` | Общая кнопка на основе композиции shadcn/ui |
 | `src/content/` | Данные превью маршрута и описание направления |
 | `src/features/philosophy-question/` | Самостоятельное демо: компонент вопроса, локальный выбор и отдельные типизированные данные |
-| `src/features/course-map/` | `course-map.tsx`: клиентская карта; `course-map-data.ts`: типизированные эпохи/шаги и геометрия; `course-map.module.css`: локальные стили |
+| `src/features/course-map/` | `course-map.tsx`: карта и выбор узла; `course-map-data.ts`: учебные описания; `course-map-config.ts`: узлы, позиции, действия и parentId; `philosopher-catalog-data.ts`: отдельные данные каталога; `philosopher-catalog.tsx` и CSS Modules: адаптивная панель и стили |
 | `public/images/course-map/` | `adventure/{era-id}.webp` и `adventure/transition-{left-id}-{right-id}.webp`; независимые сцены и переходы в одной системе координат, README с происхождением и экспортом |
 | `src/lib/` | Утилита объединения CSS-классов |
 | `tests/` | Браузерные сценарии Playwright и axe |

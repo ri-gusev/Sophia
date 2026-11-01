@@ -1,0 +1,22 @@
+.panel,.mobileDialog { color:var(--ink); background:#fbfdf9; border:1px solid #dce6dd; border-radius:18px; padding:0; overflow:hidden; }
+.panel { min-width:0; height:calc(var(--map-window-height) + 40px); display:flex; flex-direction:column; animation:catalog-in 180ms ease-out; }
+.header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:24px 24px 18px; border-bottom:1px solid #e3ebe4; flex-shrink:0; }
+.eyebrow { font-size:10px; font-weight:650; letter-spacing:.06em; color:#597063; }
+.header h2 { margin-top:6px; font-size:29px; line-height:1.3; letter-spacing:-.04em; font-weight:600; }
+.close { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:1px solid #d4e0d6; border-radius:50%; background:#fff; color:#3f5e50; cursor:pointer; }
+.close:hover { background:#eaf2ec; }
+.close:focus-visible { outline:3px solid #3e6351; outline-offset:3px; }
+.body { padding:20px 24px 28px; overflow:auto; overscroll-behavior-y:contain; }
+.body:focus-visible { outline:2px solid #47735b; outline-offset:-3px; }
+.description { font-size:13px; line-height:1.85; }
+.status { display:inline-block; margin-top:15px; padding:6px 10px; border-radius:9px; background:#eef1f9; color:#505b76; font-size:10px; font-weight:600; }
+.section { margin-top:20px; padding-top:18px; border-top:1px solid #e2e9e2; }
+.section h3 { font-size:14px; line-height:1.6; font-weight:650; }
+.section p { margin-top:6px; color:#617169; font-size:12px; line-height:1.8; }
+.mobileDialog { position:fixed; inset:0; width:100%; height:100dvh; max-width:none; max-height:none; margin:0; border:0; border-radius:0; }
+.mobileDialog[open] { display:flex; flex-direction:column; }
+.mobileDialog::backdrop { background:#19352e66; }
+.mobileDialog .header { padding-top:max(20px,env(safe-area-inset-top)); }
+.mobileDialog .body { padding-bottom:max(28px,env(safe-area-inset-bottom)); }
+@keyframes catalog-in { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:translateX(0); } }
+@media(prefers-reduced-motion:reduce) { .panel { animation:none; } }

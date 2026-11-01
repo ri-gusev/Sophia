@@ -14,7 +14,7 @@ export default function LearnPage() {
   return (
     <main id="main" className={styles.page}>
       <div className={`container ${styles.pageHeading}`}>
-        <div><h1 className={styles.pageTitle}>Основной курс философии</h1><p>Пять эпох. Двадцать пять шагов к большим вопросам.</p></div>
+        <div><h1 className={styles.pageTitle}>Основной курс философии</h1><p>Пять эпох. Путешествие к большим вопросам.</p></div>
         <Button className={styles.returnLink} asChild variant="outline" size="sm"><Link href="/"><ArrowLeft size={16} aria-hidden="true" />Вернуться на главную</Link></Button>
       </div>
       <CourseMap />
