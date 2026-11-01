@@ -6,6 +6,8 @@
 .courseMap { --map-window-height:clamp(360px,calc(100svh - 300px),480px); min-width:0; }
 .workspace { min-width:0; }
 .mapColumn { min-width:0; }
+.lessonSlot { margin-top:24px; margin-bottom:32px; scroll-margin-top:110px; }
+.lessonSlot:empty { display:none; }
 @media(min-width:1000px) { .workspace[data-catalog-open=true] { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; gap:16px; } }
 .mapFrame { padding:8px; border:1px solid #dfe7df; border-radius:18px; background:#fff; }
 .eraNavigation { display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:100%; margin:0 0 18px; }

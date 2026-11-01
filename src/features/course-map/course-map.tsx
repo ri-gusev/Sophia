@@ -9,6 +9,8 @@ import { COURSE_ERAS, ERA_WIDTH, MAP_HEIGHT, MAP_WIDTH, TRANSITION_WIDTH } from 
 import { MAP_BRANCHES, MAP_NODES, type MapIcon, type MapNode } from "./course-map-config";
 import { PHILOSOPHER_CATALOGS } from "./philosopher-catalog-data";
 import { PhilosopherCatalog } from "./philosopher-catalog";
+import { INTRO_LESSONS, type IntroLessonId } from "../course-lesson/lesson-data";
+import { LessonIntroduction } from "../course-lesson/lesson-introduction";
 import styles from "./course-map.module.css";
 
 const NODE_ICONS = { book: BookOpen, dialogue: MessageCircle, idea: Lightbulb, star: Star, trophy: Trophy, followers: Users } satisfies Record<MapIcon, typeof BookOpen>;
@@ -20,6 +22,7 @@ export function CourseMap() {
   const trigger = useRef<HTMLButtonElement | null>(null);
   const catalogTrigger = useRef<HTMLButtonElement | null>(null);
   const catalogPosition = useRef({ map: 0, page: 0 });
+  const lessonPanel = useRef<HTMLDivElement>(null);
   const drag = useRef<{ startX: number; startScroll: number } | null>(null);
   const requestedEra = useRef<number | null>(null);
   const [activeEra, setActiveEra] = useState(0);
@@ -27,10 +30,12 @@ export function CourseMap() {
   const [scrollLimit, setScrollLimit] = useState(MAP_WIDTH);
   const [selectedStep, setSelectedStep] = useState<MapNode | null>(null);
   const [catalogNode, setCatalogNode] = useState<MapNode | null>(null);
+  const [selectedLessonId, setSelectedLessonId] = useState<IntroLessonId | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const titleId = useId();
   const copyId = useId();
   const mapId = useId();
+  const lessonPanelId = useId();
   const catalog = catalogNode?.action.kind === "catalog" ? PHILOSOPHER_CATALOGS[catalogNode.action.catalogId] : null;
 
   const closeCatalog = useCallback(() => {
@@ -53,6 +58,15 @@ export function CourseMap() {
   }
 
   const scrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
+
+  function openLesson(id: IntroLessonId, dismissCatalog: boolean) {
+    flushSync(() => {
+      setSelectedLessonId(id);
+      if (dismissCatalog) setCatalogNode(null);
+    });
+    lessonPanel.current?.querySelector<HTMLHeadingElement>("h2")?.focus({ preventScroll: true });
+    lessonPanel.current?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+  }
 
   function goToEra(index: number) {
     if (catalogNode) flushSync(() => setCatalogNode(null));
@@ -222,7 +236,11 @@ export function CourseMap() {
         <p>Перетаскивай карту за фон или используй ползунок снизу. Выбери шаг, чтобы познакомиться с темой. Полные уроки готовятся.</p>
       </div>
       </div>
-      {catalog && <PhilosopherCatalog catalog={catalog} onClose={closeCatalog} />}
+      {catalog && <PhilosopherCatalog catalog={catalog} onClose={closeCatalog} onSelectLesson={openLesson}
+        activeLessonId={selectedLessonId} lessonPanelId={lessonPanelId} />}
+      </div>
+      <div ref={lessonPanel} id={lessonPanelId} className={styles.lessonSlot}>
+        {selectedLessonId && <LessonIntroduction key={selectedLessonId} lesson={INTRO_LESSONS[selectedLessonId]} />}
       </div>
       <dialog
         ref={dialog}

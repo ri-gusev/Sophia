@@ -20,6 +20,7 @@
 | `src/content/` | Данные превью маршрута и описание направления |
 | `src/features/philosophy-question/` | Самостоятельное демо: компонент вопроса, локальный выбор и отдельные типизированные данные |
 | `src/features/course-map/` | `course-map.tsx`: карта и выбор узла; `course-map-data.ts`: учебные описания; `course-map-config.ts`: узлы, позиции, действия и parentId; `philosopher-catalog-data.ts`: отдельные данные каталога; `philosopher-catalog.tsx` и CSS Modules: адаптивная панель и стили |
+| `src/features/course-lesson/` | `lesson-data.ts`: текст первого вступления и три предположения; `lesson-introduction.tsx` и CSS Module: блок под картой и локальный выбор ответа |
 | `public/images/course-map/` | `adventure/{era-id}.webp` и `adventure/transition-{left-id}-{right-id}.webp`; независимые сцены и переходы в одной системе координат, README с происхождением и экспортом |
 | `src/lib/` | Утилита объединения CSS-классов |
 | `tests/` | Браузерные сценарии Playwright и axe |

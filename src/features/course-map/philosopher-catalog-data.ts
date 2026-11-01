@@ -1,4 +1,6 @@
-export type CatalogLesson = { id: string; title: string };
+import type { IntroLessonId } from "../course-lesson/lesson-data";
+
+export type CatalogLesson = { id: string; title: string; contentId?: IntroLessonId };
 type CatalogSection = { id: string; title: string } & (
   { kind: "lessons"; lessons: readonly CatalogLesson[] } |
   { kind: "placeholder"; emptyMessage: string }
@@ -23,7 +25,7 @@ export const PHILOSOPHER_CATALOGS = {
     courseTitle: "Основной курс",
     sections: [
       { id: "themes", title: "Основные темы", kind: "lessons", lessons: [
-        { id: "who-is-plato", title: "Кто такой Платон?" },
+        { id: "who-is-plato", title: "Кто такой Платон?", contentId: "plato-introduction" },
         { id: "virtue", title: "Что такое добродетель?" },
         { id: "world-of-ideas", title: "Мир идей" },
         { id: "knowledge", title: "Что значит знать?" },

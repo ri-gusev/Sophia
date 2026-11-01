@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useRef, useSyncExternalStore } from "react";
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, ChevronDown, X } from "lucide-react";
 import type { PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
+import type { IntroLessonId } from "../course-lesson/lesson-data";
 import styles from "./philosopher-catalog.module.css";
 
 const DESKTOP_QUERY = "(min-width: 1000px)";
@@ -14,7 +15,13 @@ function subscribe(onChange: () => void) {
 const desktopSnapshot = () => window.matchMedia(DESKTOP_QUERY).matches;
 const serverSnapshot = () => false;
 
-export function PhilosopherCatalog({ catalog, onClose }: { catalog: CatalogData; onClose: () => void }) {
+export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLessonId, lessonPanelId }: {
+  catalog: CatalogData;
+  onClose: () => void;
+  onSelectLesson: (id: IntroLessonId, dismissCatalog: boolean) => void;
+  activeLessonId: IntroLessonId | null;
+  lessonPanelId: string;
+}) {
   const desktop = useSyncExternalStore(subscribe, desktopSnapshot, serverSnapshot);
   const desktopPanel = useRef<HTMLElement>(null);
   const mobileDialog = useRef<HTMLDialogElement>(null);
@@ -53,8 +60,15 @@ export function PhilosopherCatalog({ catalog, onClose }: { catalog: CatalogData;
         <h3 id={`${titleId}-${section.id}`}>{section.title}</h3>
         {section.kind === "lessons" ? <ol className={styles.lessons} role="list" aria-label={`Темы: ${catalog.title}`}>
           {section.lessons.map((lesson, index) => <li key={lesson.id} className={styles.lesson} data-lesson-id={lesson.id}>
-            <span className={styles.lessonNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-            <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+            <button type="button" className={styles.lessonButton} disabled={!lesson.contentId}
+              aria-label={lesson.title}
+              aria-controls={lesson.contentId ? lessonPanelId : undefined}
+              aria-expanded={lesson.contentId ? activeLessonId === lesson.contentId : undefined}
+              onClick={() => { if (lesson.contentId) onSelectLesson(lesson.contentId, !desktop); }}>
+              <span className={styles.lessonNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+              {lesson.contentId ? <ChevronDown size={17} aria-hidden="true" /> : <small className={styles.planned} aria-hidden="true">Скоро</small>}
+            </button>
           </li>)}
         </ol> : <p>{section.emptyMessage}</p>}
       </section>)}
