@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useRef, useSyncExternalStore } from "react";
-import { X } from "lucide-react";
+import { BookOpen, X } from "lucide-react";
 import type { PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
 import styles from "./philosopher-catalog.module.css";
 
@@ -19,6 +19,9 @@ export function PhilosopherCatalog({ catalog, onClose }: { catalog: CatalogData;
   const desktopPanel = useRef<HTMLElement>(null);
   const mobileDialog = useRef<HTMLDialogElement>(null);
   const titleId = useId(), descriptionId = useId();
+  const lessonCount = catalog.sections.reduce((count, section) => count + (section.kind === "lessons" ? section.lessons.length : 0), 0);
+  const plural = new Intl.PluralRules("ru").select(lessonCount);
+  const topicWord = plural === "one" ? "тема" : plural === "few" ? "темы" : "тем";
 
   useLayoutEffect(() => {
     if (desktop) desktopPanel.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
@@ -36,7 +39,11 @@ export function PhilosopherCatalog({ catalog, onClose }: { catalog: CatalogData;
 
   const contents = <>
     <header className={styles.header}>
-      <div><span className={styles.eyebrow}>Античная философия</span><h2 id={titleId}>{catalog.title}</h2></div>
+      <div>
+        <span className={styles.eyebrow}>Античная философия</span>
+        <h2 id={titleId}>{catalog.title}</h2>
+        <p className={styles.summary}><BookOpen size={14} aria-hidden="true" />{lessonCount} {topicWord} · {catalog.courseTitle}</p>
+      </div>
       <button type="button" className={styles.close} aria-label="Закрыть каталог" onClick={onClose}><X size={21} aria-hidden="true" /></button>
     </header>
     <div className={styles.body} role="region" aria-label={`Содержание каталога: ${catalog.title}`} tabIndex={0}>
@@ -44,7 +51,12 @@ export function PhilosopherCatalog({ catalog, onClose }: { catalog: CatalogData;
       <p className={styles.status}>{catalog.status}</p>
       {catalog.sections.map(section => <section key={section.id} className={styles.section} aria-labelledby={`${titleId}-${section.id}`}>
         <h3 id={`${titleId}-${section.id}`}>{section.title}</h3>
-        <p>{section.emptyMessage}</p>
+        {section.kind === "lessons" ? <ol className={styles.lessons} role="list" aria-label={`Темы: ${catalog.title}`}>
+          {section.lessons.map((lesson, index) => <li key={lesson.id} className={styles.lesson} data-lesson-id={lesson.id}>
+            <span className={styles.lessonNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+          </li>)}
+        </ol> : <p>{section.emptyMessage}</p>}
       </section>)}
     </div>
   </>;

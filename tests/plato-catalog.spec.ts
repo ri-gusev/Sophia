@@ -93,3 +93,31 @@ test("Plato followers is smaller, above the route, and opens an honest preview",
   await expect(dialog).not.toBeVisible();
   await expect(branch).toBeFocused();
 });
+
+test("Plato's seven supplied topics scroll inside the catalog while its header stays visible", async ({ page }) => {
+  await page.locator('[data-node-id="plato"]').click();
+  const catalog = page.getByRole("dialog", { name: "Платон", exact: true });
+  await expect(catalog.getByTestId("catalog-lesson-title")).toHaveText([
+    "Кто такой Платон?", "Что такое добродетель?", "Мир идей", "Что значит знать?",
+    "Душа и человек", "Идеальное государство", "Проблема бытия",
+  ]);
+  await expect(catalog).toContainText("7 тем · Основной курс");
+  const body = catalog.getByRole("region", { name: "Содержание каталога: Платон", exact: true });
+  expect(await body.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  const close = catalog.getByRole("button", { name: "Закрыть каталог", exact: true });
+  const before = await close.boundingBox();
+  const pageScroll = await page.evaluate(() => scrollY);
+  await body.hover();
+  await page.mouse.wheel(0, 420);
+  await expect.poll(() => body.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => scrollY)).toBe(pageScroll);
+  expect((await close.boundingBox())!.y).toBe(before!.y);
+  await body.focus();
+  await page.keyboard.press("End");
+  await expect.poll(() => body.evaluate(node => Math.abs(node.scrollHeight - node.clientHeight - node.scrollTop))).toBeLessThan(2);
+  await expect(close).toBeInViewport();
+  await expect(catalog.getByText("Проблема бытия", { exact: true })).toBeInViewport();
+  await close.click();
+  await expect(catalog).toHaveCount(0);
+  await expect(page.locator('[data-node-id="plato"]')).toBeFocused();
+});
