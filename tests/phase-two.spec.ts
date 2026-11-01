@@ -17,7 +17,9 @@ test("landing contains exactly three agreed sections and three direction cards",
   const cards = sections.nth(2).getByRole("article");
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0).getByRole("link", { name: "Начать курс" })).toHaveAttribute("href", "/learn");
-  for (const card of [cards.nth(1), cards.nth(2)]) {
+  await expect(cards.nth(1).getByRole("heading")).toHaveText("Разговор с философом");
+  await expect(cards.nth(1).getByRole("button", { name: "Разговор с философом", exact: true })).toBeEnabled();
+  for (const card of [cards.nth(2)]) {
     await expect(card.getByRole("heading")).toHaveText("—");
     await expect(card).toContainText("Скоро");
     await expect(card.getByRole("link")).toHaveCount(0);

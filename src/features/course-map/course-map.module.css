@@ -3,6 +3,8 @@
 .pageTitle { font-size:22px; line-height:1.4; font-weight:600; letter-spacing:-.035em; }
 .pageHeading p { margin-top:5px; font-size:11px; color:var(--muted); }
 .returnLink { flex-shrink:0; }
+.headingActions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; }
+@media(max-width:800px) { .headingActions { justify-content:flex-start; } }
 .courseMap { --map-window-height:clamp(360px,calc(100svh - 300px),480px); min-width:0; }
 .workspace { min-width:0; }
 .mapColumn { min-width:0; }
