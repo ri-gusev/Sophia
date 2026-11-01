@@ -26,7 +26,7 @@ for (const route of ["/", "/learn"]) {
     const composer = dialog.getByRole("textbox", { name: "Сообщение", exact: true });
     await expect(composer).toBeEnabled();
     await composer.fill("Мой вопрос о добродетели");
-    await expect(dialog.getByRole("button", { name: "Отправить сообщение" })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Отправить сообщение" })).toBeEnabled();
     await aristotle.click();
     await expect(aristotle).toHaveAttribute("aria-pressed", "true");
     await expect(composer).toBeDisabled();
@@ -91,7 +91,7 @@ test("short landscape keeps the composer reachable by wheel and closing availabl
   const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
   await dialog.locator("header").first().hover();
   await page.mouse.wheel(0, 1000);
-  await expect(dialog.getByText("Диалог в подготовке. Отправка и ответы пока недоступны. Черновик не сохраняется после перезагрузки.", { exact: true })).toBeInViewport();
+  await expect(dialog.getByText("Разговор хранится только в этой вкладке. После перезагрузки он исчезнет.", { exact: true })).toBeInViewport();
   await expect(dialog.getByRole("textbox", { name: "Сообщение", exact: true })).toBeInViewport();
   const close = dialog.getByRole("button", { name: "Закрыть разговор" });
   await expect(close).toBeInViewport();

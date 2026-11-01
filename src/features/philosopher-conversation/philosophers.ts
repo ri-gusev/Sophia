@@ -15,7 +15,7 @@ type ConversationProfile = {
 export const CONVERSATION_PHILOSOPHERS: readonly ConversationProfile[] = [
   {
     id: "plato", name: "Платон", image: "/images/philosophers/plato.png",
-    school: "Академия · Античная философия", draftAvailable: true, status: "В подготовке",
+    school: "Академия · Античная философия", draftAvailable: true, status: "Учебный диалог",
     source: "https://commons.wikimedia.org/wiki/File:Plato_Silanion_Musei_Capitolini_MC1377.png",
     photographer: "Marie-Lan Nguyen", license: "CC BY 2.5",
   },

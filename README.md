@@ -6,7 +6,7 @@
 
 ## Стек и окружение
 
-Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion. Требуется Node.js >=20.9.0 и npm; проверено на Node.js 24.22.1 и npm 11.19.1. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
+Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite. Требуется Node.js >=24.0.0 и npm; проверено на Node.js 24.22.1 и npm 11.19.1. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
 
 ## Установка и запуск
 
@@ -19,19 +19,22 @@ npm.cmd run dev
 
 Открыть [http://127.0.0.1:3000](http://127.0.0.1:3000). На Windows команды используют `npm.cmd`, чтобы не зависеть от политики запуска PowerShell-скриптов. В других оболочках можно использовать `npm`.
 
-Для production-режима: `npm.cmd run build`, затем `npm.cmd run start`. Сервер по умолчанию доступен только на этом компьютере. Переменные окружения, секреты и внешние сервисы не требуются; шрифт поставляется локально.
+Для production-режима: `npm.cmd run build`, затем `npm.cmd run start`. Сервер по умолчанию доступен только на этом компьютере. Для просмотра страниц внешние сервисы не требуются; для ответов Платона нужны серверный ключ OpenAI и локальная база корпуса. Шрифт и изображения поставляются локально.
 
 ## Разговор с философом
 
-Кнопка доступна рядом с картой `/learn` и в средней карточке на главной. Окно позволяет выбрать Платона, Аристотеля или Марка Аврелия. Сейчас это только интерфейс: для Платона можно набрать черновик, отправка отключена; два других собеседника помечены «Скоро». Ответов модели, запросов к API и подключения корпуса пока нет.
+Кнопка доступна рядом с картой `/learn` и в средней карточке на главной. Платон отвечает через серверный OpenAI API с выдержками из общей базы. Аристотель и Марк Аврелий пока помечены «Скоро». Есть отправка по Enter (Shift+Enter — новая строка), отмена, новый разговор и восстановление вопроса при ошибке. Это учебный ИИ-собеседник, который может ошибаться.
 
-Для будущего подключения OpenAI создайте **`.env.local` в корне проекта** (`D:\Sophia\.env.local`) и добавьте строку:
+В **`.env.local` в корне проекта** (`D:\Sophia\.env.local`) укажите:
 
 ```dotenv
 OPENAI_API_KEY=ваш_ключ
+OPENAI_MODEL=gpt-5.4-mini
 ```
 
-Шаблон — [.env.example](.env.example). `.env.local` исключён из Git. Не используйте префикс `NEXT_PUBLIC_`: ключ предназначен только для будущего серверного кода. Само добавление ключа пока не включает ответы; после будущего подключения потребуется перезапуск сервера. В текущий интерфейс ключ не передаётся.
+Шаблон — [.env.example](.env.example). `.env.local` исключён из Git. Не используйте префикс `NEXT_PUBLIC_`: ключ используется только сервером и не передаётся браузеру. После изменения окружения перезапустите сервер. `OPENAI_MODEL` необязателен; значение по умолчанию указано выше.
+
+Память существует только в открытой вкладке: закрытие окна и переходы между страницами сохраняют её, reload очищает. В API уходит ограниченное окно сообщений, резюме и до четырёх выдержек; переписка не пишется в нашу БД или browser storage. Лимиты, стоимость и хранение у провайдера — в [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md).
 
 ## Проверки
 
@@ -39,6 +42,8 @@ OPENAI_API_KEY=ваш_ключ
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run build
+npm.cmd run test:chat
+npm.cmd run test:knowledge
 npx.cmd playwright install chromium
 npm.cmd test
 ```
@@ -47,7 +52,7 @@ npm.cmd test
 
 ## Документация
 
-Для локальной базы корпусов используется Node.js 24: `npm.cmd run knowledge:status`, `npm.cmd run knowledge:verify -- --document plato-corpus`, `npm.cmd run test:knowledge`. Импорт новых файлов, связи философов/тем и резервное копирование описаны в [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md). База и исходники в `storage/knowledge/` исключены из Git; приложение и будущий чат пока к ним не подключены.
+Для базы корпусов: `npm.cmd run knowledge:status`, `npm.cmd run knowledge:verify -- --document plato-corpus`, `npm.cmd run test:knowledge`. Импорт, связи философов/тем и бэкап — в [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md). База и исходники в `storage/knowledge/` исключены из Git; чат читает их только на сервере. Клонирование репозитория не переносит корпус.
 
 | Документ | Ответственность |
 | --- | --- |
@@ -61,6 +66,7 @@ npm.cmd test
 | [INVARIANTS.md](docs/architecture/INVARIANTS.md) | Постоянные ограничения и способы проверки |
 | [DECISIONS.md](docs/architecture/DECISIONS.md) | Журнал принятых архитектурных решений |
 | [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md) | Единая база корпусов, импорт, версии и сохранность |
+| [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md) | API чата, память вкладки, лимиты и безопасность |
 | [DESIGN_SYSTEM.md](docs/design/DESIGN_SYSTEM.md) | Визуальный язык и палитра |
 | [UX_GUIDELINES.md](docs/design/UX_GUIDELINES.md) | Правила взаимодействия и доступности |
 | [CONVENTIONS.md](docs/development/CONVENTIONS.md) | Именование и организация кода |

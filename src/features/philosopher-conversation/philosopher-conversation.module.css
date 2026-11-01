@@ -51,6 +51,22 @@
 .inputRow textarea:disabled { color:#64756b; cursor:not-allowed; }
 .send { display:grid; place-items:center; width:38px; height:38px; flex-shrink:0; border:1px solid #c4d5ca; border-radius:12px; color:#536f60; background:#dfebe2; }
 .composerHint { margin-top:9px; color:#5b6b62; font-size:9px; line-height:1.65; }
+.chatToolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-shrink:0; padding:8px 24px; border-bottom:1px solid var(--line); color:var(--muted); font-size:9px; line-height:1.6; }
+.chatToolbar button { display:flex; align-items:center; gap:6px; padding:6px 8px; min-height:32px; border:1px solid #d7e1d6; border-radius:9px; background:#fff; color:var(--ink); font-size:10px; }
+.chatToolbar button:disabled { opacity:.6; }
+.messages { width:100%; min-width:0; display:flex; flex-direction:column; gap:16px; }
+.message { max-width:94%; padding:14px 16px; border:1px solid #dfe7df; border-radius:17px; text-align:left; }
+.userMessage { align-self:flex-end; background:#e8f4ed; border-color:#c8dfd0; }
+.assistantMessage { align-self:flex-start; background:#fff; }
+.messageAuthor { display:block; margin-bottom:7px; color:#52665b; font-size:10px; font-weight:650; }
+.message p { white-space:pre-wrap; overflow-wrap:anywhere; font-size:13px; line-height:1.85; }
+.sources { margin-top:12px; color:#5b6b62; font-size:10px; line-height:1.7; }
+.sources summary { cursor:pointer; min-height:30px; padding-block:5px; }
+.sources ul { margin:7px 0 0; padding-left:16px; }
+.waiting,.historyNotice { color:#586c60; font-size:11px; line-height:1.8; }
+.chatError { margin-top:10px; padding:9px 11px; border:1px solid #e3ccc3; border-radius:10px; color:#774734; background:#fff4ee; font-size:11px; line-height:1.7; }
+.send:not(:disabled) { color:#fff; border-color:#3e6351; background:#3e6351; }
+.send:not(:disabled):hover { background:#304f40; }
 @keyframes appear { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:700px) {
   .dialog { width:100%; height:100dvh; margin:0; border:0; border-radius:0; }
@@ -82,6 +98,9 @@
   .prompts button { min-height:40px; }
   .composer { padding:12px 18px max(14px,env(safe-area-inset-bottom)); }
   .inputRow { padding:9px; }
+  .chatToolbar { padding-inline:18px; }
+  .message { max-width:100%; padding:12px 13px; }
+  .message p { font-size:12px; }
 }
 @media(max-height:600px) {
   .dialog { overflow-y:auto; overscroll-behavior:contain; }

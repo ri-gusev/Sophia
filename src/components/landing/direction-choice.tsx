@@ -28,7 +28,7 @@ export function DirectionChoice() {
           <article className="step-card step-2 direction-card">
             <div className="step-top"><span className="step-icon"><MessageCircle size={24} strokeWidth={1.5} aria-hidden="true" /></span><span className="step-number">02</span></div>
             <h3>Разговор с философом</h3>
-            <p>Посмотри на свои вопросы глазами философа. Начнём с Платона — диалог готовится.</p>
+            <p>Посмотри на свои вопросы глазами философа. Обсуди их с Платоном в учебном диалоге с ИИ.</p>
             <PhilosopherConversation variant="default" />
           </article>
         </Reveal>

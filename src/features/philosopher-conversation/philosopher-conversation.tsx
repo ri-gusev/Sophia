@@ -3,19 +3,23 @@
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpRight, MessageCircle, Send, X } from "lucide-react";
+import { ArrowUpRight, MessageCircle, Send, Square, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CONVERSATION_PHILOSOPHERS, PLATO_CONVERSATION_PROMPTS, type PhilosopherId } from "./philosophers";
 import styles from "./philosopher-conversation.module.css";
+import { usePlatoChat } from "./plato-chat-provider";
+import { CHAT_LIMITS, CHAT_MEMORY_NOTICE } from "./chat-contract";
 
 export function PhilosopherConversation({ variant = "outline" }: { variant?: "default" | "outline" }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const history = useRef<HTMLDivElement>(null);
+  const wasSending = useRef(false);
   const titleId = useId(), descriptionId = useId(), composerHintId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<PhilosopherId>("plato");
-  const [platoDraft, setPlatoDraft] = useState("");
+  const chat = usePlatoChat();
   const selected = CONVERSATION_PHILOSOPHERS.find(profile => profile.id === selectedId)!;
 
   useEffect(() => {
@@ -25,6 +29,16 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
     dialog.current?.showModal();
     return () => { document.body.style.overflow = previousOverflow; };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && selectedId === "plato" && history.current) history.current.scrollTop = history.current.scrollHeight;
+  }, [isOpen, selectedId, chat.messages, chat.pending]);
+
+  useEffect(() => {
+    if (wasSending.current && chat.pending === null && isOpen && selectedId === "plato" &&
+      (document.activeElement === document.body || document.activeElement === dialog.current)) composer.current?.focus({ preventScroll: true });
+    wasSending.current = chat.pending !== null;
+  }, [chat.pending, isOpen, selectedId]);
 
   function openConversation() {
     setIsOpen(true);
@@ -93,33 +107,48 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
             <div><h3>{selected.name}</h3><p>{selected.school}</p></div>
             <span className={styles.status}>{selected.status}</span>
           </header>
-          <div className={styles.conversation} role="region" aria-label="Область разговора" tabIndex={0}>
-            <div className={styles.empty} key={selected.id}>
+          {selected.draftAvailable && <div className={styles.chatToolbar}>
+            <span>ИИ-собеседник · может ошибаться</span>
+            <button type="button" disabled={chat.pending !== null} onClick={() => { chat.reset(); composer.current?.focus(); }}><RotateCcw size={12} aria-hidden="true" />Новый разговор</button>
+          </div>}
+          <div ref={history} className={styles.conversation} role="region" aria-label="Область разговора" tabIndex={0}>
+            {selected.draftAvailable && (chat.messages.length > 0 || chat.pending !== null) ? <div className={styles.messages} role="log" aria-label="Переписка с Платоном" aria-live="polite" aria-relevant="additions text">
+              {chat.trimmed && <p className={styles.historyNotice}>Показана последняя часть переписки.</p>}
+              {chat.messages.map(message => <div key={message.id} className={`${styles.message} ${message.role === "user" ? styles.userMessage : styles.assistantMessage}`}>
+                <span className={styles.messageAuthor}>{message.role === "user" ? "Вы" : "Платон · ИИ"}</span>
+                <p>{message.content}</p>
+                {!!message.sources?.length && <details className={styles.sources}><summary>Материалы к ответу</summary><ul>{message.sources.map(source => <li key={source.id}>[{source.reference}] {source.title} · версия {source.revision}</li>)}</ul></details>}
+              </div>)}
+              {chat.pending !== null && <><div className={`${styles.message} ${styles.userMessage}`}><span className={styles.messageAuthor}>Вы</span><p>{chat.pending}</p></div><p className={styles.waiting} role="status">Платон размышляет…</p></>}
+            </div> : <div className={styles.empty} key={selected.id}>
               <div className={styles.portrait}><Image src={selected.image} alt={`Скульптурный портрет: ${selected.name}`} width={126} height={126} unoptimized /></div>
               <span className={styles.eyebrow}>Место для ваших вопросов</span>
               <h4>{selected.draftAvailable ? "О чём вы хотели бы спросить Платона?" : "Этот разговор ещё впереди"}</h4>
               <p>{selected.draftAvailable
                 ? "О добродетели, знании или справедливости — иногда один вопрос открывает целый мир."
-                : `Разговор с философом «${selected.name}» появится позже. Сейчас мы готовим диалог с Платоном.`}</p>
+                : `Разговор с философом «${selected.name}» появится позже. Пока можно поговорить с Платоном.`}</p>
               {selected.draftAvailable && <div className={styles.prompts} aria-label="Идеи для вопроса">
                 {PLATO_CONVERSATION_PROMPTS.map(prompt => <button key={prompt} type="button" onClick={() => {
-                  setPlatoDraft(prompt); composer.current?.focus({ preventScroll: true });
+                  chat.setDraft(prompt); composer.current?.focus({ preventScroll: true });
                 }}>{prompt}<ArrowUpRight size={13} aria-hidden="true" /></button>)}
               </div>}
-            </div>
+            </div>}
           </div>
-          <form className={styles.composer} onSubmit={event => event.preventDefault()}>
+          <form className={styles.composer} onSubmit={event => { event.preventDefault(); if (selected.draftAvailable) void chat.send(); }}>
             <label htmlFor={`${titleId}-message`}>Ваш вопрос</label>
             <div className={styles.inputRow}>
               <textarea ref={composer} id={`${titleId}-message`} aria-label="Сообщение" aria-describedby={composerHintId}
                 placeholder={selected.draftAvailable ? "Напишите, что вам интересно…" : "Этот собеседник пока недоступен"}
-                value={selected.draftAvailable ? platoDraft : ""} disabled={!selected.draftAvailable} maxLength={2000}
-                onChange={event => setPlatoDraft(event.target.value)} rows={2} />
-              <button type="submit" className={styles.send} aria-label="Отправить сообщение" disabled>
-                <Send size={18} aria-hidden="true" />
-              </button>
+                value={selected.draftAvailable ? chat.draft : ""} disabled={!selected.draftAvailable || chat.pending !== null} maxLength={CHAT_LIMITS.messageChars}
+                onChange={event => chat.setDraft(event.target.value)} rows={2}
+                onKeyDown={event => {
+                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && selected.draftAvailable) { event.preventDefault(); void chat.send(); }
+                }} />
+              {chat.pending !== null && selected.draftAvailable ? <button key="stop" type="button" className={styles.send} aria-label="Остановить ответ" onClick={event => { event.preventDefault(); chat.stop(); }}><Square size={17} aria-hidden="true" /></button> :
+                <button key="send" type="submit" className={styles.send} aria-label="Отправить сообщение" disabled={!selected.draftAvailable || !chat.draft.trim()}><Send size={18} aria-hidden="true" /></button>}
             </div>
-            <p id={composerHintId} className={styles.composerHint}>Диалог в подготовке. Отправка и ответы пока недоступны. Черновик не сохраняется после перезагрузки.</p>
+            {chat.error && selected.draftAvailable && <p className={styles.chatError} role="alert">{chat.error}</p>}
+            <p id={composerHintId} className={styles.composerHint}>{selected.draftAvailable ? CHAT_MEMORY_NOTICE : "Этот собеседник пока недоступен. Выберите Платона."}</p>
           </form>
         </section>
       </div>
