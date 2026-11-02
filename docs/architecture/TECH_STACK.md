@@ -15,6 +15,7 @@
 | Motion | Появление секций с учётом reduced motion | 14.9.0 |
 | SQLite / `node:sqlite` | Единая локальная база исходных корпусов, вне UI | SQLite 3.53.4 в Node.js 24.22.1; без новой зависимости |
 | OpenAI Responses API | Серверный чат Платона и сжатие памяти | Встроенный fetch, `store:false`; по умолчанию `gpt-5.4-mini`, reasoning none |
+| OpenAI Embeddings + SQLite FTS5 | Индекс исторического Платона | `text-embedding-3-small`/1536, JSON vectors + exact cosine, без нового сервиса; реальный индекс создан с согласия пользователя. [Устройство](PLATO_RAG.md) |
 
 Окружение: Node.js >=24.0.0, npm; локально проверяется на Node.js 24.22.1 и npm 11.19.1. Минимум повышен при подключении серверного чата к встроенному `node:sqlite` (ADR-012); SDK OpenAI не добавлен. Зависимости закреплены точными версиями в `package.json` и `package-lock.json`. ESLint 9.39.5 с `eslint-config-next` 16.4.3 проверяется отдельно: build не запускает линтер. npm предупреждает об окончании поддержки ветки ESLint 9; миграция major требует проверки совместимости.
 

@@ -44,7 +44,7 @@ export class KnowledgeStore {
       const version = this.db.prepare("PRAGMA user_version").get()!.user_version;
       if (version === 0) {
         this.db.exec(readFileSync(new URL("../../database/knowledge/001-initial.sql", import.meta.url), "utf8"));
-      } else if (version !== 1) {
+      } else if (version !== 1 && version !== 2) {
         throw new Error("Unsupported knowledge database schema version.");
       }
       this.db.exec("COMMIT");

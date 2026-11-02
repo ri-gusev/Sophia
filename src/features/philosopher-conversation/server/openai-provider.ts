@@ -1,14 +1,14 @@
 import { ChatError } from "../chat-contract.ts";
 import type { ChatMessage } from "../chat-contract.ts";
 
-export type GenerationRequest = { instructions: string; input: ChatMessage[]; maxOutputTokens: number; signal?: AbortSignal };
+export type GenerationRequest = { instructions: string; input: ChatMessage[]; maxOutputTokens: number; signal?: AbortSignal; reasoningEffort?: "none" | "low"; format?: { name: string; schema: Record<string, unknown> } };
 export type TextGenerator = (request: GenerationRequest) => Promise<string>;
 
 function object(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 }
 
-export function createOpenAITextGenerator(options: { apiKey: string | undefined; model: string; fetcher?: typeof fetch }): TextGenerator {
+export function createOpenAITextGenerator(options: { apiKey: string | undefined; model: string; fetcher?: typeof fetch; onUsage?: (usage: { input: number; output: number }) => void }): TextGenerator {
   return async request => {
     if (!options.apiKey?.trim() || !/^[a-zA-Z0-9_.-]{1,100}$/.test(options.model)) throw new ChatError(503, "Разговор пока недоступен. Попробуйте позже.");
     const signal = request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(25000)]) : AbortSignal.timeout(25000);
@@ -20,7 +20,8 @@ export function createOpenAITextGenerator(options: { apiKey: string | undefined;
         body: JSON.stringify({
           model: options.model, instructions: request.instructions, input: request.input,
           max_output_tokens: request.maxOutputTokens, store: false,
-          ...(/^gpt-(?:5\.[4-9]|6)/.test(options.model) ? { reasoning: { effort: "none" } } : {}),
+          ...(request.format ? { text: { format: { type: "json_schema", strict: true, ...request.format } } } : {}),
+          ...(/^gpt-(?:5\.[4-9]|6)/.test(options.model) ? { reasoning: { effort: request.reasoningEffort ?? "none" } } : {}),
         }),
       });
     } catch {
@@ -36,6 +37,8 @@ export function createOpenAITextGenerator(options: { apiKey: string | undefined;
     let data: Record<string, unknown> | undefined;
     try { data = object(await response.json()); } catch { throw new ChatError(502, "Не удалось прочитать ответ. Попробуйте ещё раз."); }
     if (data?.status !== "completed" || !Array.isArray(data.output)) throw new ChatError(502, "Ответ не был завершён. Попробуйте ещё раз.");
+    const usage = object(data.usage);
+    if (typeof usage?.input_tokens === "number" && typeof usage.output_tokens === "number") options.onUsage?.({ input: usage.input_tokens, output: usage.output_tokens });
     const parts: string[] = [];
     for (const output of data.output) {
       const item = object(output);

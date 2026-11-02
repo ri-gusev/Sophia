@@ -1,5 +1,13 @@
 # Стратегия проверок
 
+## Исторический Платон — 2026-11-02
+
+`npm.cmd run test:chat`: 31 синтетический unit-тестов — контракты, память/сжатие, semantic-stage routing, modern/introduced state и буквальные пользовательские определения, противоречия, изоляция, отдельный safety на входе/выходе, grounding/retry/abstention, injection boundaries, chunk metadata (Markdown/JSON/bold), hash/idempotence/stale/model-version индекс, vector-only совпадение и keyword relevance floor, SSE/побайтный UTF-8 и незавершённый поток. Это проверки кода с явными модельными ответами, **не проверка поведения реального Платона**.
+
+`test:knowledge`: 4 passed. Production Playwright: 58 passed / 36,2 с, desktop/mobile Chromium; сохранены все прежние сценарии и добавлены SSE/state, отсутствие технического списка источников. Первый sandbox-прогон завис при завершении; повтор вне sandbox на порту 3101 завершился успешно. TypeScript, ESLint, build проверяются отдельно.
+
+Индексация выполнена после явного согласия пользователя: 133 реальных embeddings/1536, повтор без новых запросов. Реальный retrieval smoke: 5/5 философских запросов найдены, 3/3 посторонних исключены с threshold=0.25 после исправления keyword bypass. Live-диалог подтвердил modern/introduced, прямое объяснение, сократический ход, противоречие и safety, но вопрос о Сократе иногда отклоняется из-за непроверенных источников; это **не прошедший benchmark исторической надёжности**. После одной перегенерации действует abstention вместо выдуманного ответа. Воспроизведение и ограничения — [PLATO_RAG.md](../architecture/PLATO_RAG.md). Реальные телефоны, Safari/Firefox не проверены.
+
 ## Что доступно сейчас
 
 Настроены TypeScript strict, ESLint, production build и Playwright с axe. Команды приведены в [README](../../README.md#проверки), результаты прогонов с разделением карты и исторической Phase 2 — в [CURRENT_STATE.md](CURRENT_STATE.md). Отдельный unit-runner не установлен: выбор ответа и навигация карты проверяются через реальный UI. При появлении содержательной бизнес-логики добавить узкие unit-тесты её правил.

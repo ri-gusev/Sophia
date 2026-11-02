@@ -32,7 +32,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
 
   useEffect(() => {
     if (isOpen && selectedId === "plato" && history.current) history.current.scrollTop = history.current.scrollHeight;
-  }, [isOpen, selectedId, chat.messages, chat.pending]);
+  }, [isOpen, selectedId, chat.messages, chat.pending, chat.streamed]);
 
   useEffect(() => {
     if (wasSending.current && chat.pending === null && isOpen && selectedId === "plato" &&
@@ -115,11 +115,10 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
             {selected.draftAvailable && (chat.messages.length > 0 || chat.pending !== null) ? <div className={styles.messages} role="log" aria-label="Переписка с Платоном" aria-live="polite" aria-relevant="additions text">
               {chat.trimmed && <p className={styles.historyNotice}>Показана последняя часть переписки.</p>}
               {chat.messages.map(message => <div key={message.id} className={`${styles.message} ${message.role === "user" ? styles.userMessage : styles.assistantMessage}`}>
-                <span className={styles.messageAuthor}>{message.role === "user" ? "Вы" : "Платон · ИИ"}</span>
+                <span className={styles.messageAuthor}>{message.role === "user" ? "Вы" : message.outcome === "safety" ? "Sophia" : "Платон · ИИ"}</span>
                 <p>{message.content}</p>
-                {!!message.sources?.length && <details className={styles.sources}><summary>Материалы к ответу</summary><ul>{message.sources.map(source => <li key={source.id}>[{source.reference}] {source.title} · версия {source.revision}</li>)}</ul></details>}
               </div>)}
-              {chat.pending !== null && <><div className={`${styles.message} ${styles.userMessage}`}><span className={styles.messageAuthor}>Вы</span><p>{chat.pending}</p></div><p className={styles.waiting} role="status">Платон размышляет…</p></>}
+              {chat.pending !== null && <><div className={`${styles.message} ${styles.userMessage}`}><span className={styles.messageAuthor}>Вы</span><p>{chat.pending}</p></div>{chat.streamed ? <div className={styles.message}><span className={styles.messageAuthor}>Платон · ИИ</span><p>{chat.streamed}</p></div> : <p className={styles.waiting} role="status">Платон размышляет…</p>}</>}
             </div> : <div className={styles.empty} key={selected.id}>
               <div className={styles.portrait}><Image src={selected.image} alt={`Скульптурный портрет: ${selected.name}`} width={126} height={126} unoptimized /></div>
               <span className={styles.eyebrow}>Место для ваших вопросов</span>

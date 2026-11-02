@@ -25,6 +25,8 @@ test("Plato sends bounded local context, renders replies safely and keeps the co
   await composer.fill("Что такое добродетель?");
   await composer.press("Enter");
   await expect(dialog.getByRole("log")).toContainText(ANSWER);
+  await expect(dialog.getByRole("log")).not.toContainText("Тестовый материал");
+  await expect(dialog.getByText("Материалы к ответу", { exact: true })).toHaveCount(0);
   await expect(composer).toHaveValue("");
   await expect(dialog.locator('img[src="x"]')).toHaveCount(0);
   expect(await page.evaluate(() => "chatInjected" in window)).toBe(false);
@@ -113,4 +115,41 @@ test("real API boundary rejects cross-origin and invalid philosopher requests be
   const rejectedPhilosopher = await request.post("/api/philosopher-chat", { headers: { origin: baseURL! }, data: body });
   expect(rejectedPhilosopher.status()).toBe(400);
   expect(rejectedPhilosopher.headers()["cache-control"]).toBe("no-store");
+});
+
+test("validated SSE delivery preserves structured user definitions for the next turn", async ({ page }) => {
+  const calls: (TestRequest & { memory: { dialogue?: unknown } })[] = [];
+  const dialogue = { current_topic: "общение", user_theses: [], open_questions: [], contradictions: [], introduced_concepts: [{ concept: "смартфон", explanation: "Устройство для общения" }], dialogue_stage: "analogy" };
+  await page.route("**/api/philosopher-chat", async route => {
+    const body = route.request().postDataJSON(); calls.push(body);
+    expect(route.request().headers().accept).toContain("text/event-stream");
+    const message = "Рассмотрим общение и понимание.";
+    const result = { message, memory: { summary: "", recent: [{ role: "user", content: body.message }, { role: "assistant", content: message }], dialogue }, sources: [] };
+    await route.fulfill({ contentType: "text/event-stream", body: `event: delta\ndata: ${JSON.stringify({ text: message })}\n\nevent: done\ndata: ${JSON.stringify(result)}\n\n` });
+  });
+  await page.goto("/learn");
+  await page.getByRole("button", { name: "Разговор с философом", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
+  const composer = dialog.getByRole("textbox", { name: "Сообщение", exact: true });
+  await composer.fill("Смартфон — устройство для общения.");
+  await dialog.getByRole("button", { name: "Отправить сообщение" }).click();
+  await expect(composer).toBeEnabled();
+  await expect(dialog.getByRole("log")).toContainText("Рассмотрим общение");
+  await composer.fill("Что это меняет?");
+  await dialog.getByRole("button", { name: "Отправить сообщение" }).click();
+  await expect.poll(() => calls.length).toBe(2);
+  expect(calls[1].memory.dialogue).toEqual(dialogue);
+  await expect(composer).toBeEnabled();
+});
+
+test("safety handler replies are identified as Sophia rather than the historical persona", async ({ page }) => {
+  await page.route("**/api/philosopher-chat", route => route.fulfill({ json: { message: "Я не могу помочь с такими инструкциями. Можем обсудить этическую сторону вопроса.", memory: { summary: "", recent: [] }, sources: [], outcome: "safety" } }));
+  await page.goto("/learn");
+  await page.getByRole("button", { name: "Разговор с философом", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
+  await dialog.getByRole("textbox", { name: "Сообщение", exact: true }).fill("Синтетический запрос безопасности");
+  await dialog.getByRole("button", { name: "Отправить сообщение" }).click();
+  await expect(dialog.getByRole("log")).toContainText("Я не могу помочь");
+  await expect(dialog.getByRole("log").getByText("Sophia", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("log").getByText("Платон · ИИ", { exact: true })).toHaveCount(0);
 });

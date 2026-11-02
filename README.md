@@ -34,7 +34,7 @@ OPENAI_MODEL=gpt-5.4-mini
 
 Шаблон — [.env.example](.env.example). `.env.local` исключён из Git. Не используйте префикс `NEXT_PUBLIC_`: ключ используется только сервером и не передаётся браузеру. После изменения окружения перезапустите сервер. `OPENAI_MODEL` необязателен; значение по умолчанию указано выше.
 
-Память существует только в открытой вкладке: закрытие окна и переходы между страницами сохраняют её, reload очищает. В API уходит ограниченное окно сообщений, резюме и до четырёх выдержек; переписка не пишется в нашу БД или browser storage. Лимиты, стоимость и хранение у провайдера — в [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md).
+Память существует только в открытой вкладке: закрытие окна и переходы между страницами сохраняют её, reload очищает. Сервер использует ограниченную историю, структурированное состояние и до шести найденных фрагментов. Переписка не пишется в БД/browser storage. На этой машине корпус проиндексирован с разрешения пользователя; после переноса потребуется `npm.cmd run knowledge:index` (платная отправка корпуса в OpenAI с согласия владельца). Статус: `npm.cmd run knowledge:index-status`. Без индекса — 503; без достаточного подтверждения ответ может быть ограничен. Архитектура, запуск и ограничения — в [PLATO_RAG.md](docs/architecture/PLATO_RAG.md).
 
 ## Проверки
 
@@ -67,6 +67,7 @@ npm.cmd test
 | [DECISIONS.md](docs/architecture/DECISIONS.md) | Журнал принятых архитектурных решений |
 | [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md) | Единая база корпусов, импорт, версии и сохранность |
 | [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md) | API чата, память вкладки, лимиты и безопасность |
+| [PLATO_RAG.md](docs/architecture/PLATO_RAG.md) | Историческая роль, семантический индекс, safety, проверка ответов и запуск |
 | [DESIGN_SYSTEM.md](docs/design/DESIGN_SYSTEM.md) | Визуальный язык и палитра |
 | [UX_GUIDELINES.md](docs/design/UX_GUIDELINES.md) | Правила взаимодействия и доступности |
 | [CONVENTIONS.md](docs/development/CONVENTIONS.md) | Именование и организация кода |

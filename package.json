@@ -16,7 +16,11 @@
     "test:chat": "node --test scripts/chat/*.test.ts",
     "knowledge:import": "node scripts/knowledge/cli.ts import",
     "knowledge:status": "node scripts/knowledge/cli.ts status",
-    "knowledge:verify": "node scripts/knowledge/cli.ts verify"
+    "knowledge:verify": "node scripts/knowledge/cli.ts verify",
+    "knowledge:index": "node scripts/knowledge/rag-cli.ts index",
+    "knowledge:index-status": "node scripts/knowledge/rag-cli.ts status",
+    "knowledge:check-retrieval": "node scripts/knowledge/retrieval-check.ts",
+    "chat:check:live": "node scripts/chat/live-check.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

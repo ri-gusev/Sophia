@@ -1,13 +1,15 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { CHAT_LIMITS, EMPTY_CHAT_MEMORY, parseChatReply } from "./chat-contract";
-import type { ChatMemory, ChatMessage, CitedSource } from "./chat-contract";
+import { CHAT_LIMITS, EMPTY_CHAT_MEMORY } from "./chat-contract";
+import { readChatResponse } from "./chat-stream";
+import type { ChatMemory, ChatMessage, CitedSource, ChatReply } from "./chat-contract";
 
-export type VisibleChatMessage = ChatMessage & { id: string; sources?: CitedSource[] };
+export type VisibleChatMessage = ChatMessage & { id: string; sources?: CitedSource[]; outcome?: ChatReply["outcome"] };
 type ChatSession = {
   draft: string; setDraft: (value: string) => void;
   messages: VisibleChatMessage[]; pending: string | null; error: string | null; trimmed: boolean;
+  streamed: string;
   send: () => Promise<void>; stop: () => void; reset: () => void;
 };
 const ChatContext = createContext<ChatSession | null>(null);
@@ -21,6 +23,7 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [trimmed, setTrimmed] = useState(false);
+  const [streamed, setStreamed] = useState("");
   const controller = useRef<AbortController | null>(null);
 
   useEffect(() => () => { controller.current?.abort(); controller.current = null; }, []);
@@ -30,24 +33,24 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
     if (!message || message.length > CHAT_LIMITS.messageChars || controller.current) return;
     const active = new AbortController();
     controller.current = active;
-    setPending(message); setDraft(""); setError(null);
+    setPending(message); setDraft(""); setError(null); setStreamed("");
     try {
       const response = await fetch("/api/philosopher-chat", {
-        method: "POST", signal: AbortSignal.any([active.signal, AbortSignal.timeout(50000)]), cache: "no-store",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ philosopherId: "plato", message, memory }),
+        method: "POST", signal: AbortSignal.any([active.signal, AbortSignal.timeout(120000)]), cache: "no-store",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" }, body: JSON.stringify({ philosopherId: "plato", message, memory }),
       });
-      const data: unknown = await response.json();
       if (!response.ok) {
+        const data: unknown = await response.json();
         const publicError = data && typeof data === "object" && "error" in data ? (data as { error: unknown }).error : undefined;
         throw new PublicChatError(typeof publicError === "string" && publicError.length < 300 ? publicError : "Не удалось получить ответ. Попробуйте ещё раз.");
       }
-      const reply = parseChatReply(data);
+      const reply = await readChatResponse(response, text => { if (!active.signal.aborted && controller.current === active) setStreamed(text); });
       if (active.signal.aborted || controller.current !== active) return;
       setMemory(reply.memory);
       setMessages(previous => {
         let next: VisibleChatMessage[] = [...previous,
           { id: crypto.randomUUID(), role: "user", content: message },
-          { id: crypto.randomUUID(), role: "assistant", content: reply.message, sources: reply.sources },
+          { id: crypto.randomUUID(), role: "assistant", content: reply.message, sources: reply.sources, outcome: reply.outcome },
         ];
         while (next.length > CHAT_LIMITS.displayedMessages || next.reduce((sum, item) => sum + item.content.length, 0) > 96000) next = next.slice(2);
         return next;
@@ -59,13 +62,13 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
       setError(active.signal.aborted ? "Отправка остановлена. Вопрос можно отправить снова."
         : cause instanceof PublicChatError ? cause.message : "Не удалось связаться с сервером. Попробуйте ещё раз.");
     } finally {
-      if (controller.current === active) { controller.current = null; setPending(null); }
+      if (controller.current === active) { controller.current = null; setPending(null); setStreamed(""); }
     }
   }
 
   function reset() {
     controller.current?.abort(); controller.current = null;
-    setMessages([]); setMemory(EMPTY_CHAT_MEMORY); setPending(null); setDraft(""); setError(null); setTrimmed(false);
+    setMessages([]); setMemory(EMPTY_CHAT_MEMORY); setPending(null); setDraft(""); setError(null); setTrimmed(false); setStreamed("");
   }
 
   function stop() {
@@ -74,11 +77,11 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
     // Release UI immediately even if the network has not settled its abort yet.
     controller.current = null;
     active.abort();
-    setDraft(pending ?? ""); setPending(null);
+    setDraft(pending ?? ""); setPending(null); setStreamed("");
     setError("Отправка остановлена. Вопрос можно отправить снова.");
   }
 
-  return <ChatContext.Provider value={{ draft, setDraft, messages, pending, error, trimmed, send, stop, reset }}>{children}</ChatContext.Provider>;
+  return <ChatContext.Provider value={{ draft, setDraft, messages, pending, error, trimmed, streamed, send, stop, reset }}>{children}</ChatContext.Provider>;
 }
 
 export function usePlatoChat() {

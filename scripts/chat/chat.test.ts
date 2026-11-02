@@ -1,12 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve, sep } from "node:path";
-import { KnowledgeStore } from "../knowledge/knowledge-store.ts";
 import { parseChatRequest, EMPTY_CHAT_MEMORY } from "../../src/features/philosopher-conversation/chat-contract.ts";
 import { answerPlato } from "../../src/features/philosopher-conversation/server/chat-service.ts";
-import { rankExcerpts, retrievePlatoExcerpts } from "../../src/features/philosopher-conversation/server/knowledge-retrieval.ts";
 import { createOpenAITextGenerator } from "../../src/features/philosopher-conversation/server/openai-provider.ts";
 import { createChatHandler, createRequestGate } from "../../src/features/philosopher-conversation/server/chat-http.ts";
 
@@ -58,17 +53,6 @@ test("a failed summary does not mutate memory or make an answer call", async () 
   assert.equal(JSON.stringify(request), before);
 });
 
-test("lexical retrieval ranks relevant synthetic passages and caps excerpt size/count", () => {
-  const documents = [
-    { documentId: "one", title: "One", revision: 1, text: "Знание отличается от мнения. ".repeat(150) },
-    { documentId: "two", title: "Two", revision: 2, text: "Добродетель связана с добродетелью и благом. ".repeat(150) },
-  ];
-  const ranked = rankExcerpts(documents, "Что такое добродетель?");
-  assert.ok(ranked.length > 0 && ranked.length <= 4);
-  assert.equal(ranked[0].documentId, "two");
-  assert.ok(ranked.every(item => item.text.length <= 1200));
-  assert.equal(rankExcerpts(documents, "невстречающеесяслово").length, 0);
-});
 
 test("OpenAI requests use server credentials, bounded output and store:false; provider errors are sanitized", async () => {
   let payload: Record<string, unknown> = {};
@@ -81,6 +65,9 @@ test("OpenAI requests use server credentials, bounded output and store:false; pr
   assert.equal(payload.store, false);
   assert.equal(payload.max_output_tokens, 900);
   assert.equal("previous_response_id" in payload, false);
+  await generate({ instructions: "Check", input: [{ role: "user", content: "Synthetic draft" }], maxOutputTokens: 2400, reasoningEffort: "low", format: { name: "check", schema: { type: "object" } } });
+  assert.deepEqual(payload.reasoning, { effort: "low" });
+  assert.ok(payload.text);
   const failing = createOpenAITextGenerator({ apiKey: "synthetic-private-key", model: "gpt-5.4-mini", fetcher: async () => Response.json({ error: { message: "synthetic-private-key user text" } }, { status: 401 }) });
   await assert.rejects(failing({ instructions: "", input: [], maxOutputTokens: 10 }), error => !String(error).includes("synthetic-private-key"));
 });
@@ -118,24 +105,6 @@ test("large turns are summarized before eviction and always return a valid bound
   assert.ok(parseChatRequest({ ...input(), memory: result.memory }));
 });
 
-test("read-only retrieval uses only latest Plato revisions in a synthetic shared database", t => {
-  const root = mkdtempSync(join(resolve(tmpdir()), "sophia-chat-"));
-  const store = new KnowledgeStore(join(root, "store"));
-  t.after(() => { store.close(); assert.ok(resolve(root).startsWith(resolve(tmpdir()) + sep + "sophia-chat-")); rmSync(root, { recursive: true, force: true }); });
-  const filePath = join(root, "synthetic.md");
-  writeFileSync(filePath, "устаревшийуникальныйтермин");
-  store.importFile({ filePath, documentId: "plato", title: "Plato", philosophers: [{ id: "plato", name: "Платон" }] });
-  writeFileSync(filePath, "актуальныйуникальныйтермин");
-  store.importFile({ filePath, documentId: "plato", title: "Plato", philosophers: [{ id: "plato", name: "Платон" }] });
-  writeFileSync(filePath, "аристотелевскийуникальныйтермин");
-  store.importFile({ filePath, documentId: "aristotle", title: "Aristotle", philosophers: [{ id: "aristotle", name: "Аристотель" }] });
-  const before = store.status().counts;
-  assert.equal(retrievePlatoExcerpts("устаревшийуникальныйтермин", store.databasePath).length, 0);
-  assert.equal(retrievePlatoExcerpts("аристотелевскийуникальныйтермин", store.databasePath).length, 0);
-  const current = retrievePlatoExcerpts("актуальныйуникальныйтермин", store.databasePath);
-  assert.equal(current[0].revision, 2);
-  assert.deepEqual(store.status().counts, before);
-});
 
 test("request gate bounds concurrency and request count, then resets its minute window", () => {
   let now = 0;

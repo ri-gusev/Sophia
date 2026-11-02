@@ -1,5 +1,6 @@
 import { CHAT_LIMITS, ChatError, parseChatRequest } from "../chat-contract.ts";
 import type { ChatRequest, ChatReply } from "../chat-contract.ts";
+import { validatedStream } from "../chat-stream.ts";
 
 export function createRequestGate(now: () => number = Date.now) {
   let windowStart = now(), requests = 0, active = 0;
@@ -48,7 +49,10 @@ export function createChatHandler(dependencies: { answer: (request: ChatRequest,
       if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json") throw new ChatError(415, "Ожидается JSON-запрос.");
       const input = parseChatRequest(await readBody(request));
       release = dependencies.gate();
-      const result = await dependencies.answer(input, AbortSignal.any([request.signal, AbortSignal.timeout(45000)]));
+      const result = await dependencies.answer(input, AbortSignal.any([request.signal, AbortSignal.timeout(110000)]));
+      if (request.headers.get("accept")?.includes("text/event-stream")) return new Response(validatedStream(result), {
+        headers: { ...headers, "Content-Type": "text/event-stream; charset=utf-8", "X-Accel-Buffering": "no" },
+      });
       return Response.json(result, { headers });
     } catch (error) {
       const safe = error instanceof ChatError ? error : new ChatError(500, "Не удалось отправить сообщение. Попробуйте ещё раз.");

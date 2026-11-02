@@ -1,3 +1,5 @@
+import { parseDialogueState, type DialogueState } from "./dialogue-state.ts";
+
 export const CHAT_LIMITS = {
   messageChars: 2000, assistantChars: 6000, summaryChars: 2000,
   recentMessages: 12, recentChars: 16000, keepMessages: 4,
@@ -5,10 +7,10 @@ export const CHAT_LIMITS = {
 } as const;
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
-export type ChatMemory = { summary: string; recent: ChatMessage[] };
-export type ChatSource = { id: string; documentId: string; title: string; revision: number };
+export type ChatMemory = { summary: string; recent: ChatMessage[]; dialogue?: DialogueState };
+export type ChatSource = { id: string; documentId: string; title: string; revision: number; work?: string; stephanus?: string };
 export type CitedSource = ChatSource & { reference: number };
-export type ChatReply = { message: string; memory: ChatMemory; sources: CitedSource[] };
+export type ChatReply = { message: string; memory: ChatMemory; sources: CitedSource[]; outcome?: "answer" | "clarification" | "safety" | "abstained" };
 export type ChatRequest = { philosopherId: "plato"; message: string; memory: ChatMemory };
 export const EMPTY_CHAT_MEMORY: ChatMemory = { summary: "", recent: [] };
 export const CHAT_MEMORY_NOTICE = "Разговор хранится только в этой вкладке. После перезагрузки он исчезнет.";
@@ -41,18 +43,24 @@ export function parseChatRequest(value: unknown): ChatRequest {
     return { role, content: text(item.content, role === "user" ? CHAT_LIMITS.messageChars : CHAT_LIMITS.assistantChars) };
   });
   if (recent.reduce((sum, item) => sum + item.content.length, 0) > CHAT_LIMITS.recentChars) throw new ChatError(400, "Слишком большая история разговора.");
-  return { philosopherId: "plato", message: text(body.message, CHAT_LIMITS.messageChars).trim(), memory: { summary, recent } };
+  let dialogue: DialogueState | undefined;
+  if (memory.dialogue !== undefined) {
+    try { dialogue = parseDialogueState(memory.dialogue); } catch { throw new ChatError(400, "Некорректное состояние беседы. Начните новый разговор."); }
+  }
+  return { philosopherId: "plato", message: text(body.message, CHAT_LIMITS.messageChars).trim(), memory: { summary, recent, ...(dialogue ? { dialogue } : {}) } };
 }
 
 export function parseChatReply(value: unknown): ChatReply {
   const reply = record(value);
   const message = text(reply.message, CHAT_LIMITS.assistantChars);
   const memory = parseChatRequest({ philosopherId: "plato", message: "validate", memory: reply.memory }).memory;
-  if (!Array.isArray(reply.sources) || reply.sources.length > 4) throw new Error("Invalid response sources");
+  if (!Array.isArray(reply.sources) || reply.sources.length > 8) throw new Error("Invalid response sources");
   const sources = reply.sources.map((value): CitedSource => {
     const source = record(value);
-    if (!Number.isInteger(source.revision) || Number(source.revision) < 1 || !Number.isInteger(source.reference) || Number(source.reference) < 1 || Number(source.reference) > 4) throw new Error("Invalid source reference");
-    return { id: text(source.id, 200), documentId: text(source.documentId, 80), title: text(source.title, 300), revision: Number(source.revision), reference: Number(source.reference) };
+    if (!Number.isInteger(source.revision) || Number(source.revision) < 1 || !Number.isInteger(source.reference) || Number(source.reference) < 1 || Number(source.reference) > 8) throw new Error("Invalid source reference");
+    return { id: text(source.id, 240), documentId: text(source.documentId, 80), title: text(source.title, 300), revision: Number(source.revision), reference: Number(source.reference),
+      ...(source.work ? { work: text(source.work, 300) } : {}), ...(source.stephanus ? { stephanus: text(source.stephanus, 120) } : {}) };
   });
-  return { message, memory, sources };
+  if (reply.outcome !== undefined && !["answer", "clarification", "safety", "abstained"].includes(String(reply.outcome))) throw new Error("Invalid chat outcome");
+  return { message, memory, sources, ...(reply.outcome ? { outcome: reply.outcome as ChatReply["outcome"] } : {}) };
 }

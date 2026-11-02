@@ -1,5 +1,7 @@
 # Структура проекта
 
+Дополнение: `server/historical-chat.ts` координирует исторический диалог; `server/structured.ts`, `plato-persona.ts`, `output-validation.ts`, `safety-handler.ts` разделяют схемы/роль/проверку/safety. `server/rag/` — конфигурация, разбиение, embeddings, SQLite-индекс; `scripts/knowledge/rag-cli.ts` — локальная администрация; `database/knowledge/002-rag-index.sql` — расширение общей БД. `dialogue-state.ts` и `chat-stream.ts` — общие безопасные контракты состояния/доставки. [Архитектура](PLATO_RAG.md).
+
 ## Существующие каталоги
 
 Корень `D:\Sophia` содержит приложение, конфигурации, npm lock-файл, `AGENTS.md`, `README.md` и `docs/`. Назначение отдельных документов — в [карте документации](../../README.md#документация).
