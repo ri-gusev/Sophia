@@ -68,6 +68,7 @@ npm.cmd test
 | [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md) | Единая база корпусов, импорт, версии и сохранность |
 | [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md) | API чата, память вкладки, лимиты и безопасность |
 | [PLATO_RAG.md](docs/architecture/PLATO_RAG.md) | Историческая роль, семантический индекс, safety, проверка ответов и запуск |
+| [PLATO_DIALOGUE.md](docs/architecture/PLATO_DIALOGUE.md) | Первое лицо, сократическая беседа, generation policy, проверка стиля и реальные сценарии |
 | [DESIGN_SYSTEM.md](docs/design/DESIGN_SYSTEM.md) | Визуальный язык и палитра |
 | [UX_GUIDELINES.md](docs/design/UX_GUIDELINES.md) | Правила взаимодействия и доступности |
 | [CONVENTIONS.md](docs/development/CONVENTIONS.md) | Именование и организация кода |

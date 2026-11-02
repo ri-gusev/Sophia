@@ -1,5 +1,12 @@
 # Стратегия проверок
 
+## Уточнение поведения Платона — 2026-11-02
+
+- `test:chat`: **41 passed**. Добавлены стиль/метаязык/AI-услуги, естественная неопределённость, объяснение без обязательного вопроса, личные встречи, повторы, modern_unknown без условных определений, dynamic evidence schema, style-only retry и запрет переноса пользовательского тезиса в developer instructions. Сохранены проверки safety/источников/памяти.
+- `test:knowledge`: **4 passed**; typecheck/lint/production build успешны. Browser-регрессия: **58 passed**, 36,9 с, desktop/mobile Chromium, без платных API-вызовов; frontend не изменён.
+- Реальные ответы на все десять запросов: `node scripts/chat/persona-eval.ts` при запущенном loopback production 3102. Финальный run `2026-11-02T16-17-03-846Z`: **10 ответов, 0 abstained**; сценарий №7 продолжает №6. При ошибке №6 зависимый №7 явно пропускается, не выдаётся за разговор с историей. Результаты в игнорируемом `artifacts/plato-persona-eval/`, включая дословный отчёт `2026-11-02-final-report.md` и неудачные промежуточные прогоны.
+- Критерии: историчность, естественность, роль, философское рассуждение, отсутствие наблюдаемых галлюцинаций. Редакторская оценка без exact-match. Один прогон не является гарантией стабильности/абсолютной истинности; базовый private corpus по-прежнему требует верификации. [Правила](../architecture/PLATO_DIALOGUE.md).
+
 ## Исторический Платон — 2026-11-02
 
 `npm.cmd run test:chat`: 31 синтетический unit-тестов — контракты, память/сжатие, semantic-stage routing, modern/introduced state и буквальные пользовательские определения, противоречия, изоляция, отдельный safety на входе/выходе, grounding/retry/abstention, injection boundaries, chunk metadata (Markdown/JSON/bold), hash/idempotence/stale/model-version индекс, vector-only совпадение и keyword relevance floor, SSE/побайтный UTF-8 и незавершённый поток. Это проверки кода с явными модельными ответами, **не проверка поведения реального Платона**.

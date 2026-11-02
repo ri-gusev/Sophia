@@ -6,11 +6,14 @@ const array = (items: unknown) => ({ type: "array", items });
 const action = { type: "string", enum: [...DIALOGUE_ACTIONS] };
 export const ANALYSIS_SCHEMA = objectSchema({ safety: { type: "string", enum: ["allow", "refuse", "crisis"] }, historical_category: { type: "string", enum: ["historical", "modern_unknown", "introduced"] }, query: string, action,
   state: objectSchema({ current_topic: string, user_theses: array(string), open_questions: array(string), contradictions: array(string), introduced_concepts: array(objectSchema({ concept: string, explanation: string })), dialogue_stage: action }) });
-export const DRAFT_SCHEMA = objectSchema({ message: string, claims: array(objectSchema({ text: string, kind: { type: "string", enum: ["fact", "position", "quote", "reconstruction"] }, evidence: array(objectSchema({ source: { type: "integer" }, quote: string })) })) });
-export const VALIDATION_SCHEMA = objectSchema({ valid: { type: "boolean" }, unsupported_claims: array(string), historical_anachronisms: array(string), fabricated_attributions: array(string), requires_regeneration: { type: "boolean" } });
+export function draftSchema(verifiedSources: number[]) {
+  const evidence = verifiedSources.length ? array(objectSchema({ source: { type: "integer", enum: verifiedSources }, quote: { type: "string", minLength: 1 } })) : { ...array(objectSchema({ source: { type: "integer" }, quote: string })), maxItems: 0 };
+  return objectSchema({ message: string, claims: array(objectSchema({ text: string, kind: { type: "string", enum: verifiedSources.length ? ["fact", "position", "quote", "reconstruction"] : ["reconstruction"] }, evidence })) });
+}
+export const VALIDATION_SCHEMA = objectSchema({ valid: { type: "boolean" }, unsupported_claims: array(string), historical_anachronisms: array(string), fabricated_attributions: array(string), dialogue_violations: array(string), requires_regeneration: { type: "boolean" } });
 export type TurnAnalysis = { safety: "allow" | "refuse" | "crisis"; historical_category: "historical" | "modern_unknown" | "introduced"; query: string; action: DialogueState["dialogue_stage"]; state: DialogueState };
 export type Draft = { message: string; claims: { text: string; kind: "fact" | "position" | "quote" | "reconstruction"; evidence: { source: number; quote: string }[] }[] };
-export type ValidationResult = { valid: boolean; unsupported_claims: string[]; historical_anachronisms: string[]; fabricated_attributions: string[]; requires_regeneration: boolean };
+export type ValidationResult = { valid: boolean; unsupported_claims: string[]; historical_anachronisms: string[]; fabricated_attributions: string[]; dialogue_violations: string[]; requires_regeneration: boolean };
 export function jsonObject(raw: string): Record<string, unknown> {
   try { const value: unknown = JSON.parse(raw); if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>; } catch {}
   throw new ChatError(502, "Не удалось проверить ответ. Попробуйте ещё раз.");
