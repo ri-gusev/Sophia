@@ -153,3 +153,23 @@ test("safety handler replies are identified as Sophia rather than the historical
   await expect(dialog.getByRole("log").getByText("Sophia", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("log").getByText("Платон · ИИ", { exact: true })).toHaveCount(0);
 });
+
+
+test("composer limits typing and paste to 50 words", async ({ page }) => {
+  await page.goto("/learn");
+  await page.getByRole("button", { name: "Разговор с философом", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
+  const composer = dialog.getByRole("textbox", { name: "Сообщение", exact: true });
+  const fifty = Array(50).fill("слово").join(" ");
+  await composer.fill(fifty);
+  await expect(composer).toHaveValue(fifty);
+  await expect(dialog.getByRole("status")).toContainText("50 / 50 слов");
+  await composer.press("End");
+  await composer.pressSequentially(" ещё");
+  await expect(composer).toHaveValue(fifty + " ");
+  await composer.fill(fifty + " лишнее");
+  await expect(composer).toHaveValue(fifty + " ");
+  await composer.fill("Короткий вопрос");
+  await expect(composer).toHaveValue("Короткий вопрос");
+  await expect(dialog.getByRole("status")).toContainText("2 / 50 слов");
+});

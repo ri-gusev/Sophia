@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CONVERSATION_PHILOSOPHERS, PLATO_CONVERSATION_PROMPTS, type PhilosopherId } from "./philosophers";
 import styles from "./philosopher-conversation.module.css";
 import { usePlatoChat } from "./plato-chat-provider";
-import { CHAT_LIMITS, CHAT_MEMORY_NOTICE } from "./chat-contract";
+import { CHAT_LIMITS, CHAT_MEMORY_NOTICE, countMessageWords } from "./chat-contract";
 
 export function PhilosopherConversation({ variant = "outline" }: { variant?: "default" | "outline" }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -139,13 +139,14 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
               <textarea ref={composer} id={`${titleId}-message`} aria-label="Сообщение" aria-describedby={composerHintId}
                 placeholder={selected.draftAvailable ? "Напишите, что вам интересно…" : "Этот собеседник пока недоступен"}
                 value={selected.draftAvailable ? chat.draft : ""} disabled={!selected.draftAvailable || chat.pending !== null} maxLength={CHAT_LIMITS.messageChars}
-                onChange={event => chat.setDraft(event.target.value)} rows={2}
+                onChange={event => { if (countMessageWords(event.target.value) <= CHAT_LIMITS.messageWords) chat.setDraft(event.target.value); }} rows={2}
                 onKeyDown={event => {
                   if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && selected.draftAvailable) { event.preventDefault(); void chat.send(); }
                 }} />
               {chat.pending !== null && selected.draftAvailable ? <button key="stop" type="button" className={styles.send} aria-label="Остановить ответ" onClick={event => { event.preventDefault(); chat.stop(); }}><Square size={17} aria-hidden="true" /></button> :
-                <button key="send" type="submit" className={styles.send} aria-label="Отправить сообщение" disabled={!selected.draftAvailable || !chat.draft.trim()}><Send size={18} aria-hidden="true" /></button>}
+                <button key="send" type="submit" className={styles.send} aria-label="Отправить сообщение" disabled={!selected.draftAvailable || !chat.draft.trim() || countMessageWords(chat.draft) > CHAT_LIMITS.messageWords}><Send size={18} aria-hidden="true" /></button>}
             </div>
+            {selected.draftAvailable && <p className={styles.composerHint} role="status">{countMessageWords(chat.draft)} / {CHAT_LIMITS.messageWords} слов. Максимум 50 слов в сообщении.</p>}
             {chat.error && selected.draftAvailable && <p className={styles.chatError} role="alert">{chat.error}</p>}
             <p id={composerHintId} className={styles.composerHint}>{selected.draftAvailable ? CHAT_MEMORY_NOTICE : "Этот собеседник пока недоступен. Выберите Платона."}</p>
           </form>

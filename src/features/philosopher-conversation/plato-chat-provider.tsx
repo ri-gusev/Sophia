@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { CHAT_LIMITS, EMPTY_CHAT_MEMORY } from "./chat-contract";
+import { CHAT_LIMITS, EMPTY_CHAT_MEMORY, countMessageWords } from "./chat-contract";
 import { readChatResponse } from "./chat-stream";
 import type { ChatMemory, ChatMessage, CitedSource, ChatReply } from "./chat-contract";
 
@@ -30,7 +30,7 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
 
   async function send() {
     const message = draft.trim();
-    if (!message || message.length > CHAT_LIMITS.messageChars || controller.current) return;
+    if (!message || message.length > CHAT_LIMITS.messageChars || countMessageWords(message) > CHAT_LIMITS.messageWords || controller.current) return;
     const active = new AbortController();
     controller.current = active;
     setPending(message); setDraft(""); setError(null); setStreamed("");

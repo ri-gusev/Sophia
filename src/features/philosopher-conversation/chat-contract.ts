@@ -1,10 +1,15 @@
 import { parseDialogueState, type DialogueState } from "./dialogue-state.ts";
 
 export const CHAT_LIMITS = {
-  messageChars: 2000, assistantChars: 6000, summaryChars: 2000,
+  messageWords: 50, messageChars: 2000, assistantChars: 6000, summaryChars: 2000,
   recentMessages: 12, recentChars: 16000, keepMessages: 4,
   displayedMessages: 40, bodyBytes: 96 * 1024,
 } as const;
+
+/** Words are non-empty sequences separated by whitespace, including newlines. */
+export function countMessageWords(value: string): number {
+  return value.match(/\S+/gu)?.length ?? 0;
+}
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 export type ChatMemory = { summary: string; recent: ChatMessage[]; dialogue?: DialogueState };
@@ -47,7 +52,9 @@ export function parseChatRequest(value: unknown): ChatRequest {
   if (memory.dialogue !== undefined) {
     try { dialogue = parseDialogueState(memory.dialogue); } catch { throw new ChatError(400, "Некорректное состояние беседы. Начните новый разговор."); }
   }
-  return { philosopherId: "plato", message: text(body.message, CHAT_LIMITS.messageChars).trim(), memory: { summary, recent, ...(dialogue ? { dialogue } : {}) } };
+  const message = text(body.message, CHAT_LIMITS.messageChars).trim();
+  if (countMessageWords(message) > CHAT_LIMITS.messageWords) throw new ChatError(400, "Сообщение должно содержать не больше 50 слов.");
+  return { philosopherId: "plato", message, memory: { summary, recent, ...(dialogue ? { dialogue } : {}) } };
 }
 
 export function parseChatReply(value: unknown): ChatReply {

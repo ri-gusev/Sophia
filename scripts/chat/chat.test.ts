@@ -17,6 +17,17 @@ test("request validation rejects role injection, oversized memory and other phil
   assert.throws(() => parseChatRequest({ ...input(), memory: { summary: "a".repeat(2001), recent: [] } }));
 });
 
+test("new messages accept 50 words and reject 51 with whitespace variants", () => {
+  const fifty = Array(50).fill("слово").join(" ");
+  assert.equal(parseChatRequest(input(fifty)).message, fifty);
+  assert.equal(parseChatRequest(input("  " + Array(50).fill("слово").join("\n\t") + "  ")).message.split(/\s+/u).length, 50);
+  assert.throws(() => parseChatRequest(input(fifty + " лишнее")), /50 слов/);
+  // Previously accepted history remains readable after introducing the new-message limit.
+  assert.ok(parseChatRequest({ ...input(), memory: { summary: "", recent: [
+    { role: "user", content: fifty + " прежнее" }, { role: "assistant", content: "Ответ" },
+  ] } }));
+});
+
 test("a short exchange returns bounded memory without a summary call and without cross-session state", async () => {
   let calls = 0;
   const dependencies = { generate: async () => { calls++; return "Давай уточним, что ты считаешь добродетелью. [1]"; }, retrieve: () => excerpts };
