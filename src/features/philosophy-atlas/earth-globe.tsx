@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { SRGBColorSpace, TextureLoader, type Texture } from "three";
+import { ACESFilmicToneMapping, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from "three";
 import { AtlasControls } from "./atlas-controls";
-import { earthSurfaceCacheKey, styleEarthSurface } from "./earth-surface-style";
-import { CAMERA_FOV, EARTH_TEXTURE, type AtlasAction, type ZoomLimits } from "./globe-config";
+import { harmonizeEarthPalette, earthPaletteCacheKey } from "./earth-palette";
+import { CAMERA_FOV, EARTH_TEXTURE, EARTH_TEXTURE_8K, type AtlasAction, type ZoomLimits } from "./globe-config";
 
 type Props = {
   action: AtlasAction;
@@ -14,8 +14,10 @@ type Props = {
   onLimitsChange: (limits: ZoomLimits) => void;
 };
 
-function EarthScene({ texture, onReady, onError }: { texture: Texture } & Pick<Props, "onReady" | "onError">) {
-  const { gl } = useThree();
+function EarthSurface({ onReady, onError, onQualityChange }: Pick<Props, "onReady" | "onError"> & { onQualityChange: (high: boolean) => void }) {
+  const { gl, invalidate } = useThree();
+  const [texture, setTexture] = useState<Texture | null>(null);
+
   useEffect(() => {
     const canvas = gl.domElement;
     const lost = (event: Event) => {
@@ -23,53 +25,86 @@ function EarthScene({ texture, onReady, onError }: { texture: Texture } & Pick<P
       onError("webgl");
     };
     canvas.addEventListener("webglcontextlost", lost);
-    onReady();
     return () => canvas.removeEventListener("webglcontextlost", lost);
-  }, [gl, onReady, onError]);
+  }, [gl, onError]);
+
+  useEffect(() => {
+    let active = true;
+    const owned = new Set<Texture>();
+    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const use8k = gl.capabilities.maxTextureSize >= 8192
+      && !matchMedia("(pointer: coarse)").matches && (memory === undefined || memory > 4);
+    onQualityChange(use8k);
+
+    function load(path: string) {
+      const pending = new TextureLoader().load(path, (result) => {
+        if (!active) { result.dispose(); return; }
+        result.colorSpace = SRGBColorSpace;
+        result.wrapS = RepeatWrapping;
+        result.wrapT = ClampToEdgeWrapping;
+        result.generateMipmaps = true;
+        result.minFilter = LinearMipmapLinearFilter;
+        result.magFilter = LinearFilter;
+        result.anisotropy = Math.min(path === EARTH_TEXTURE_8K ? 16 : 4, gl.capabilities.getMaxAnisotropy());
+        try {
+          // Upload here so an 8K allocation failure can use 4K before declaring readiness.
+          gl.initTexture(result);
+          const context = gl.getContext();
+          if (context.isContextLost()) { onError("webgl"); return; }
+          if (context.getError() !== context.NO_ERROR) throw new Error("Texture upload failed");
+          setTexture(result);
+          invalidate();
+        } catch {
+          result.dispose();
+          owned.delete(result);
+          if (path === EARTH_TEXTURE_8K) { onQualityChange(false); load(EARTH_TEXTURE); }
+          else onError("webgl");
+        }
+      }, undefined, () => {
+        pending.dispose();
+        owned.delete(pending);
+        if (!active) return;
+        if (path === EARTH_TEXTURE_8K) { onQualityChange(false); load(EARTH_TEXTURE); }
+        else onError("texture");
+      });
+      owned.add(pending);
+    }
+
+    load(use8k ? EARTH_TEXTURE_8K : EARTH_TEXTURE);
+    return () => { active = false; owned.forEach(value => value.dispose()); owned.clear(); };
+  }, [gl, invalidate, onError, onQualityChange]);
+
+  useEffect(() => { if (texture) onReady(); }, [texture, onReady]);
+
+  if (!texture) return null;
 
   return (
     <>
-      <ambientLight intensity={1.2} />
-      <hemisphereLight args={["#ffffff", "#bcefe0", 1.1]} />
-      <directionalLight position={[-3, 2, 5]} intensity={2.2} />
+      <ambientLight intensity={1.8} />
+      <directionalLight position={[-4, 2.5, 5]} intensity={1.5} />
       <mesh rotation={[0, -Math.PI / 2, 0]}>
-        <sphereGeometry args={[1, 64, 48]} />
-        <meshStandardMaterial map={texture} roughness={1} metalness={0} onBeforeCompile={styleEarthSurface} customProgramCacheKey={earthSurfaceCacheKey} />
+        <sphereGeometry args={[1, 128, 96]} />
+        <meshStandardMaterial map={texture} roughness={1} metalness={0} onBeforeCompile={harmonizeEarthPalette} customProgramCacheKey={earthPaletteCacheKey} />
       </mesh>
     </>
   );
 }
 
 export default function EarthGlobe({ action, onReady, onError, onLimitsChange }: Props) {
-  const [texture, setTexture] = useState<Texture | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    // This component owns the texture, including failed/retried loads; no global loader cache.
-    const loaded = new TextureLoader().load(EARTH_TEXTURE, (result) => {
-      if (!active) { result.dispose(); return; }
-      result.colorSpace = SRGBColorSpace;
-      result.anisotropy = 4;
-      setTexture(result);
-    }, undefined, () => { if (active) onError("texture"); });
-    return () => { active = false; loaded.dispose(); };
-  }, [onError]);
-
-  if (!texture) return null;
-
+  const [highQuality, setHighQuality] = useState(false);
   return (
     <Canvas
       frameloop="demand"
-      dpr={[1, 1.5]}
+      dpr={[1, highQuality ? 2 : 1.5]}
       camera={{ position: [0, 0, 5], fov: CAMERA_FOV, near: 0.01, far: 40 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
-      onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
+      gl={{ antialias: true, alpha: true, powerPreference: "default" }}
+      onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}
       fallback={<p role="alert">Для глобуса нужен браузер с поддержкой WebGL.</p>}
       role="img"
       aria-label="Трёхмерная модель Земли"
       aria-describedby="atlas-help"
     >
-      <EarthScene texture={texture} onReady={onReady} onError={onError} />
+      <EarthSurface onReady={onReady} onError={onError} onQualityChange={setHighQuality} />
       <AtlasControls action={action} onLimitsChange={onLimitsChange} />
     </Canvas>
   );

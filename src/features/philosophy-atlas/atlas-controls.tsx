@@ -16,6 +16,7 @@ export function AtlasControls({ action, onLimitsChange }: Props) {
   const { camera, size, invalidate } = useThree();
   const limits = useRef({ near: false, far: false });
   const consumedSequence = useRef(0);
+  const fitted = useRef(false);
 
   const resetView = useCallback((aspect: number) => {
     const orbit = controls.current;
@@ -36,9 +37,26 @@ export function AtlasControls({ action, onLimitsChange }: Props) {
   }, [camera, invalidate]);
 
   useLayoutEffect(() => {
-    // Refit on orientation/size changes so a narrow screen never clips the initial globe.
-    resetView(size.width / size.height);
-  }, [size.width, size.height, resetView]);
+    if (!fitted.current) {
+      fitted.current = true;
+      resetView(size.width / size.height);
+      return;
+    }
+    const orbit = controls.current;
+    if (orbit) {
+      const position = camera.position.clone();
+      const damping = orbit.enableDamping;
+      orbit.enableDamping = false;
+      orbit.update();
+      orbit.enableDamping = damping;
+      camera.position.copy(position);
+    }
+    // Preserve the chosen direction and zoom unless more distance is needed to fit.
+    const required = initialDistance(size.width / size.height);
+    if (camera.position.length() + 0.000001 < required) camera.position.setLength(required);
+    orbit?.update();
+    invalidate();
+  }, [camera, size.width, size.height, invalidate, resetView]);
 
   useEffect(() => {
     const orbit = controls.current;

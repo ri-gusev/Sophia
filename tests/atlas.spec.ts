@@ -13,7 +13,7 @@ async function stableGlobe(page: Page) {
   const canvas = page.locator("canvas");
   await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => {
     const bounds = element.getBoundingClientRect();
-    const dpr = Math.min(devicePixelRatio, 1.5);
+    const dpr = Math.min(devicePixelRatio, matchMedia("(pointer: coarse)").matches ? 1.5 : 2);
     return Math.abs(element.width - bounds.width * dpr) <= 1 && Math.abs(element.height - bounds.height * dpr) <= 1;
   })).toBe(true);
   let previous: Buffer | undefined;
@@ -22,7 +22,7 @@ async function stableGlobe(page: Page) {
     const stable = previous?.equals(current) ?? false;
     previous = current;
     return stable;
-  }).toBe(true);
+  }, { timeout: 10_000 }).toBe(true); // WebGL screenshots can each take seconds on the test GPU.
   return previous!;
 }
 
@@ -66,10 +66,10 @@ test("real globe renders and mouse rotation and bounded zoom change its image", 
 });
 
 test("texture failure is explained and can be retried", async ({ page }) => {
-  await page.route("**/textures/earth/earth-day.jpg", (route) => route.abort());
+  await page.route("**/textures/earth/earth-day*.jpg", (route) => route.abort());
   await page.goto("/atlas");
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Не удалось загрузить глобус");
-  await page.unroute("**/textures/earth/earth-day.jpg");
+  await page.unroute("**/textures/earth/earth-day*.jpg");
   await page.getByRole("button", { name: "Попробовать снова" }).click();
   await expect(page.getByRole("status")).toHaveText("Глобус готов", { timeout: 30_000 });
 });
@@ -98,7 +98,7 @@ test("atlas fits narrow and landscape screens and has no detected accessibility 
     // R3F resizes its drawing buffer asynchronously after the browser viewport changes.
     await expect.poll(() => page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
       const bounds = canvas.getBoundingClientRect();
-      const dpr = Math.min(devicePixelRatio, 1.5);
+      const dpr = Math.min(devicePixelRatio, matchMedia("(pointer: coarse)").matches ? 1.5 : 2);
       return Math.abs(canvas.width - bounds.width * dpr) <= 1 && Math.abs(canvas.height - bounds.height * dpr) <= 1;
     })).toBe(true);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -135,7 +135,7 @@ test("reset clears rotation inertia", async ({ page }) => {
   await expect.poll(async () => (await canvas.screenshot()).equals(initial)).toBe(true);
 });
 
-test("resize fits without replaying the previous zoom", async ({ page }) => {
+test("resize increases distance only when necessary and reset restores the fitted view", async ({ page }) => {
   await page.setViewportSize({ width: 667, height: 375 });
   const canvas = await loadedGlobe(page);
   const initial = await stableGlobe(page);
@@ -144,7 +144,91 @@ test("resize fits without replaying the previous zoom", async ({ page }) => {
   await page.getByRole("button", { name: "Приблизить", exact: true }).click();
   await page.setViewportSize({ width: 667, height: 375 });
   await stableGlobe(page);
+  expect((await canvas.screenshot()).equals(initial)).toBe(false);
+  await page.getByRole("button", { name: "Исходный вид" }).click();
+  // Controls overlay the transparent canvas; keep hover/focus out of the image comparison.
+  await page.mouse.move(0, 0);
+  await page.getByRole("region", { name: "Интерактивный глобус", exact: true }).focus();
   await expect.poll(async () => (await canvas.screenshot()).equals(initial)).toBe(true);
+});
+
+test("resize preserves the chosen direction and an already sufficient distance", async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 850 });
+  const canvas = await loadedGlobe(page);
+  const initial = await stableGlobe(page);
+  const scene = page.getByRole("region", { name: "Интерактивный глобус", exact: true });
+  await scene.focus();
+  for (let index = 0; index < 7; index++) await page.keyboard.press("ArrowRight");
+  const rotated = await stableGlobe(page);
+  expect(rotated.equals(initial)).toBe(false);
+  await page.setViewportSize({ width: 1400, height: 850 });
+  await stableGlobe(page);
+  await page.setViewportSize({ width: 1100, height: 850 });
+  await stableGlobe(page);
+  await expect.poll(async () => (await canvas.screenshot()).equals(rotated)).toBe(true);
+});
+
+test("desktop loads the detailed map and falls back when it cannot be fetched", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "8K targets desktop GPUs");
+  const textures: string[] = [];
+  page.on("request", request => { if (request.url().includes("/textures/earth/")) textures.push(request.url()); });
+  await page.route("**/textures/earth/earth-day-8k.jpg", route => route.abort());
+  await loadedGlobe(page);
+  expect(textures.some(url => url.endsWith("earth-day-8k.jpg"))).toBe(true);
+  expect(textures.some(url => url.endsWith("earth-day.jpg"))).toBe(true);
+  await page.unroute("**/textures/earth/earth-day-8k.jpg");
+  textures.length = 0;
+  await loadedGlobe(page);
+  expect(textures.some(url => url.endsWith("earth-day-8k.jpg"))).toBe(true);
+  expect(textures.some(url => url.endsWith("earth-day.jpg"))).toBe(false);
+});
+
+test("limited texture capability uses only the 4K fallback", async ({ page }) => {
+  await page.addInitScript(() => {
+    const getParameter = WebGL2RenderingContext.prototype.getParameter;
+    WebGL2RenderingContext.prototype.getParameter = function (parameter: number) {
+      if (parameter === this.MAX_TEXTURE_SIZE) return 4096;
+      return getParameter.call(this, parameter);
+    };
+  });
+  const textures: string[] = [];
+  page.on("request", request => { if (request.url().includes("/textures/earth/")) textures.push(request.url()); });
+  await loadedGlobe(page);
+  expect(textures.some(url => url.endsWith("earth-day.jpg"))).toBe(true);
+  expect(textures.some(url => url.endsWith("earth-day-8k.jpg"))).toBe(false);
+});
+
+test("desktop HiDPI remains at DPR 2 after readiness, control and resize", async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Desktop HiDPI profile");
+  const context = await browser.newContext({ baseURL, viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  try {
+    const page = await context.newPage();
+    const canvas = await loadedGlobe(page);
+    const ratio = () => canvas.evaluate((element: HTMLCanvasElement) => element.width / element.getBoundingClientRect().width);
+    await expect.poll(ratio).toBeCloseTo(2, 2);
+    await page.getByRole("button", { name: "Приблизить", exact: true }).click();
+    await page.setViewportSize({ width: 1280, height: 850 });
+    await expect.poll(ratio).toBeCloseTo(2, 2);
+  } finally { await context.close(); }
+});
+
+test("idle globe stops scheduling frames and reports no WebGL errors", async ({ page }) => {
+  await page.addInitScript(() => {
+    let frames = 0;
+    const scheduleFrame = requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = callback => scheduleFrame(time => { frames++; callback(time); });
+    Object.defineProperty(window, "__atlasFrames", { get: () => frames });
+  });
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  await loadedGlobe(page);
+  await stableGlobe(page);
+  const frames = () => page.evaluate(() => (window as unknown as { __atlasFrames: number }).__atlasFrames);
+  const before = await frames();
+  await page.waitForTimeout(400);
+  expect(await frames() - before).toBeLessThanOrEqual(1);
+  expect(errors).toEqual([]);
 });
 
 test("touch rotation and pinch zoom stay inside the globe area", async ({ page, context }, testInfo) => {

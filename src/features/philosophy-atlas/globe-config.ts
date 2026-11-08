@@ -1,4 +1,5 @@
 export const EARTH_TEXTURE = "/textures/earth/earth-day.jpg";
+export const EARTH_TEXTURE_8K = "/textures/earth/earth-day-8k.jpg";
 export const MIN_DISTANCE = 1.35;
 export const MAX_DISTANCE = 12;
 export const CAMERA_FOV = 40;
