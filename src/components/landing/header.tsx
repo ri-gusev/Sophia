@@ -22,7 +22,7 @@ export function Header() {
         <nav id="main-navigation" aria-label="Основная навигация" className={`main-nav ${isOpen ? "is-open" : ""}`}>
           <Link href="/#how-it-works" onClick={closeMenu}>Как это работает</Link>
           <Link href="/learn" onClick={closeMenu}>Обучение</Link>
-          <span className="login-wrap"><button disabled type="button" aria-describedby="atlas-note">Атлас</button><span id="atlas-note">Скоро</span></span>
+          <Link href="/atlas" onClick={closeMenu}>Атлас</Link>
           <span className="login-wrap"><button disabled type="button" aria-describedby="login-note">Войти</button><span id="login-note">Скоро</span></span>
           <Button asChild size="sm"><Link href="/learn" onClick={closeMenu}>Начать бесплатно <ArrowUpRight size={16} aria-hidden="true" /></Link></Button>
         </nav>

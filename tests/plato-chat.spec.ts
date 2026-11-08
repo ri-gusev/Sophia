@@ -97,7 +97,7 @@ test("pending replies can be cancelled without recording a completed turn", asyn
   const composer = dialog.getByRole("textbox", { name: "Сообщение", exact: true });
   await composer.fill("Остановленный вопрос");
   await dialog.getByRole("button", { name: "Отправить сообщение" }).click();
-  await expect(dialog.getByRole("status")).toContainText("размышляет");
+  await expect(dialog.getByRole("status").filter({ hasText: "размышляет" })).toBeVisible();
   await expect(composer).toBeDisabled();
   await dialog.getByRole("button", { name: "Остановить ответ" }).click();
   await expect(dialog.getByRole("alert")).toContainText("остановлена");

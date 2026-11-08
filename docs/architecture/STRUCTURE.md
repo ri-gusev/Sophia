@@ -17,6 +17,9 @@
 | `src/app/` | Общий корневой layout, CSS-токены и favicon |
 | `src/app/(marketing)/` | Layout с полной шапкой и композиция трёх секций маршрута `/` |
 | `src/app/(learning)/` | Независимый layout с компактной навигацией и серверная композиция карты `learn/page.tsx` для `/learn` |
+| `src/app/atlas/` | Серверная композиция `/atlas` и метаданные |
+| `src/features/philosophy-atlas/` | `atlas-view.tsx`: оболочка/ошибки/клавиатура; `earth-globe.tsx`: динамическая клиентская сцена и текстура; `atlas-controls.tsx`: OrbitControls; `globe-config.ts`: геометрия/контракты; CSS Module: UI |
+| `public/textures/earth/` | Локальная `earth-day.jpg` NASA Blue Marble, README с источником, обработкой и условиями использования |
 | `src/components/landing/` | Hero, превью маршрута, выбор направления, мобильная шапка и Motion-обёртка |
 | `src/components/ui/` | Общая кнопка на основе композиции shadcn/ui |
 | `src/content/` | Данные превью маршрута и описание направления |

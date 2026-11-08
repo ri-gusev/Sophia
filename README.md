@@ -6,7 +6,9 @@
 
 ## Стек и окружение
 
-Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite. Требуется Node.js >=24.0.0 и npm; проверено на Node.js 24.22.1 и npm 11.19.1. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
+Атлас доступен на `/atlas` через существующий пункт верхнего меню. На первом этапе это только интерактивная Земля: вращение, масштаб и исходный вид, без географических подписей, маркеров и учебного контента. Поддерживаются мышь, сенсорные жесты и клавиатура (стрелки, `+`/`-`, `Home` после фокуса на области глобуса). UI сохраняет оформление Sophia, тёмной остаётся область сцены. Текстура NASA поставляется локально; [источник и условия использования](public/textures/earth/README.md).
+
+Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite; Three.js, React Three Fiber и Drei для атласа. Требуется Node.js >=24.0.0 и npm; проверено на Node.js 24.22.1 и npm 11.19.1. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
 
 ## Установка и запуск
 

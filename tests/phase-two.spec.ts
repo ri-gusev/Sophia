@@ -85,9 +85,8 @@ test("how-it-works anchors work from both routes and mobile menu closes", async 
   }
   await page.goto("/");
   await openNavigation(page);
-  await expect(page.getByRole("button", { name: "Атлас" })).toBeDisabled();
+  await expect(page.getByRole("link", { name: "Атлас", exact: true })).toHaveAttribute("href", "/atlas");
   await expect(page.getByRole("button", { name: "Войти" })).toBeDisabled();
-  await expect(page.getByRole("link", { name: "Атлас", exact: true })).toHaveCount(0);
 });
 
 test("both routes fit narrow and wide screens with reduced motion", async ({ page }) => {
