@@ -1,24 +1,24 @@
 .page { min-height: 100svh; display: flex; flex-direction: column; background: radial-gradient(ellipse at 15% 25%, #e6efe2, transparent 55%), radial-gradient(ellipse at 90% 80%, #ececf5, transparent 50%), #f8faf7; }
 .header { min-height: 89px; }
-.main { width: min(1180px, calc(100% - 96px)); margin: 0 auto; flex: 1; display: flex; flex-direction: column; padding: 24px 0 14px; }
-.intro { margin-bottom: 18px; }
+.main { width: 100%; flex: 1; display: flex; flex-direction: column; padding: 24px 0 14px; }
+.intro { width: min(1180px, calc(100% - 96px)); margin: 0 auto 18px; }
 .intro h1 { font-size: clamp(24px, 3vw, 34px); font-weight: 650; letter-spacing: -.045em; margin-top: 6px; }
 .intro > p { font-size: 12px; color: var(--muted); margin-top: 5px; }
-.scene { position: relative; min-height: 260px; height: calc(100svh - 275px); flex: 1; overflow: hidden; border: 8px solid rgba(255,255,255,.9); border-radius: var(--radius); background: #152326; box-shadow: var(--shadow); isolation: isolate; }
-.canvas { position: absolute; inset: 0 0 70px; touch-action: none; }
+.scene { position: relative; min-height: 260px; height: calc(100svh - 275px); flex: 1; isolation: isolate; }
+.canvas { position: absolute; inset: 0; touch-action: none; }
 .canvas canvas { touch-action: none; display: block; }
-.message { position: absolute; inset: 0 0 70px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; padding: 24px; color: var(--snow); text-align: center; pointer-events: none; }
+.message { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; padding: 24px; color: var(--ink); text-align: center; pointer-events: none; }
 .message p { font-size: 13px; line-height: 1.8; }
 .error { max-width: 370px; display: grid; justify-items: center; gap: 18px; pointer-events: auto; }
-.sceneFooter { position: absolute; inset: auto 0 0; min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; border-top: 1px solid rgba(217,221,248,.12); background: #1b2c2f; }
-.help { color: #c4d7d0; font-size: 11px; line-height: 1.7; }
+.sceneFooter { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: min(1180px, calc(100% - 96px)); min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; pointer-events: none; }
+.help { color: var(--muted); font-size: 11px; line-height: 1.7; padding: 8px 12px; border-radius: 16px; background: rgba(248,250,247,.9); }
 .touchHelp { display: none; }
-.toolbar { display: flex; flex-shrink: 0; gap: 5px; padding: 3px; background: #f0f5f0; border: 1px solid #fff; border-radius: 100px; }
+.toolbar { display: flex; flex-shrink: 0; gap: 5px; padding: 3px; background: #f0f5f0; border: 1px solid #fff; border-radius: 100px; box-shadow: var(--shadow); pointer-events: auto; }
 .toolbar button { width: 44px; height: 44px; min-height: 44px; padding: 0; }
 .toolbar button:disabled { opacity: .4; }
-.credit { font-size: 10px; line-height: 1.6; color: var(--muted); margin-top: 10px; text-align: right; }
+.credit { width: min(1180px, calc(100% - 96px)); margin: 10px auto 0; font-size: 10px; line-height: 1.6; color: var(--muted); text-align: right; }
 .credit a { text-decoration: underline; text-underline-offset: 3px; }
-.spinner { width: 24px; height: 24px; border: 2px solid #42615a; border-top-color: var(--mint); border-radius: 50%; animation: turn 1.1s linear infinite; }
+.spinner { width: 24px; height: 24px; border: 2px solid var(--mint); border-top-color: var(--green); border-radius: 50%; animation: turn 1.1s linear infinite; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @keyframes turn { to { transform: rotate(360deg); } }
 @media (pointer: coarse) { .desktopHelp { display: none; } .touchHelp { display: inline; } }
@@ -26,13 +26,13 @@
   .header { min-height: 76px; gap: 12px; }
   .header > a:first-child { font-size: 28px; }
   .header > a:last-child { gap: 7px; font-size: 10px; padding-inline: 12px; }
-  .main { width: calc(100% - 32px); padding-top: 18px; }
-  .intro { margin-bottom: 12px; }
-  .scene { height: calc(100svh - 250px); min-height: 280px; border-width: 5px; border-radius: 20px; }
-  .sceneFooter { padding: 8px 10px; gap: 8px; }
+  .main { padding-top: 18px; }
+  .intro { width: calc(100% - 32px); margin-bottom: 12px; }
+  .scene { height: calc(100svh - 250px); min-height: 280px; }
+  .sceneFooter { width: calc(100% - 32px); padding: 8px 0; gap: 8px; }
   .help { max-width: 135px; font-size: 10px; }
   .toolbar { gap: 0; padding: 2px; }
-  .credit { font-size: 9px; }
+  .credit { width: calc(100% - 32px); font-size: 9px; }
 }
 @media (max-height: 500px) and (min-width: 500px) {
   .header { min-height: 60px; }
@@ -41,7 +41,6 @@
   .intro h1 { font-size: 22px; margin-top: 0; }
   .intro > p, .intro > span { display: none; }
   .scene { min-height: 220px; height: calc(100svh - 130px); }
-  .canvas, .message { bottom: 58px; }
   .sceneFooter { min-height: 58px; padding-block: 4px; }
   .credit { margin-top: 5px; }
 }

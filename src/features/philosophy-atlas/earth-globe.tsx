@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { SRGBColorSpace, TextureLoader, type Texture } from "three";
 import { AtlasControls } from "./atlas-controls";
+import { earthSurfaceCacheKey, styleEarthSurface } from "./earth-surface-style";
 import { CAMERA_FOV, EARTH_TEXTURE, type AtlasAction, type ZoomLimits } from "./globe-config";
 
 type Props = {
@@ -28,11 +29,12 @@ function EarthScene({ texture, onReady, onError }: { texture: Texture } & Pick<P
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[-3, 2, 5]} intensity={2.4} />
+      <ambientLight intensity={1.2} />
+      <hemisphereLight args={["#ffffff", "#bcefe0", 1.1]} />
+      <directionalLight position={[-3, 2, 5]} intensity={2.2} />
       <mesh rotation={[0, -Math.PI / 2, 0]}>
         <sphereGeometry args={[1, 64, 48]} />
-        <meshStandardMaterial map={texture} roughness={1} metalness={0} />
+        <meshStandardMaterial map={texture} roughness={1} metalness={0} onBeforeCompile={styleEarthSurface} customProgramCacheKey={earthSurfaceCacheKey} />
       </mesh>
     </>
   );
@@ -60,8 +62,8 @@ export default function EarthGlobe({ action, onReady, onError, onLimitsChange }:
       frameloop="demand"
       dpr={[1, 1.5]}
       camera={{ position: [0, 0, 5], fov: CAMERA_FOV, near: 0.01, far: 40 }}
-      gl={{ antialias: true, alpha: false, powerPreference: "low-power" }}
-      onCreated={({ gl }) => gl.setClearColor("#152326")}
+      gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
+      onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
       fallback={<p role="alert">Для глобуса нужен браузер с поддержкой WebGL.</p>}
       role="img"
       aria-label="Трёхмерная модель Земли"
