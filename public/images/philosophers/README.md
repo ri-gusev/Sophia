@@ -10,7 +10,7 @@
 
 ## Atlas, 2026-11-13
 
-Additional local Wikimedia Commons thumbnails, up to 500px wide; downloaded without pixel edits. CSS crops the displayed avatars. Images are ancient sculptures/mosaic or later artistic representations, never verified lifetime portraits. Some traditional identifications are uncertain (notably Democritus and Plotinus); the atlas cards state this. Attribution and license links are also shown in each card. CC BY-SA images retain their original license; no image adaptations were exported.
+Additional local Wikimedia Commons thumbnails, up to 500px wide; downloaded without pixel edits. CSS crops the displayed avatars. Images are ancient sculptures/mosaic or later artistic representations, never verified lifetime portraits. Some traditional identifications are uncertain (notably Heraclitus, Democritus and Plotinus). The atlas footer links to this shared attribution and license registry; these details are not repeated in each philosopher card. CC BY-SA images retain their original license; no image adaptations were exported.
 
 Additional photographic credits supplied by Commons: Pythagoras — Szilas (2013); Socrates — Eric Gaba / Sting (2005); Epicurus — Marie-Lan Nguyen (2011). Heraclitus is a bust of an unknown philosopher, only tentatively identified as Heraclitus; that identification is not affirmed by the museum. The ancient sculptor and the photographer are distinct credits. The public-domain labels below are those provided by each Commons file page.
 

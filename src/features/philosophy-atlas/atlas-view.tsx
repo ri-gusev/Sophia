@@ -10,6 +10,7 @@ import { INITIAL_YEAR, isAliveAt } from "./historical-time";
 import { PHILOSOPHERS } from "./philosophers-data";
 import { Timeline } from "./timeline";
 import { PhilosopherCard } from "./philosopher-card";
+import { PageScrollEdges } from "./page-scroll-edges";
 import styles from "./philosophy-atlas.module.css";
 
 const EarthGlobe = dynamic(() => import("./earth-globe"), { ssr: false });
@@ -79,6 +80,7 @@ export function AtlasView() {
               </SceneBoundary>
             )}
           </div>
+          <PageScrollEdges />
           {status === "loading" && <div className={styles.message}><span className={styles.spinner} aria-hidden="true" /><p>Загружаем Землю…</p></div>}
           {hasError && (
             <div className={styles.message}>
@@ -101,7 +103,7 @@ export function AtlasView() {
         {!hasError && selected.length > 0 && <PhilosopherCard philosophers={selected} onChoose={id => setSelection([id])} onClose={closeCard} />}
         </div>
         <Timeline year={year} count={philosophers.length} onYearChange={nextYear => { setYear(nextYear); setSelection(current => current.filter(id => PHILOSOPHERS.some(person => person.id === id && isAliveAt(person, nextYear)))); }} />
-        <p className={styles.credit}>Изображение Земли: <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/" target="_blank" rel="noreferrer">NASA Earth Observatory</a></p>
+        <p className={styles.credit}>Изображение Земли: <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/" target="_blank" rel="noreferrer">NASA Earth Observatory</a> · Портреты: <a href="/images/philosophers/README.md" target="_blank" rel="noreferrer">источники и лицензии</a></p>
       </main>
     </div>
   );

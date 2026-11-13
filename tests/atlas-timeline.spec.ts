@@ -6,7 +6,7 @@ async function surfaceDetail(page: import("@playwright/test").Page) {
   return page.screenshot({ clip: { x: box.x + box.width * 0.4, y: box.y + box.height * 0.55, width: box.width * 0.2, height: box.height * 0.2 } });
 }
 
-test("timeline changes historical years without replacing the globe and opens philosopher groups", async ({ page }) => {
+test("timeline changes historical years without replacing the globe and opens philosopher groups", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/atlas");
   await expect(page.getByRole("status")).toHaveText("Глобус готов", { timeout: 30_000 });
@@ -22,11 +22,13 @@ test("timeline changes historical years without replacing the globe and opens ph
   const group = page.getByRole("button", { name: /Философы:.*Платон/ }).first();
   await expect(group).toBeVisible();
   await group.click();
-  await expect.poll(async () => (await surfaceDetail(page)).equals(initial), { timeout: 10_000 }).toBe(true);
   await page.getByRole("button", { name: "Платон", exact: true }).click();
   await expect(page.getByRole("complementary", { name: "Карточка философа" })).toContainText("Платон");
+  await page.screenshot({ path: testInfo.outputPath("centered-card.png") });
   await page.getByRole("button", { name: "Закрыть карточку" }).click();
   await expect(page.getByRole("complementary", { name: "Карточка философа" })).toHaveCount(0);
+  // The centered card intentionally covers this surface patch; compare after closing.
+  await expect.poll(async () => (await surfaceDetail(page)).equals(initial), { timeout: 10_000 }).toBe(true);
   await timeline.fill("-1");
   await timeline.focus();
   await page.keyboard.press("ArrowRight");
@@ -81,7 +83,7 @@ test("mouse scrubs the timeline, life boundaries update and every grouped philos
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2, { steps: 15 });
   await page.mouse.up();
   expect(Number(await timeline.inputValue())).toBeGreaterThan(0);
-  const socrates = page.locator('[data-marker-ids*="socrates"]');
+  const socrates = page.locator('[data-marker-ids*="socrates"]:not(:disabled)');
   await timeline.fill("-470");
   await expect(socrates).toHaveCount(0);
   await timeline.fill("-469");

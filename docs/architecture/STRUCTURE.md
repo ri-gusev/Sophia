@@ -18,7 +18,7 @@
 | `src/app/(marketing)/` | Layout с полной шапкой и композиция трёх секций маршрута `/` |
 | `src/app/(learning)/` | Независимый layout с компактной навигацией и серверная композиция карты `learn/page.tsx` для `/learn` |
 | `src/app/atlas/` | Серверная композиция `/atlas` и метаданные |
-| `src/features/philosophy-atlas/` | `atlas-view.tsx`: оболочка/год/выбор/ошибки; `earth-globe.tsx`: Canvas и текстура; `atlas-controls.tsx`: OrbitControls; `earth-palette.ts`: палитра; `historical-time.ts`, `geo-utils.ts`, `marker-groups.ts`: чистая логика; `philosophers-data.ts`/`portrait-credits.ts`: каталог и права; `timeline.tsx`, `philosopher-markers.tsx`, `philosopher-card.tsx`, `philosopher-portrait.tsx`: UI с CSS Modules |
+| `src/features/philosophy-atlas/` | `atlas-view.tsx`: оболочка/год/выбор/ошибки; `earth-globe.tsx`: Canvas и текстура; `atlas-controls.tsx`: OrbitControls; `page-scroll-edges.tsx`: боковые зоны прокрутки документа; `earth-palette.ts`: палитра; `historical-time.ts`, `geo-utils.ts`, `marker-groups.ts`: чистая логика; `philosophers-data.ts`/`portrait-credits.ts`: каталог и права; `timeline.tsx`, `philosopher-markers.tsx`, `philosopher-card.tsx`, `philosopher-portrait.tsx`: UI с CSS Modules |
 | `public/images/philosophers/` | 15 локальных исторических изображений; README источников и лицензий; три исходных ресурса разговора переиспользованы |
 | `public/textures/earth/` | Локальная `earth-day.jpg` NASA Blue Marble, README с источником, обработкой и условиями использования |
 | `src/components/landing/` | Hero, превью маршрута, выбор направления, мобильная шапка и Motion-обёртка |

@@ -256,3 +256,62 @@ test("touch rotation and pinch zoom stay inside the globe area", async ({ page, 
   await expect.poll(async () => (await canvas.screenshot()).equals(rotated)).toBe(false);
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
+
+test("side margins aligned with the timeline scroll the page without moving Earth", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Mouse wheel and drag are desktop interactions");
+  await page.setViewportSize({ width: 1440, height: 720 });
+  const canvas = await loadedGlobe(page);
+  const initial = await stableGlobe(page);
+  const timeline = (await page.getByRole("region", { name: "Историческая шкала", exact: true }).boundingBox())!;
+  const scene = (await canvas.boundingBox())!;
+  const left = page.getByTestId("atlas-page-scroll-left");
+  const right = page.getByTestId("atlas-page-scroll-right");
+  await expect(left).toBeVisible();
+  await expect(right).toBeVisible();
+  expect((await left.boundingBox())!.width).toBeCloseTo(timeline.x, 0);
+  expect((await right.boundingBox())!.x).toBeCloseTo(timeline.x + timeline.width, 0);
+  for (const zone of [left, right]) {
+    const box = (await zone.boundingBox())!;
+    const x = box.x + box.width / 2;
+    await page.mouse.move(x, scene.y + 80);
+    await page.mouse.wheel(0, 260);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(20);
+    await page.mouse.wheel(0, -1000);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await page.mouse.move(x, scene.y + 150);
+    await page.mouse.down();
+    await page.mouse.move(x, scene.y + 50, { steps: 10 });
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(20);
+    await page.mouse.wheel(0, -1000);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+  }
+  await page.mouse.move(0, 0);
+  await expect.poll(async () => (await canvas.screenshot()).equals(initial), { timeout: 10_000 }).toBe(true);
+});
+
+test("touch swipes at both side margins scroll the page without rotating Earth", async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Native touch scrolling is checked in the mobile profile");
+  await page.setViewportSize({ width: 390, height: 700 });
+  const canvas = await loadedGlobe(page);
+  const initial = await stableGlobe(page);
+  const session = await context.newCDPSession(page);
+  for (const side of ["left", "right"]) {
+    const zone = page.getByTestId(`atlas-page-scroll-${side}`);
+    await expect(zone).toBeVisible();
+    const box = (await zone.boundingBox())!;
+    const x = box.x + box.width / 2, y = box.y + 180;
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y, id: 1 }] });
+    for (let step = 1; step <= 4; step++) {
+      await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y - step * 25, id: 1 }] });
+      await page.waitForTimeout(70);
+    }
+    // Stop the finger before release so momentum does not race the next gesture.
+    await page.waitForTimeout(150);
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(20);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+  }
+  await expect.poll(async () => (await canvas.screenshot()).equals(initial), { timeout: 10_000 }).toBe(true);
+});
