@@ -1,5 +1,5 @@
 export const FIRST_YEAR = -650;
-export const LAST_YEAR = 270;
+export const LAST_YEAR = 2026;
 export const INITIAL_YEAR = -400;
 
 export function toAxisYear(year: number): number {
@@ -17,9 +17,26 @@ export function formatHistoricalYear(year: number): string {
   return `${Math.abs(year)} г. ${year < 0 ? "до н. э." : "н. э."}`;
 }
 
-export function isAliveAt(life: { birthYear: number; deathYear: number }, year: number): boolean {
+export function isAliveAt(life: { birthYear: number; deathYear: number | null }, year: number): boolean {
   toAxisYear(year);
-  return life.birthYear <= year && year <= life.deathYear;
+  return FIRST_YEAR <= year && year <= LAST_YEAR && life.birthYear <= year && year <= (life.deathYear ?? LAST_YEAR);
+}
+
+export type HistoricalEra = "bce" | "ce";
+
+export function parseHistoricalYear(text: string, era: HistoricalEra): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const number = Number(trimmed);
+  if (!Number.isSafeInteger(number) || number < 1) return null;
+  const year = era === "bce" ? -number : number;
+  return year < FIRST_YEAR || year > LAST_YEAR ? null : year;
+}
+
+export function formatLifeDates(life: { birthYear: number; deathYear: number | null; approximateBirth: boolean; approximateDeath: boolean }): string {
+  const birth = `${life.approximateBirth ? "Ок. " : ""}${formatHistoricalYear(life.birthYear)}`;
+  const death = life.deathYear === null ? "настоящее время" : `${life.approximateDeath ? "ок. " : ""}${formatHistoricalYear(life.deathYear)}`;
+  return `${birth} — ${death}`;
 }
 
 export function philosopherCountLabel(count: number): string {

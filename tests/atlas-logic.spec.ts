@@ -46,19 +46,22 @@ test("nearby screen points group transitively without moving geographical anchor
   expect(groupProjectedMarkers(points, 10)).toHaveLength(4);
 });
 
-test("all fifteen catalogue records have valid dated lives, local portraits and attribution", () => {
-  expect(PHILOSOPHERS).toHaveLength(15);
-  expect(new Set(PHILOSOPHERS.map(person => person.id)).size).toBe(15);
+test("all catalogue records have valid lives, sourced locations and licensed portraits or initials", () => {
+  expect(PHILOSOPHERS).toHaveLength(89);
+  expect(new Set(PHILOSOPHERS.map(person => person.id)).size).toBe(89);
   for (const person of PHILOSOPHERS) {
     expect(person.birthYear).not.toBe(0);
-    expect(person.deathYear).toBeGreaterThan(person.birthYear);
+    if (person.deathYear !== null) expect(person.deathYear).toBeGreaterThan(person.birthYear);
     expect(latLonToVector3(person.latitude, person.longitude).length()).toBeCloseTo(1.015);
-    expect(existsSync(path.join(process.cwd(), "public", person.portrait))).toBe(true);
-    expect(person.credit.source).toMatch(/^https:/);
-    expect(person.credit.license).toMatch(/CC BY|Public domain/);
+    if (person.portrait) {
+      expect(existsSync(path.join(process.cwd(), "public", person.portrait))).toBe(true);
+      expect(person.credit?.source).toMatch(/^https:/);
+      expect(person.credit?.license).toMatch(/CC BY|CC0|Public domain/);
+    } else expect(person.credit).toBeNull();
+    expect(["birth", "activity", "other"]).toContain(person.locationType);
     expect(person.source).toMatch(/^https:/);
     expect(isAliveAt(person, person.birthYear)).toBe(true);
-    expect(isAliveAt(person, person.deathYear)).toBe(true);
+    expect(isAliveAt(person, person.deathYear ?? 2026)).toBe(true);
   }
   expect(PHILOSOPHERS.filter(person => isAliveAt(person, -600)).map(person => person.id)).toEqual(["thales"]);
   expect(PHILOSOPHERS.filter(person => isAliveAt(person, 100)).map(person => person.id)).toEqual(["epictetus"]);

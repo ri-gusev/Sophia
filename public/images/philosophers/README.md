@@ -28,3 +28,6 @@ Additional photographic credits supplied by Commons: Pythagoras — Szilas (2013
 | `epictetus.jpg` | [Epicteti_Enchiridion_Latinis_versibus_adumbratum_(Oxford_1715)_frontispiece_(cropped).jpg](https://commons.wikimedia.org/wiki/File:Epicteti_Enchiridion_Latinis_versibus_adumbratum_(Oxford_1715)_frontispiece_(cropped).jpg) | William Sonmans / Michael Burghers | [Public domain](https://creativecommons.org/publicdomain/mark/1.0/) |
 | `plotinus.jpg` | [Plotinos.jpg](https://commons.wikimedia.org/wiki/File:Plotinos.jpg) | AnonymousUnknown author | [Public domain](https://creativecommons.org/publicdomain/mark/1.0/) |
 | `thales.jpg` | [Thales by Luca Giordano.jpg](https://commons.wikimedia.org/wiki/File:Thales_by_Luca_Giordano.jpg) | Luca Giordano | [Public domain](https://creativecommons.org/publicdomain/mark/1.0/) |
+## Дополнение: история до современности
+
+Единый каталог содержит 80 философов. Таблица выше сохраняет атрибуцию прежних 15 изображений; **63 новых портрета, авторство, лицензии и характер изображения** перечислены в [MODERN_SOURCES.md](MODERN_SOURCES.md). Для Прокла и Кваси Виреду используются инициалы. При ошибке загрузки любого портрета также показываются инициалы. Кадрирование выполняется в интерфейсе, исходные файлы не ретушировались.

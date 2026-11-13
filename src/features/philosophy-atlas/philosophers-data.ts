@@ -1,12 +1,9 @@
-import { PORTRAIT_CREDITS, type PortraitCredit } from "./portrait-credits";
-
-export type AtlasPhilosopher = {
-  id: string; name: string; birthYear: number; deathYear: number;
-  approximateBirth: boolean; approximateDeath: boolean;
-  latitude: number; longitude: number; place: string; approximateLocation: true;
-  portrait: string; portraitPosition: string; portraitScale: number; portraitNote: string;
-  description: string; school: string; source: string; credit: PortraitCredit;
-};
+import { PORTRAIT_CREDITS } from "./portrait-credits";
+import type { AtlasPhilosopher } from "./philosopher-types";
+import { MODERN_BIOGRAPHIES } from "./philosophers-modern-data";
+import { MODERN_PORTRAITS } from "./modern-portrait-assets";
+import { EARLY_MEDIEVAL_BIOGRAPHIES } from "./philosophers-early-medieval-data";
+export type { AtlasPhilosopher } from "./philosopher-types";
 
 type Entry = [id: string, name: string, birth: number, death: number, place: string, latitude: number, longitude: number, school: string, description: string, source: string];
 const entries: readonly Entry[] = [
@@ -36,14 +33,22 @@ const portraitNotes: Record<string, string> = {
   diogenes: "Античное мозаичное изображение; не свидетельство точной внешности.",
 };
 
-export const PHILOSOPHERS: readonly AtlasPhilosopher[] = entries.map(([id, name, birthYear, deathYear, place, latitude, longitude, school, description, source]) => ({
+const legacyPhilosophers: readonly AtlasPhilosopher[] = entries.map(([id, name, birthYear, deathYear, place, latitude, longitude, school, description, source]) => ({
   id, name, birthYear, deathYear, place, latitude, longitude, school, description, source,
   approximateBirth: !["aristotle", "epicurus", "marcus-aurelius"].includes(id),
   approximateDeath: !["socrates", "aristotle", "epicurus", "seneca", "marcus-aurelius", "plotinus"].includes(id),
   approximateLocation: true,
+  locationType: "activity",
+  verifiedAt: "2026-11-13",
   portrait: `/images/philosophers/${id}.${id === "plato" ? "png" : "jpg"}`,
   portraitPosition: id === "epictetus" ? "65% 22%" : id === "thales" ? "52% 18%" : "50% 30%",
   portraitScale: id === "thales" ? 2.6 : id === "epictetus" ? 2 : 1,
   portraitNote: portraitNotes[id] ?? "Скульптурное изображение в античной традиции; не подтверждённый прижизненный портрет.",
   credit: PORTRAIT_CREDITS[id],
 }));
+
+export const PHILOSOPHERS: readonly AtlasPhilosopher[] = [...legacyPhilosophers, ...[...MODERN_BIOGRAPHIES, ...EARLY_MEDIEVAL_BIOGRAPHIES].map(person => {
+  const asset = MODERN_PORTRAITS[person.id];
+  return { ...person, portrait: asset?.path ?? null, portraitPosition: asset?.position ?? "50% 30%",
+    portraitScale: asset?.scale ?? 1, portraitNote: asset?.note ?? "Проверенный свободный портрет недоступен; показаны инициалы.", credit: asset?.credit ?? null };
+})];

@@ -78,7 +78,8 @@ test("mouse scrubs the timeline, life boundaries update and every grouped philos
   const timeline = page.getByRole("slider");
   await timeline.scrollIntoViewIfNeeded();
   const box = (await timeline.boundingBox())!;
-  await page.mouse.move(box.x + box.width * 250 / 919, box.y + box.height / 2);
+  const progress = await timeline.evaluate((element: HTMLInputElement) => (Number(element.value) - Number(element.min)) / (Number(element.max) - Number(element.min)));
+  await page.mouse.move(box.x + box.width * progress, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2, { steps: 15 });
   await page.mouse.up();
