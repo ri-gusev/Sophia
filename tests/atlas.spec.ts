@@ -139,7 +139,9 @@ test("resize increases distance only when necessary and reset restores the fitte
   await page.setViewportSize({ width: 667, height: 375 });
   const canvas = await loadedGlobe(page);
   const initial = await stableGlobe(page);
-  await page.setViewportSize({ width: 320, height: 740 });
+  // The timeline reserves vertical space; use a sufficiently tall narrow scene
+  // so one zoom-in still leaves more distance than the landscape fit requires.
+  await page.setViewportSize({ width: 320, height: 1000 });
   await stableGlobe(page);
   await page.getByRole("button", { name: "Приблизить", exact: true }).click();
   await page.setViewportSize({ width: 667, height: 375 });

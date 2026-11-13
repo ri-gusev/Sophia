@@ -4,8 +4,9 @@
 .intro { width: min(1180px, calc(100% - 96px)); margin: 0 auto 18px; }
 .intro h1 { font-size: clamp(24px, 3vw, 34px); font-weight: 650; letter-spacing: -.045em; margin-top: 6px; }
 .intro > p { font-size: 12px; color: var(--muted); margin-top: 5px; }
-.scene { position: relative; min-height: 260px; height: calc(100svh - 275px); flex: 1; isolation: isolate; }
-.canvas { position: absolute; inset: 0; touch-action: none; }
+.exploration { position:relative; flex:1; }
+.scene { position: relative; min-height: 360px; height: calc(100svh - 505px); isolation: isolate; }
+.canvas { position: absolute; inset: 0; touch-action: none; overflow:hidden; }
 .canvas canvas { touch-action: none; display: block; }
 .message { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; padding: 24px; color: var(--ink); text-align: center; pointer-events: none; }
 .message p { font-size: 13px; line-height: 1.8; }
@@ -28,7 +29,7 @@
   .header > a:last-child { gap: 7px; font-size: 10px; padding-inline: 12px; }
   .main { padding-top: 18px; }
   .intro { width: calc(100% - 32px); margin-bottom: 12px; }
-  .scene { height: calc(100svh - 250px); min-height: 280px; }
+  .scene { height: calc(100svh - 470px); min-height: 360px; }
   .sceneFooter { width: calc(100% - 32px); padding: 8px 0; gap: 8px; }
   .help { max-width: 135px; font-size: 10px; }
   .toolbar { gap: 0; padding: 2px; }
