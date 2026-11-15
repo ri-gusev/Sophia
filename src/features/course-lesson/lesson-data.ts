@@ -11,6 +11,11 @@ type SceneBase = {
   buttonLabel: string;
   quote?: string;
   quoteAttribution?: string;
+  map?: "greece";
+  portrait?: {
+    src: string; alt: string; width: number; height: number;
+    title: string; credit: string; sourceUrl: string; license: string; licenseUrl: string;
+  };
 };
 type ExerciseFields = {
   question: string;
@@ -40,6 +45,17 @@ export const INTRO_LESSONS = {
     "scenes": [
       {
         "id": "journey",
+        "portrait": {
+          "src": "/images/philosophers/plato.png",
+          "alt": "Мраморный бюст Платона",
+          "width": 500,
+          "height": 750,
+          "credit": "Marie-Lan Nguyen",
+          "title": "Plato Silanion Musei Capitolini MC1377.png",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Plato_Silanion_Musei_Capitolini_MC1377.png",
+          "license": "CC BY 2.5",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.5/"
+        },
         "lessonId": "plato-introduction",
         "type": "story",
         "title": "Кто такой Платон?",
@@ -59,6 +75,7 @@ export const INTRO_LESSONS = {
       },
       {
         "id": "athens",
+        "map": "greece",
         "lessonId": "plato-introduction",
         "type": "story",
         "title": "Афины, V век до н. э.",
@@ -308,6 +325,14 @@ export const INTRO_LESSONS = {
       }
     ],
     "sources": [
+      {
+        "title": "Карта: Natural Earth — береговая линия, public domain",
+        "url": "https://www.naturalearthdata.com/about/terms-of-use/"
+      },
+      {
+        "title": "Координаты Афин — UNGEGN",
+        "url": "https://ungegn.un.org/dashboard/cities/details?id=77"
+      },
       {
         "title": "Stanford Encyclopedia of Philosophy — Plato",
         "url": "https://plato.stanford.edu/entries/plato/"

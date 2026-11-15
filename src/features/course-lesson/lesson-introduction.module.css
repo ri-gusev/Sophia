@@ -1,4 +1,4 @@
-.lesson { scroll-margin-top:110px; }
+.lesson { scroll-margin-top:110px; cursor:default; caret-color:transparent; }
 .toolbar { display:flex; align-items:center; gap:22px; padding:20px 8px; }
 .lessonName { font-size:14px; font-weight:650; line-height:1.8; }
 .duration { color:var(--muted); font-size:11px; }

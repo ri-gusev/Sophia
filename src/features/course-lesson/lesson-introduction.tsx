@@ -99,7 +99,11 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     <details className={styles.sources}>
       <summary>Источники и иллюстрации</summary>
       <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
-      <p>Иллюстрации — художественные интерпретации, созданные для Sophia, а не документальные изображения.</p>
+      {lesson.scenes.map(item => item.portrait && <p key={item.id}>
+        Фото: <a href={item.portrait.sourceUrl} target="_blank" rel="noreferrer">{item.portrait.title}</a>
+        {" — "}{item.portrait.credit}{", "}<a href={item.portrait.licenseUrl} target="_blank" rel="noreferrer">{item.portrait.license}</a>.
+      </p>)}
+      <p>Иллюстрации сцен — художественные интерпретации, созданные для Sophia, а не документальные изображения.</p>
       <a href="/images/lessons/plato/README.md" target="_blank" rel="noreferrer">Происхождение иллюстраций</a>
     </details>
   </div>;

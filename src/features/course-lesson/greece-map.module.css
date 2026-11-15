@@ -1,0 +1,12 @@
+.map { display:block; width:100%; height:auto; overflow:visible; font-family:inherit; }
+.land { fill:color-mix(in srgb,var(--green) 18%,var(--page-background)); stroke:color-mix(in srgb,var(--green) 48%,var(--page-background)); stroke-width:.8; stroke-linejoin:round; }
+.grid { fill:none; stroke:var(--line); stroke-width:.6; stroke-dasharray:2 6; }
+.compass { fill:var(--muted); font-size:9px; }
+.compass path { fill:none; stroke:var(--muted); stroke-width:.8; }
+.region { fill:var(--green); font-size:10px; font-weight:550; letter-spacing:3px; }
+.sea { fill:var(--muted); font-size:12px; font-style:italic; letter-spacing:1px; }
+.island { fill:var(--muted); font-size:10px; letter-spacing:1px; }
+.halo { fill:var(--green); opacity:.1; }
+.leader { fill:none; stroke:var(--green); stroke-width:1; opacity:.65; }
+.marker { fill:var(--green); stroke:var(--page-background); stroke-width:2.5; }
+.city { fill:var(--green); font-size:20px; font-weight:600; letter-spacing:-.5px; }

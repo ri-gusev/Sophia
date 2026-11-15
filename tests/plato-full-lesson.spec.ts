@@ -17,11 +17,39 @@ test("complete nine-scene journey checks answers, retains work and returns to th
   const heading = lesson.getByRole("heading", { level: 2 });
   const next = () => lesson.getByRole("button", { name: "Продолжить", exact: true });
   await expect(heading).toHaveText("Кто такой Платон?");
+  const portrait = lesson.getByRole("img", { name: "Мраморный бюст Платона", exact: true });
+  await expect(portrait).toBeVisible();
+  await expect.poll(() => portrait.evaluate(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0)).toBe(true);
+  if (page.viewportSize()!.width > 1000) {
+    const portraitBox = await portrait.boundingBox();
+    const storyBox = await lesson.getByText("Представь человека, жившего почти две с половиной тысячи лет назад.", { exact: true }).boundingBox();
+    expect(portraitBox!.x).toBeGreaterThan(storyBox!.x + storyBox!.width);
+    expect(portraitBox!.width).toBeGreaterThanOrEqual(280);
+  }
   await expect(lesson.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "9");
   await lesson.screenshot({ path: testInfo.outputPath("01-journey.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await lesson.getByRole("button", { name: "Начать путешествие", exact: true }).click();
   await expect(heading).toHaveText("Афины, V век до н. э.");
+  await expect(portrait).toHaveCount(0);
+  const map = lesson.getByRole("img", { name: "Карта Греции с отметкой Афин", exact: true });
+  await expect(map).toBeVisible();
+  await expect(map.getByText("Афины", { exact: true })).toBeVisible();
+  const mapBox = await map.boundingBox();
+  const athensText = await lesson.getByText("Именно в этом мире начиналась история будущего философа.", { exact: true }).boundingBox();
+  if (page.viewportSize()!.width > 1000) {
+    expect(mapBox!.x).toBeGreaterThan(athensText!.x + athensText!.width);
+    // The primary button rises 2 px on hover; compare its resting position.
+    await heading.hover();
+    await expect.poll(async () => {
+      const nextBox = await next().boundingBox();
+      const currentMapBox = await map.boundingBox();
+      return Math.abs(currentMapBox!.y + currentMapBox!.height - nextBox!.y - nextBox!.height + 32);
+    }).toBeLessThan(1);
+  }
+  else if (page.viewportSize()!.width <= 760) expect(mapBox!.y).toBeGreaterThan(athensText!.y + athensText!.height);
+  await lesson.screenshot({ path: testInfo.outputPath("02-athens-map.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await next().click();
+  await expect(map).toHaveCount(0);
   await expect(heading).toHaveText("Философ, который мог стать поэтом");
   await expect(next()).toBeDisabled();
   await expect(lesson.getByRole("button", { name: "Проверить", exact: true })).toBeDisabled();
