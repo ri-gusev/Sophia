@@ -29,7 +29,7 @@ test("scene changes align a compact illustrated header above the plain reading a
   await expectReadingStart();
   const scene = lesson.getByTestId("lesson-scene");
   const artwork = lesson.getByTestId("lesson-artwork");
-  await expect(artwork).toHaveCSS("object-fit", "cover");
+  await expect(artwork).toHaveCSS("object-fit", page.viewportSize()!.width > 760 ? "contain" : "cover");
   const imageBox = await artwork.boundingBox(), titleBox = await heading.boundingBox();
   expect(imageBox!.height).toBeLessThanOrEqual(104);
   expect(titleBox!.x).toBeGreaterThan(imageBox!.x + imageBox!.width);

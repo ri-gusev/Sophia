@@ -51,8 +51,8 @@ export const INTRO_LESSONS = {
           "Он стал одним из самых влиятельных философов в истории. Но когда-то он был обычным молодым афинянином, которому ещё предстояло найти собственный путь."
         ],
         "image": {
-          "src": "/images/lessons/plato/01-athens.webp",
-          "position": "center 40%"
+          "src": "/images/lessons/plato/headers-v2/01-athens.webp",
+          "position": "center center"
         },
         "imageAlt": "Панорама древних Афин. Акрополь на возвышенности, античные здания, тёплый солнечный свет. Атмосфера начала путешествия.",
         "buttonLabel": "Начать путешествие"
@@ -69,8 +69,8 @@ export const INTRO_LESSONS = {
           "Именно в этом мире начиналась история будущего философа."
         ],
         "image": {
-          "src": "/images/lessons/plato/02-athenian-streets.webp",
-          "position": "center 32%"
+          "src": "/images/lessons/plato/headers-v2/02-athenian-streets.webp",
+          "position": "center center"
         },
         "imageAlt": "Оживлённые улицы древних Афин. Горожане, торговцы, античные здания.",
         "buttonLabel": "Продолжить"
@@ -88,8 +88,8 @@ export const INTRO_LESSONS = {
           "Но история показывает, какое огромное значение античные авторы придавали встрече Платона с Сократом."
         ],
         "image": {
-          "src": "/images/lessons/plato/03-young-plato.webp",
-          "position": "center 30%"
+          "src": "/images/lessons/plato/headers-v2/03-young-plato.webp",
+          "position": "center center"
         },
         "imageAlt": "Молодой Платон за деревянным столом среди свитков. Рядом лежит рукопись трагедии. Тёплый свет.",
         "buttonLabel": "Продолжить",
@@ -128,8 +128,8 @@ export const INTRO_LESSONS = {
           "Этот способ философствования оказал огромное влияние на Платона."
         ],
         "image": {
-          "src": "/images/lessons/plato/04-socrates.webp",
-          "position": "center 32%"
+          "src": "/images/lessons/plato/headers-v2/04-socrates.webp",
+          "position": "center center"
         },
         "imageAlt": "Сократ разговаривает с афинянами на площади. Молодой Платон среди слушателей. Художественная реконструкция.",
         "buttonLabel": "Продолжить",
@@ -167,8 +167,8 @@ export const INTRO_LESSONS = {
           "Как общество, которое рассуждает о справедливости, могло приговорить к смерти человека, посвятившего жизнь её исследованию?"
         ],
         "image": {
-          "src": "/images/lessons/plato/05-socrates-prison.webp",
-          "position": "center 30%"
+          "src": "/images/lessons/plato/headers-v2/05-socrates-prison.webp",
+          "position": "center center"
         },
         "imageAlt": "Сдержанная драматичная сцена в афинской тюрьме. Сократ среди учеников, мягкий свет.",
         "buttonLabel": "Продолжить",
@@ -187,8 +187,8 @@ export const INTRO_LESSONS = {
           "Так идеи передавались от одного поколения мыслителей к другому — но ученики не обязательно соглашались со своими учителями."
         ],
         "image": {
-          "src": "/images/lessons/plato/06-academy.webp",
-          "position": "center 35%"
+          "src": "/images/lessons/plato/headers-v2/06-academy.webp",
+          "position": "center center"
         },
         "imageAlt": "Античный сад, тенистые аллеи, каменные колонны. Несколько мыслителей обсуждают философские вопросы.",
         "buttonLabel": "Продолжить",
@@ -231,8 +231,8 @@ export const INTRO_LESSONS = {
           "Философский диалог — не просто запись разговора. Это произведение, в котором сама беседа становится способом исследования проблемы."
         ],
         "image": {
-          "src": "/images/lessons/plato/07-dialogues.webp",
-          "position": "center 45%"
+          "src": "/images/lessons/plato/headers-v2/07-dialogues.webp",
+          "position": "center center"
         },
         "imageAlt": "Античные свитки и рукописи на фоне группы беседующих мыслителей. Камерная интеллектуальная атмосфера.",
         "buttonLabel": "Продолжить",
@@ -271,8 +271,8 @@ export const INTRO_LESSONS = {
           "Гораздо важнее научиться понимать его идеи, проверять аргументы и формировать собственную позицию."
         ],
         "image": {
-          "src": "/images/lessons/plato/08-library.webp",
-          "position": "center 35%"
+          "src": "/images/lessons/plato/headers-v2/08-library.webp",
+          "position": "center center"
         },
         "imageAlt": "Атмосферная античная библиотека с рукописями. Композиция постепенно переходит к свету, символизирующему продолжение философской традиции.",
         "buttonLabel": "Завершить урок",
@@ -288,8 +288,8 @@ export const INTRO_LESSONS = {
           "Сегодня ты узнал:"
         ],
         "image": {
-          "src": "/images/lessons/plato/09-plato-bust.webp",
-          "position": "center 12%"
+          "src": "/images/lessons/plato/headers-v2/09-plato-bust.webp",
+          "position": "center center"
         },
         "imageAlt": "Мраморный бюст Платона на фоне светлого античного сада. Спокойная, торжественная атмосфера.",
         "buttonLabel": "Вернуться к курсу",

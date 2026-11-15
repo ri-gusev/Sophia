@@ -57,7 +57,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
 
   useEffect(() => {
     if (!nextImage) return;
-    const { props } = getImageProps({ src: nextImage.src, alt: "", fill: true, sizes: "(max-width: 760px) 35vw, 40vw" });
+    const { props } = getImageProps({ src: nextImage.src, alt: "", fill: true, sizes: "(max-width: 760px) 264px, 312px" });
     const image = new window.Image();
     image.sizes = props.sizes ?? "";
     image.srcset = props.srcSet ?? "";

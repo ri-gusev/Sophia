@@ -1,5 +1,13 @@
 # Стратегия проверок
 
+## Панорамные изображения шапок — 2026-11-15
+
+`plato-header-artwork.spec.ts` проходит все девять сцен desktop/mobile и проверяет новые пути `headers-v2`, успешную загрузку, панорамное соотношение сторон ≥2.8 и contain на desktop. Сохраняются реальные кадры каждой шапки и отдельной картинки. Все девять пар кадров просмотрены на контактном листе `test-results/plato-header-contact-sheet.png`.
+
+Профильный прогон на production-порту 3207: `npm.cmd test -- tests/plato-header-artwork.spec.ts tests/plato-scene-reading.spec.ts tests/plato-lesson.spec.ts tests/plato-full-lesson.spec.ts tests/plato-lesson-state.spec.ts --output=test-results/plato-panorama-qa` — **24 passed (16.5s)**. Проверка full suite и ограничения — в CURRENT_STATE.
+
+Полный production-прогон `npm.cmd test -- --output=test-results/plato-panorama-final` на том же порту: **133 passed, 7 skipped, 2 failed (2.0m)**, exit 1. Только два прежних сбоя портретов в `atlas-modern.spec.ts:19` desktop/mobile. Typecheck, lint и build успешны; все девять активных изображений и мобильных кадров просмотрены.
+
 ## Компактная шапка и прокрутка — 2026-11-15
 
 Последний визуальный запрос заменил фоновые сцены шапкой с полосой изображения и названием. `plato-scene-reading.spec.ts` проверяет её положение под site-header при открытии, переходах и reload; фокус h2, высоту изображения ≤104 px, название справа и основной текст ниже. Снимок `compact-scene-header.png` сохраняется для desktop/mobile. Профильный прогон вместе с `plato-lesson.spec.ts`: 8 passed (15.0s). Результаты полного прогона — в CURRENT_STATE.

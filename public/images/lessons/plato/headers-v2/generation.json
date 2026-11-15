@@ -1,0 +1,79 @@
+{
+  "created": "2026-11-15",
+  "tool": "built-in image_gen",
+  "session": "01a1df52-0d11-7563-b1d1-162c8d8e6a38",
+  "entries": [
+    {
+      "id": "01-athens",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Ancient Athens panorama at warm morning light. The complete Acropolis hill and its Doric temple are the single central focal subject, fully visible and small enough to fit the central safe area; distant city roofs and olive trees extend across both sides. No foreground figures.",
+      "source": "exec-799541b9-206c-4c4c-9d29-43b080d754ad.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 499264
+    },
+    {
+      "id": "02-athenian-streets",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Classical Athenian street: one merchant beside a modest pottery stall and one citizen in an ivory himation form the central compact focal group. Their heads, shoulders, gesturing hands and pottery are entirely in frame. Side streets, columns and buildings continue toward both edges; the emphasis is everyday civic life.",
+      "source": "exec-5dae04f2-0b2d-4de0-b908-3e32c00c0f96.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 446932
+    },
+    {
+      "id": "03-young-plato",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Young Athenian representing Plato at a modest wooden desk, dark curly hair and ivory himation. The compact central subject is his ENTIRE head, upper body, both hands and a papyrus manuscript on the desk, with comfortable space above his hair. Frame as an intentionally wide seated half-length portrait, never a truncated tall portrait. Warm window light, rolls on desk; quiet Athenian room continues sideways.",
+      "source": "exec-f9b1c244-fa89-4530-b054-63c1753dc95f.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 285644
+    },
+    {
+      "id": "04-socrates",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Socrates, elderly bald and bearded, converses with a young dark curly-haired Athenian representing Plato. Both complete heads and their conversational hands fit together in the central safe area, shown waist-up with headroom. A quiet Agora colonnade and olive shade extend across the sides. No additional prominent faces.",
+      "source": "exec-59e82b7e-0df2-42f5-82fb-ae59426f0d54.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 353556
+    },
+    {
+      "id": "05-socrates-prison",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Socrates seated calmly in a simple ancient Athenian prison with one anonymous adult pupil. Compact central half-length group, fully intact heads and hands and the seat visible, no death or violence or exaggerated drama, no poison cup prominently featured. Soft high-window light, quiet stone walls extend sideways. Do not depict Plato or copy a famous painting.",
+      "source": "exec-1c709de9-b7d6-4a1c-a64c-dac150f9c166.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 219516
+    },
+    {
+      "id": "06-academy",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Academy grove outside Athens: three adult philosophers in quiet discussion under an olive tree, modest stone columns behind. The central compact group has fully visible heads and hands with generous margins, shown seated half-length. Shaded garden paths and foliage extend laterally; no grand fantasy palace.",
+      "source": "exec-66d1612b-60e1-49c0-8fa7-b250cedfbf89.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 418034
+    },
+    {
+      "id": "07-dialogues",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Compact central still life of papyrus scrolls and an open blank manuscript on a low desk, with two small adult Greek thinkers conversing just behind. Scrolls, manuscript edges and thinkers' complete heads all fit inside the central safe zone. Quiet limestone room and colonnade extend across both sides. No legible writing or modern bound books.",
+      "source": "exec-3d46714c-5ff4-4d9a-a93c-a2493cac830b.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 319536
+    },
+    {
+      "id": "08-library",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. Classical manuscript room: central shelves of papyrus rolls, a modest desk with two rolls and a luminous doorway toward an olive garden, all essential objects fully visible inside the central safe zone. Wooden shelves and soft stone wall textures extend across the panoramic sides. Calm intellectual atmosphere, no modern bound books.",
+      "source": "exec-598c5d5d-837f-466b-bdf2-4353403acafc.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 325156
+    },
+    {
+      "id": "09-plato-bust",
+      "prompt": "Create an ORIGINAL very wide panoramic header illustration, aspect ratio 4:1 (ideally 2048x512), for Sophia classical philosophy lesson. This is the FINAL WIDE BANNER COMPOSITION, not a crop from a taller painting. Refined restrained historical oil/gouache painting, softly textured, warm limestone, muted olive sage, dusty gold and pale blue, gentle natural cinematic light. No text, letters, graphic borders, UI, fantasy or saturated colors. CRITICAL COMPOSITION: all principal subjects are complete within the frame: intact heads, hands, key objects and landmarks, with breathing space above and below. Keep the essential action inside the CENTRAL 28 PERCENT OF THE WIDTH so it also works in a centered narrow mobile crop; the outer left and right parts extend the atmosphere with secondary environment. Make subjects legible and calmly arranged, not a busy crowd. Full image remains visually engaging across its panoramic width. Artistic interpretation, not documentary evidence. A complete imagined marble bust of mature bearded Plato is centered: entire crown of the head, hair, beard, shoulders and base fully visible, with at least 12 percent breathing room above the head and below the base. Bust stays within central 22 percent of image width, never clipped. Soft luminous antique garden and understated columns extend across the panoramic sides.",
+      "source": "exec-5a5d4fa5-f36b-4b2b-a4c5-42dad10e14fc.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 406942
+    }
+  ]
+}

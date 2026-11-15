@@ -21,10 +21,10 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
     <header className={styles.sceneHeader} data-testid="lesson-scene-header">
     <div className={styles.artwork}>
       {layers.previous && <div key={`previous-${layers.previous.src}`} className={styles.imageLayer}>
-        <Image src={layers.previous.src} alt="" aria-hidden="true" fill sizes="(max-width: 760px) 35vw, 40vw" className={styles.image} style={{ objectPosition: layers.previous.position }} />
+        <Image src={layers.previous.src} alt="" aria-hidden="true" fill sizes="(max-width: 760px) 264px, 312px" className={styles.image} style={{ objectPosition: layers.previous.position }} />
       </div>}
       <div key={scene.image.src} className={`${styles.imageLayer} ${styles.currentLayer}`} style={{ opacity: ready === scene.image.src ? 1 : 0 }}>
-        <Image src={scene.image.src} alt={scene.imageAlt} fill sizes="(max-width: 760px) 35vw, 40vw" className={styles.image} style={{ objectPosition: scene.image.position }}
+        <Image src={scene.image.src} alt={scene.imageAlt} fill sizes="(max-width: 760px) 264px, 312px" className={styles.image} style={{ objectPosition: scene.image.position }}
           onLoad={() => setReady(scene.image.src)} onError={() => setReady(null)} data-testid="lesson-artwork" />
       </div>
     </div>

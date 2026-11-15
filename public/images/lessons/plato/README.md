@@ -1,6 +1,8 @@
 # Plato lesson illustrations
 
-Latest presentation (2026-11-15): the lesson uses a compact 104 px desktop / 88 px mobile image strip beside the scene title; the remaining content is below on the Sophia white background. Per-image focal positions in `lesson-data.ts` adapt these originals for the header. The source files and their provenance remain unchanged.
+Active header artwork: [headers-v2/README.md](headers-v2/README.md). Nine new 3:1 panoramas were composed specifically for the narrow header, keeping the principal subjects intact. The assets and prompts below belong to the earlier full-scene revision and are preserved for compatibility/history.
+
+Previous presentation (2026-11-15): the lesson uses a compact 104 px desktop / 88 px mobile image strip beside the scene title; the remaining content is below on the Sophia white background. Per-image focal positions in `lesson-data.ts` adapt these originals for the header. The source files and their provenance remain unchanged.
 
 Nine original illustrations created for Sophia using built-in image_gen on 2026-11-15. No stock photographs, third-party artwork or film frames were supplied. They are artistic interpretations, not documentary reconstructions or authenticated portraits. Figures surrounding Socrates in prison are anonymous pupils; the picture does not document Plato's presence there.
 
