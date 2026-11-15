@@ -33,7 +33,7 @@ test("Plato opens a responsive adjacent catalog and closing restores map positio
   await plato.click();
   const catalog = page.getByRole("dialog", { name: "Платон", exact: true });
   await expect(catalog).toBeVisible();
-  for (const title of ["Основные темы", "Диалоги и произведения", "Дополнительные материалы"]) {
+  for (const title of ["Программа обучения", "Диалоги и произведения", "Дополнительные материалы"]) {
     await expect(catalog.getByRole("heading", { name: title, exact: true })).toBeVisible();
   }
   await expect(catalog).toContainText("Содержание в разработке");
@@ -94,14 +94,29 @@ test("Plato followers is smaller, above the route, and opens an honest preview",
   await expect(branch).toBeFocused();
 });
 
-test("Plato's seven supplied topics scroll inside the catalog while its header stays visible", async ({ page }) => {
+test("Plato's seven blocks expand independently and scroll while the header stays visible", async ({ page }) => {
   await page.locator('[data-node-id="plato"]').click();
   const catalog = page.getByRole("dialog", { name: "Платон", exact: true });
-  await expect(catalog.getByTestId("catalog-lesson-title")).toHaveText([
-    "Кто такой Платон?", "Что такое добродетель?", "Мир идей", "Что значит знать?",
-    "Душа и человек", "Идеальное государство", "Проблема бытия",
-  ]);
-  await expect(catalog).toContainText("7 тем · Основной курс");
+  const titles = ["Сократ и рождение философского вопроса", "Добродетель и правильная жизнь", "Познание и истина", "Душа и мир идей", "Справедливость и государство", "Бытие, небытие и диалектика", "Благо, счастье и философское наследие Платона"];
+  await expect(catalog.getByTestId("catalog-block-title")).toHaveText(titles);
+  for (const question of ["С чего начинается философия?", "Что значит быть хорошим человеком?", "Что мы можем знать?", "Что существует на самом деле?", "Как должно быть устроено общество?", "Как устроена реальность и как её мыслить?", "Как жить и чему нас научил Платон?"]) {
+    await expect(catalog.getByText(question, { exact: true })).toBeVisible();
+  }
+  await expect(catalog).toContainText("7 блоков · Основной курс");
+  for (const title of titles) {
+    const toggle = catalog.getByRole("button", { name: title, exact: true });
+    await expect(toggle).toBeEnabled();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  }
+  await expect(catalog.getByText("Уроки в разработке", { exact: true })).toHaveCount(6);
+  await expect(catalog.getByRole("button", { name: "Кто такой Платон?", exact: true })).toBeEnabled();
+  const first = catalog.getByRole("button", { name: titles[0], exact: true });
+  await first.focus();
+  await page.keyboard.press("Enter");
+  await expect(first).toHaveAttribute("aria-expanded", "false");
+  await expect(catalog.getByRole("button", { name: titles[1], exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(catalog.getByRole("button", { name: "Кто такой Платон?", exact: true })).toBeHidden();
   const body = catalog.getByRole("region", { name: "Содержание каталога: Платон", exact: true });
   expect(await body.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
   const close = catalog.getByRole("button", { name: "Закрыть каталог", exact: true });
@@ -116,7 +131,7 @@ test("Plato's seven supplied topics scroll inside the catalog while its header s
   await page.keyboard.press("End");
   await expect.poll(() => body.evaluate(node => Math.abs(node.scrollHeight - node.clientHeight - node.scrollTop))).toBeLessThan(2);
   await expect(close).toBeInViewport();
-  await expect(catalog.getByText("Проблема бытия", { exact: true })).toBeInViewport();
+  await expect(catalog.getByText("Дополнительные материалы", { exact: true })).toBeInViewport();
   await close.click();
   await expect(catalog).toHaveCount(0);
   await expect(page.locator('[data-node-id="plato"]')).toBeFocused();

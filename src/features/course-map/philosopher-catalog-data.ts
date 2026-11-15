@@ -1,8 +1,16 @@
 import type { IntroLessonId } from "../course-lesson/lesson-data";
 
 export type CatalogLesson = { id: string; title: string; contentId?: IntroLessonId };
+export type CatalogBlock = {
+  id: string;
+  order: number;
+  title: string;
+  question: string;
+  lessons: readonly CatalogLesson[];
+  status: "partial" | "planned" | "ready";
+};
 type CatalogSection = { id: string; title: string } & (
-  { kind: "lessons"; lessons: readonly CatalogLesson[] } |
+  { kind: "blocks"; blocks: readonly CatalogBlock[] } |
   { kind: "placeholder"; emptyMessage: string }
 );
 
@@ -24,14 +32,14 @@ export const PHILOSOPHER_CATALOGS = {
     status: "Содержание в разработке",
     courseTitle: "Основной курс",
     sections: [
-      { id: "themes", title: "Основные темы", kind: "lessons", lessons: [
-        { id: "who-is-plato", title: "Кто такой Платон?", contentId: "plato-introduction" },
-        { id: "virtue", title: "Что такое добродетель?" },
-        { id: "world-of-ideas", title: "Мир идей" },
-        { id: "knowledge", title: "Что значит знать?" },
-        { id: "soul-and-human", title: "Душа и человек" },
-        { id: "ideal-state", title: "Идеальное государство" },
-        { id: "being", title: "Проблема бытия" },
+      { id: "themes", title: "Программа обучения", kind: "blocks", blocks: [
+        { id: "socrates", order: 1, title: "Сократ и рождение философского вопроса", question: "С чего начинается философия?", lessons: [{ id: "who-is-plato", title: "Кто такой Платон?", contentId: "plato-introduction" }], status: "partial" },
+        { id: "virtue", order: 2, title: "Добродетель и правильная жизнь", question: "Что значит быть хорошим человеком?", lessons: [], status: "planned" },
+        { id: "knowledge", order: 3, title: "Познание и истина", question: "Что мы можем знать?", lessons: [], status: "planned" },
+        { id: "world-of-ideas", order: 4, title: "Душа и мир идей", question: "Что существует на самом деле?", lessons: [], status: "planned" },
+        { id: "ideal-state", order: 5, title: "Справедливость и государство", question: "Как должно быть устроено общество?", lessons: [], status: "planned" },
+        { id: "being", order: 6, title: "Бытие, небытие и диалектика", question: "Как устроена реальность и как её мыслить?", lessons: [], status: "planned" },
+        { id: "legacy", order: 7, title: "Благо, счастье и философское наследие Платона", question: "Как жить и чему нас научил Платон?", lessons: [], status: "planned" },
       ] },
       { id: "works", title: "Диалоги и произведения", kind: "placeholder", emptyMessage: "Перечень диалогов и произведений готовится." },
       { id: "materials", title: "Дополнительные материалы", kind: "placeholder", emptyMessage: "Дополнительные материалы появятся здесь позже." },

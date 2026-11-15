@@ -6,9 +6,9 @@ test("the first Plato topic opens an inline introduction below the map with thre
   await page.goto("/learn");
   await page.locator('[data-node-id="plato"]').click();
   const catalog = page.getByRole("dialog", { name: "Платон", exact: true });
+  await catalog.getByRole("button", { name: "Сократ и рождение философского вопроса", exact: true }).click();
   const firstTopic = catalog.getByRole("button", { name: "Кто такой Платон?", exact: true });
   await expect(firstTopic).toBeEnabled();
-  await expect(catalog.getByRole("button", { name: /Что такое добродетель|Мир идей|Что значит знать|Душа и человек|Идеальное государство|Проблема бытия/ })).toHaveCount(6);
   const beforeScroll = await page.evaluate(() => scrollY);
   await firstTopic.focus();
   await page.keyboard.press("Enter");

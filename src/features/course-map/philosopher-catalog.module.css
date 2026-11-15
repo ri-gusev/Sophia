@@ -32,3 +32,8 @@
 .mobileDialog .body { padding-bottom:max(28px,env(safe-area-inset-bottom)); }
 @keyframes catalog-in { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:translateX(0); } }
 @media(prefers-reduced-motion:reduce) { .panel { animation:none; } }
+
+.blockText { flex:1; min-width:0; }
+.question { display:block; margin-top:4px; color:#617169; font-size:12px; line-height:1.8; }
+.blockContents { padding:0 6px 16px 45px; }
+.blockContents .lessons { margin-top:0; }

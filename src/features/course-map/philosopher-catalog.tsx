@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { BookOpen, ChevronDown, X } from "lucide-react";
-import type { PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
+import type { CatalogBlock, PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
 import type { IntroLessonId } from "../course-lesson/lesson-data";
 import styles from "./philosopher-catalog.module.css";
 
@@ -26,9 +26,9 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
   const desktopPanel = useRef<HTMLElement>(null);
   const mobileDialog = useRef<HTMLDialogElement>(null);
   const titleId = useId(), descriptionId = useId();
-  const lessonCount = catalog.sections.reduce((count, section) => count + (section.kind === "lessons" ? section.lessons.length : 0), 0);
+  const lessonCount = catalog.sections.reduce((count, section) => count + (section.kind === "blocks" ? section.blocks.length : 0), 0);
   const plural = new Intl.PluralRules("ru").select(lessonCount);
-  const topicWord = plural === "one" ? "тема" : plural === "few" ? "темы" : "тем";
+  const topicWord = plural === "one" ? "блок" : plural === "few" ? "блока" : "блоков";
 
   useLayoutEffect(() => {
     if (desktop) desktopPanel.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
@@ -58,18 +58,10 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
       <p className={styles.status}>{catalog.status}</p>
       {catalog.sections.map(section => <section key={section.id} className={styles.section} aria-labelledby={`${titleId}-${section.id}`}>
         <h3 id={`${titleId}-${section.id}`}>{section.title}</h3>
-        {section.kind === "lessons" ? <ol className={styles.lessons} role="list" aria-label={`Темы: ${catalog.title}`}>
-          {section.lessons.map((lesson, index) => <li key={lesson.id} className={styles.lesson} data-lesson-id={lesson.id}>
-            <button type="button" className={styles.lessonButton} disabled={!lesson.contentId}
-              aria-label={lesson.title}
-              aria-controls={lesson.contentId ? lessonPanelId : undefined}
-              aria-expanded={lesson.contentId ? activeLessonId === lesson.contentId : undefined}
-              onClick={() => { if (lesson.contentId) onSelectLesson(lesson.contentId, !desktop); }}>
-              <span className={styles.lessonNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-              <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
-              {lesson.contentId ? <ChevronDown size={17} aria-hidden="true" /> : <small className={styles.planned} aria-hidden="true">Скоро</small>}
-            </button>
-          </li>)}
+        {section.kind === "blocks" ? <ol className={styles.lessons} role="list" aria-label={`Программа: ${catalog.title}`}>
+          {section.blocks.map(block => <CourseBlock key={block.id} block={block}
+            lessonPanelId={lessonPanelId} activeLessonId={activeLessonId}
+            onSelectLesson={id => onSelectLesson(id, !desktop)} />)}
         </ol> : <p>{section.emptyMessage}</p>}
       </section>)}
     </div>
@@ -89,4 +81,39 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
     }}
   >{contents}</dialog>;
+}
+
+function CourseBlock({ block, lessonPanelId, activeLessonId, onSelectLesson }: {
+  block: CatalogBlock;
+  lessonPanelId: string;
+  activeLessonId: IntroLessonId | null;
+  onSelectLesson: (id: IntroLessonId) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const contentId = useId();
+  return <li className={styles.lesson} data-block-id={block.id}>
+    <button type="button" className={styles.lessonButton} aria-label={block.title}
+      aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded(value => !value)}>
+      <span className={styles.lessonNumber} aria-hidden="true">{String(block.order).padStart(2, "0")}</span>
+      <span className={styles.blockText}>
+        <span className={styles.lessonTitle} data-testid="catalog-block-title">{block.title}</span>
+        <span className={styles.question}>{block.question}</span>
+      </span>
+      <ChevronDown size={17} aria-hidden="true" style={{ transform: expanded ? "rotate(180deg)" : undefined }} />
+    </button>
+    <div id={contentId} hidden={!expanded} className={styles.blockContents}>
+      {block.lessons.length > 0 && <ul className={styles.lessons}>
+        {block.lessons.map(lesson => <li key={lesson.id} data-lesson-id={lesson.id}>
+          <button type="button" className={styles.lessonButton} disabled={!lesson.contentId}
+            aria-controls={lesson.contentId ? lessonPanelId : undefined}
+            aria-expanded={lesson.contentId ? activeLessonId === lesson.contentId : undefined}
+            onClick={() => { if (lesson.contentId) onSelectLesson(lesson.contentId); }}>
+            <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+            {lesson.contentId ? <ChevronDown size={17} aria-hidden="true" /> : <small className={styles.planned}>Скоро</small>}
+          </button>
+        </li>)}
+      </ul>}
+      {(block.status === "planned" || block.lessons.length === 0) && <p>Уроки в разработке</p>}
+    </div>
+  </li>;
 }
