@@ -26,7 +26,7 @@
 | `src/content/` | Данные превью маршрута и описание направления |
 | `src/features/philosophy-question/` | Самостоятельное демо: компонент вопроса, локальный выбор и отдельные типизированные данные |
 | `src/features/course-map/` | `course-map.tsx`: карта и выбор узла; `course-map-data.ts`: учебные описания; `course-map-config.ts`: узлы, позиции, действия и parentId; `philosopher-catalog-data.ts`: отдельные данные каталога; `philosopher-catalog.tsx` и CSS Modules: адаптивная панель и стили |
-| `src/features/course-lesson/` | `lesson-data.ts`: текст первого вступления и три предположения; `lesson-introduction.tsx` и CSS Module: блок под картой и локальный выбор ответа |
+| `src/features/course-lesson/` | `lesson-data.ts`: девять утверждённых сцен, изображения, задания и источники; `lesson-state.ts`: чистые правила ответов, перестановок, URL и валидации состояния; `lesson-scene.tsx` / CSS: общий бесшовный шаблон и смена изображений; `lesson-exercise.tsx`: radio и порядок с кнопками; `lesson-introduction.tsx` / CSS: навигация, tab-local состояние, прогресс и завершение |
 | `src/features/philosopher-conversation/` | Общий UI, профили, контракты, корневой provider с памятью вкладки и CSS Module |
 | `src/features/philosopher-conversation/server/` | HTTP-валидация/ограничитель, логика ограниченной памяти, read-only поиск и транспорт OpenAI |
 | `src/app/api/philosopher-chat/` | Тонкий Node.js POST route, только Платон |

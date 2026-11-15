@@ -1,36 +1,106 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import { getImageProps } from "next/image";
+import { Button } from "@/components/ui/button";
 import type { IntroLesson } from "./lesson-data";
+import { LessonScene } from "./lesson-scene";
+import { LessonExercise } from "./lesson-exercise";
+import { initialAnswer, lessonHash, lessonStorageKey, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
 import styles from "./lesson-introduction.module.css";
 
-export function LessonIntroduction({ lesson }: { lesson: IntroLesson }) {
-  const titleId = useId(), answerGroup = useId();
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
+  lesson: IntroLesson;
+  initialSceneId?: string;
+  onClose: () => void;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  const [run, setRun] = useState(() => {
+    let saved: unknown = null;
+    try { saved = JSON.parse(sessionStorage.getItem(lessonStorageKey(lesson.id)) ?? "null"); } catch { /* Storage is optional. */ }
+    return restoreRun(lesson, saved, initialSceneId);
+  });
+  const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
+  const scene = lesson.scenes[index];
+  const exercise = scene.type === "single-choice" || scene.type === "ordering" ? scene : null;
+  const answer = exercise ? run.exercises[scene.id] ?? initialAnswer(exercise) : null;
+  const nextImage = lesson.scenes[index + 1]?.image;
 
-  return <section className={styles.lesson} aria-labelledby={titleId} data-testid="lesson-introduction">
-    <div className={styles.reading}>
-      <p className={styles.context}>{lesson.context}</p>
-      <p className={styles.stage}>{lesson.stage}</p>
-      <h2 id={titleId} className={styles.title} tabIndex={-1}>{lesson.title}</h2>
-      <div className={styles.story}>
-        {lesson.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
-        <p className={styles.hook}>{lesson.hook}</p>
-      </div>
-      <fieldset className={styles.question}>
-        <legend>{lesson.question.prompt}</legend>
-        <div className={styles.options}>
-          {lesson.question.options.map(option => <label
-            key={option.id}
-            className={`${styles.option} ${selectedAnswer === option.id ? styles.selected : ""}`}
-          >
-            <input type="radio" name={`${answerGroup}-${lesson.question.id}`} value={option.id}
-              checked={selectedAnswer === option.id} onChange={() => setSelectedAnswer(option.id)} />
-            <span>{option.text}</span>
-            {selectedAnswer === option.id && <small aria-hidden="true">Твой выбор</small>}
-          </label>)}
-        </div>
-      </fieldset>
+  useEffect(() => {
+    function followFragment() {
+      const location = readLessonLocation(window.location.hash);
+      if (location?.lessonId === lesson.id) setRun(previous => ({ ...previous, sceneId: location.sceneId }));
+    }
+    window.addEventListener("hashchange", followFragment);
+    return () => window.removeEventListener("hashchange", followFragment);
+  }, [lesson.id]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.hash = lessonHash(lesson.id, run.sceneId);
+    window.history.replaceState(window.history.state, "", url);
+    try { sessionStorage.setItem(lessonStorageKey(lesson.id), JSON.stringify({ version: 1, ...run })); } catch { /* Private or full storage must not block learning. */ }
+  }, [lesson.id, run]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const heading = root.current?.querySelector<HTMLHeadingElement>("h2");
+      if (!heading) return;
+      const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
+      const banner = root.current?.querySelector<HTMLElement>('[data-testid="lesson-scene-header"]') ?? heading;
+      heading.focus({ preventScroll: true });
+      window.scrollTo({ top: Math.max(0, window.scrollY + banner.getBoundingClientRect().top - headerHeight - 24), behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [scene.id]);
+
+  useEffect(() => {
+    if (!nextImage) return;
+    const { props } = getImageProps({ src: nextImage.src, alt: "", fill: true, sizes: "(max-width: 760px) 35vw, 40vw" });
+    const image = new window.Image();
+    image.sizes = props.sizes ?? "";
+    image.srcset = props.srcSet ?? "";
+    image.src = props.src;
+    void image.decode().catch(() => {});
+  }, [nextImage]);
+
+  function updateAnswer(value: ExerciseAnswer) {
+    setRun(previous => ({ ...previous, exercises: { ...previous.exercises, [scene.id]: value } }));
+  }
+  function move(direction: -1 | 1) {
+    const destination = lesson.scenes[index + direction];
+    if (!destination || (direction === 1 && answer && !answer.checked)) return;
+    setRun(previous => ({ ...previous, sceneId: destination.id }));
+  }
+  function finish() {
+    try { sessionStorage.removeItem(lessonStorageKey(lesson.id)); } catch { /* Optional tab cache. */ }
+    onClose();
+  }
+
+  return <div ref={root} className={styles.lesson} data-testid="lesson-introduction">
+    <header className={styles.toolbar}>
+      <div><p className={styles.lessonName}>{lesson.title}</p><span className={styles.duration}>{lesson.duration} · Платон</span></div>
+      <span className={styles.step} aria-live="polite">Шаг {index + 1} из {lesson.scenes.length}</span>
+      <button type="button" className={styles.close} aria-label="Закрыть урок" onClick={onClose}><X size={20} aria-hidden="true" /></button>
+    </header>
+    <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={1} aria-valuemax={lesson.scenes.length} aria-valuenow={index + 1}>
+      <span style={{ width: `${(index + 1) / lesson.scenes.length * 100}%` }} />
     </div>
-  </section>;
+    <LessonScene scene={scene}
+      navigation={<>
+        <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
+        <Button type="button" disabled={Boolean(answer && !answer.checked)} onClick={scene.type === "completion" ? finish : () => move(1)}>
+          {scene.buttonLabel}{scene.type !== "completion" && <ArrowRight size={15} aria-hidden="true" />}
+        </Button>
+      </>}>
+      {exercise && answer && <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />}
+    </LessonScene>
+    <details className={styles.sources}>
+      <summary>Источники и иллюстрации</summary>
+      <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
+      <p>Иллюстрации — художественные интерпретации, созданные для Sophia, а не документальные изображения.</p>
+      <a href="/images/lessons/plato/README.md" target="_blank" rel="noreferrer">Происхождение иллюстраций</a>
+    </details>
+  </div>;
 }

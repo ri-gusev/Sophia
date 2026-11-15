@@ -11,6 +11,7 @@ import { PHILOSOPHER_CATALOGS } from "./philosopher-catalog-data";
 import { PhilosopherCatalog } from "./philosopher-catalog";
 import { INTRO_LESSONS, type IntroLessonId } from "../course-lesson/lesson-data";
 import { LessonIntroduction } from "../course-lesson/lesson-introduction";
+import { readLessonLocation } from "../course-lesson/lesson-state";
 import styles from "./course-map.module.css";
 
 const NODE_ICONS = { book: BookOpen, dialogue: MessageCircle, idea: Lightbulb, star: Star, trophy: Trophy, followers: Users } satisfies Record<MapIcon, typeof BookOpen>;
@@ -31,6 +32,7 @@ export function CourseMap() {
   const [selectedStep, setSelectedStep] = useState<MapNode | null>(null);
   const [catalogNode, setCatalogNode] = useState<MapNode | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<IntroLessonId | null>(null);
+  const [initialSceneId, setInitialSceneId] = useState<string | undefined>();
   const [isDragging, setIsDragging] = useState(false);
   const titleId = useId();
   const copyId = useId();
@@ -62,10 +64,31 @@ export function CourseMap() {
   function openLesson(id: IntroLessonId, dismissCatalog: boolean) {
     flushSync(() => {
       setSelectedLessonId(id);
+      setInitialSceneId(undefined);
       if (dismissCatalog) setCatalogNode(null);
     });
-    lessonPanel.current?.querySelector<HTMLHeadingElement>("h2")?.focus({ preventScroll: true });
-    lessonPanel.current?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+  }
+
+  useEffect(() => {
+    const location = readLessonLocation(window.location.hash);
+    if (!location) return;
+    // Restore after hydration without starting a new navigation or opening the catalog.
+    const frame = requestAnimationFrame(() => {
+      flushSync(() => { setInitialSceneId(location.sceneId); setSelectedLessonId(location.lessonId); });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function returnToCatalog() {
+    const plato = MAP_NODES.find(node => node.id === "plato");
+    if (!plato) return;
+    const url = new URL(window.location.href);
+    url.hash = "";
+    window.history.replaceState(window.history.state, "", url);
+    catalogTrigger.current = viewport.current?.querySelector<HTMLButtonElement>('[data-node-id="plato"]') ?? null;
+    catalogPosition.current = { map: viewport.current?.scrollLeft ?? 0, page: Math.max(0, (viewport.current?.getBoundingClientRect().top ?? 0) + window.scrollY - 110) };
+    flushSync(() => { setSelectedLessonId(null); setInitialSceneId(undefined); setCatalogNode(plato); });
+    viewport.current?.scrollIntoView({ behavior: "instant", block: "start" });
   }
 
   function goToEra(index: number) {
@@ -233,14 +256,14 @@ export function CourseMap() {
         />
       </div>
       <div className={styles.mapFooter}>
-        <p>Перетаскивай карту за фон или используй ползунок снизу. Выбери шаг, чтобы познакомиться с темой. Полные уроки готовятся.</p>
+        <p>Перетаскивай карту за фон или используй ползунок снизу. Выбери шаг, чтобы познакомиться с темой. Остальные уроки готовятся.</p>
       </div>
       </div>
       {catalog && <PhilosopherCatalog catalog={catalog} onClose={closeCatalog} onSelectLesson={openLesson}
         activeLessonId={selectedLessonId} lessonPanelId={lessonPanelId} />}
       </div>
       <div ref={lessonPanel} id={lessonPanelId} className={styles.lessonSlot}>
-        {selectedLessonId && <LessonIntroduction key={selectedLessonId} lesson={INTRO_LESSONS[selectedLessonId]} />}
+        {selectedLessonId && <LessonIntroduction key={selectedLessonId} lesson={INTRO_LESSONS[selectedLessonId]} initialSceneId={initialSceneId} onClose={returnToCatalog} />}
       </div>
       <dialog
         ref={dialog}

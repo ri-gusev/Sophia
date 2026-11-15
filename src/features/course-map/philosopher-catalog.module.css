@@ -18,7 +18,9 @@
 .lesson { border-bottom:1px solid #e8eee8; }
 .lesson:last-child { border-bottom:0; }
 .lessonButton { display:flex; align-items:center; gap:16px; width:100%; min-height:62px; padding:16px 6px; border:0; border-radius:8px; background:transparent; color:var(--ink); text-align:left; font:inherit; cursor:pointer; }
-.lessonButton:hover:not(:disabled),.lessonButton[aria-expanded=true] { background:#edf5ef; }
+.lessonButton { position:relative; isolation:isolate; }
+.lessonButton::before { content:""; position:absolute; z-index:-1; inset:4px 12px; border-radius:8px; pointer-events:none; }
+.lessonButton:hover:not(:disabled)::before,.lessonButton[aria-expanded=true]::before { background:#edf5ef; }
 .lessonButton:focus-visible { outline:2px solid #47735b; outline-offset:2px; }
 .lessonButton:disabled { cursor:default; opacity:1; }
 .lessonButton svg,.planned { flex-shrink:0; margin-left:auto; }
