@@ -3,6 +3,7 @@ import type { AtlasPhilosopher } from "./philosopher-types";
 import { MODERN_BIOGRAPHIES } from "./philosophers-modern-data";
 import { MODERN_PORTRAITS } from "./modern-portrait-assets";
 import { EARLY_MEDIEVAL_BIOGRAPHIES } from "./philosophers-early-medieval-data";
+import { EARLY_MEDIEVAL_PORTRAITS } from "./early-medieval-portrait-assets";
 export type { AtlasPhilosopher } from "./philosopher-types";
 
 type Entry = [id: string, name: string, birth: number, death: number, place: string, latitude: number, longitude: number, school: string, description: string, source: string];
@@ -48,7 +49,7 @@ const legacyPhilosophers: readonly AtlasPhilosopher[] = entries.map(([id, name, 
 }));
 
 export const PHILOSOPHERS: readonly AtlasPhilosopher[] = [...legacyPhilosophers, ...[...MODERN_BIOGRAPHIES, ...EARLY_MEDIEVAL_BIOGRAPHIES].map(person => {
-  const asset = MODERN_PORTRAITS[person.id];
+  const asset = MODERN_PORTRAITS[person.id] ?? EARLY_MEDIEVAL_PORTRAITS[person.id];
   return { ...person, portrait: asset?.path ?? null, portraitPosition: asset?.position ?? "50% 30%",
     portraitScale: asset?.scale ?? 1, portraitNote: asset?.note ?? "Проверенный свободный портрет недоступен; показаны инициалы.", credit: asset?.credit ?? null };
 })];

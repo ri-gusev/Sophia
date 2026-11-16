@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("all nine scene headers load purpose-composed panoramic artwork", async ({ page }, testInfo) => {
+test("all eight scene headers load purpose-composed panoramic artwork", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const id of ["journey", "athens", "poet", "socrates", "trial", "academy", "dialogues", "legacy", "completion"]) {
+  for (const id of ["journey", "athens", "poet", "socrates", "trial", "academy", "legacy", "completion"]) {
     await page.goto(`/learn#lesson=plato-introduction&scene=${id}`);
     const scene = page.getByTestId("lesson-scene");
     await expect(scene).toHaveAttribute("data-scene-id", id);

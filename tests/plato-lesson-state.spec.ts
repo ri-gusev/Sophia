@@ -5,9 +5,9 @@ import { initialAnswer, isCorrect, moveItem, readLessonLocation, restoreRun } fr
 
 const lesson: IntroLesson = INTRO_LESSONS["plato-introduction"];
 
-test("approved lesson has nine stable, ordered scenes, four exercises and local artwork", () => {
-  expect(lesson.scenes.map(scene => scene.id)).toEqual(["journey", "athens", "poet", "socrates", "trial", "academy", "dialogues", "legacy", "completion"]);
-  expect(lesson.scenes.filter(scene => scene.type === "single-choice")).toHaveLength(3);
+test("approved lesson has eight stable, ordered scenes, three exercises and local artwork", () => {
+  expect(lesson.scenes.map(scene => scene.id)).toEqual(["journey", "athens", "poet", "socrates", "trial", "academy", "legacy", "completion"]);
+  expect(lesson.scenes.filter(scene => scene.type === "single-choice")).toHaveLength(2);
   expect(lesson.scenes.filter(scene => scene.type === "ordering")).toHaveLength(1);
   for (const scene of lesson.scenes) {
     expect(scene.lessonId).toBe("plato-introduction");

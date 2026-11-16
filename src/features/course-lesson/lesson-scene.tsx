@@ -19,6 +19,10 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
   if (layers.current.src !== scene.image.src) setLayers({ current: scene.image, previous: layers.current });
   const delay = (index: number): CSSProperties => ({ animationDelay: `${Math.min(index, 7) * 40}ms` });
   const navigationUnderStory = !children || scene.exercisePlacement === "right";
+  const sideQuote = scene.quotePlacement === "right";
+  const quoteElement = scene.quote && <blockquote className={`${styles.quote} ${sideQuote ? styles.sideQuote : ""} ${styles.reveal}`} style={delay(5)}>
+    <p>{scene.quote}</p><footer>{scene.quoteAttribution}</footer>
+  </blockquote>;
   const navigationElement = navigation && <nav aria-label="Навигация по уроку"
     className={`${styles.navigation} ${navigationUnderStory ? styles.storyNavigation : ""} ${styles.reveal}`} style={delay(7)}>{navigation}</nav>;
   return <section className={styles.scene} aria-labelledby={titleId} data-testid="lesson-scene" data-scene-id={scene.id}>
@@ -36,7 +40,7 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
     </header>
     <div key={scene.id} className={styles.reading} data-exercise-placement={scene.exercisePlacement} data-feedback-placement={scene.feedbackPlacement}>
       {scene.subtitle && <p className={`${styles.subtitle} ${styles.reveal}`} style={delay(2)}>{scene.subtitle}</p>}
-      <div data-lesson-narrative data-side-image={scene.portrait?.presentation} className={scene.map ? `${styles.storyLayout} ${styles.mapLayout}` : scene.portrait ? styles.storyLayout : undefined}>
+      <div data-lesson-narrative data-side-image={scene.portrait?.presentation} className={scene.map ? `${styles.storyLayout} ${styles.mapLayout}` : scene.portrait || sideQuote ? styles.storyLayout : undefined}>
       <div className={styles.contentColumn}>
       <div className={styles.story}>
         {scene.paragraphs.map((paragraph, index) => <p key={`${scene.id}-${index}`} className={styles.reveal} style={delay(index + 2)}>{paragraph}</p>)}
@@ -44,9 +48,7 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
           <ul className={styles.reveal} style={delay(3)} aria-label="Что ты узнал">{scene.bullets.map(item => <li key={item}>{item}</li>)}</ul>
           {scene.closing.map(paragraph => <p key={paragraph} className={styles.reveal} style={delay(4)}>{paragraph}</p>)}
         </>}
-        {scene.quote && <blockquote className={`${styles.quote} ${styles.reveal}`} style={delay(5)}>
-          <p>{scene.quote}</p><footer>{scene.quoteAttribution}</footer>
-        </blockquote>}
+        {!sideQuote && quoteElement}
       </div>
       {navigationUnderStory && navigationElement}
       </div>
@@ -55,6 +57,7 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
           sizes={scene.portrait.presentation === "story" ? "(max-width: 760px) 380px, (max-width: 1000px) 240px, 400px" : "(max-width: 760px) 220px, (max-width: 1000px) 240px, 320px"} />
       </figure>}
       {scene.map === "greece" && <figure className={`${styles.mapFigure} ${styles.reveal}`} style={delay(2)}><GreeceMap /></figure>}
+      {sideQuote && quoteElement}
       </div>
       {children && <div className={`${styles.interaction} ${styles.reveal}`} style={delay(6)}>{children}</div>}
       {!navigationUnderStory && navigationElement}

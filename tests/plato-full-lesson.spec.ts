@@ -10,7 +10,7 @@ async function openLesson(page: Page) {
   return page.getByTestId("lesson-introduction");
 }
 
-test("complete nine-scene journey checks answers, retains work and returns to the catalog", async ({ page }, testInfo) => {
+test("complete eight-scene journey checks answers, retains work and returns to the catalog", async ({ page }, testInfo) => {
   const apiCalls: string[] = [];
   page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/")) apiCalls.push(request.url()); });
   const lesson = await openLesson(page);
@@ -26,7 +26,7 @@ test("complete nine-scene journey checks answers, retains work and returns to th
     expect(portraitBox!.x).toBeGreaterThan(storyBox!.x + storyBox!.width);
     expect(portraitBox!.width).toBeGreaterThanOrEqual(280);
   }
-  await expect(lesson.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "9");
+  await expect(lesson.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "8");
   await lesson.screenshot({ path: testInfo.outputPath("01-journey.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await lesson.getByRole("button", { name: "Начать путешествие", exact: true }).click();
   await expect(heading).toHaveText("Афины, V век до н. э.");
@@ -98,19 +98,14 @@ test("complete nine-scene journey checks answers, retains work and returns to th
   await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
   await expect(lesson.getByTestId("exercise-feedback")).toContainText("Отлично!");
   await next().click();
-  await expect(heading).toHaveText("Почему Платон писал диалоги?");
-  await lesson.getByRole("radio").nth(1).check();
-  await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
-  await expect(lesson.getByTestId("exercise-feedback")).toContainText("Правильно!");
-  await next().click();
   await expect(heading).toHaveText("Почему мы изучаем Платона?");
   await expect(lesson).toContainText("Авторская формулировка Sophia");
   await lesson.getByRole("button", { name: "Завершить урок", exact: true }).click();
   await expect(heading).toHaveText("Знакомство состоялось!");
-  await expect(lesson.getByRole("list", { name: "Что ты узнал" }).getByRole("listitem")).toHaveCount(5);
+  await expect(lesson.getByRole("list", { name: "Что ты узнал" }).getByRole("listitem")).toHaveCount(4);
   const axe = await new AxeBuilder({ page }).include('[data-testid="lesson-introduction"]').withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(axe.violations).toEqual([]);
-  await lesson.screenshot({ path: testInfo.outputPath("09-completion.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
+  await lesson.screenshot({ path: testInfo.outputPath("08-completion.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await lesson.getByRole("button", { name: "Вернуться к курсу", exact: true }).click();
   await expect(lesson).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "Платон", exact: true })).toBeVisible();
@@ -156,7 +151,7 @@ test("reload resets ordering results and the exercise must be solved again", asy
 
 test("other choice exercises allow correcting mistakes entirely from the keyboard", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const id of ["socrates", "dialogues"]) {
+  for (const id of ["socrates"]) {
     await page.goto(`/learn#lesson=plato-introduction&scene=${id}`);
     const lesson = page.getByTestId("lesson-introduction");
     await expect(lesson.getByTestId("lesson-scene")).toHaveAttribute("data-scene-id", id);

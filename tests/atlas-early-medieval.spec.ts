@@ -1,6 +1,19 @@
 import { expect, test } from "@playwright/test";
+import { existsSync } from "node:fs";
 import { PHILOSOPHERS } from "../src/features/philosophy-atlas/philosophers-data";
 import { isAliveAt, toAxisYear, formatHistoricalYear } from "../src/features/philosophy-atlas/historical-time";
+
+test("seven verified early medieval portraits are connected with attribution", () => {
+  for (const id of ["isidore", "maximus", "fazang", "bede", "shantarakshita", "al-kindi", "eriugena"]) {
+    const person = PHILOSOPHERS.find(item => item.id === id)!;
+    expect(person.portrait, id).toMatch(/^\/images\/philosophers\/early-medieval\//);
+    expect(existsSync(`public${person.portrait}`), id).toBe(true);
+    expect(person.credit?.source, id).toMatch(/^https:\/\/commons.wikimedia.org\//);
+    expect(person.credit?.license, id).toBeTruthy();
+    expect(person.portraitNote, id).toBeTruthy();
+  }
+  for (const id of ["philoponus", "dharmottara", "proclus", "wiredu"]) expect(PHILOSOPHERS.find(item => item.id === id)?.portrait, id).toBeNull();
+});
 
 test("nine additions cover every year of the early medieval gap without duplicate IDs", () => {
   const ids = ["philoponus", "isidore", "maximus", "fazang", "bede", "shantarakshita", "dharmottara", "al-kindi", "eriugena"];
@@ -43,5 +56,8 @@ test("early medieval thinkers have selectable cards and the same globe survives 
   if (await card.getByRole("heading", { name: "Философы рядом" }).count()) await card.getByRole("button", { name: "Иоанн Скот Эриугена", exact: true }).click();
   await expect(card.getByRole("heading")).toHaveText("Иоанн Скот Эриугена");
   await expect(card).toContainText("Лан");
+  const portrait = card.getByRole("img", { name: "Изображение: Иоанн Скот Эриугена", exact: true });
+  await expect(portrait).toBeVisible();
+  await expect.poll(() => portrait.evaluate(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0)).toBe(true);
   expect(await canvas!.evaluate(element => element.isConnected)).toBe(true);
 });

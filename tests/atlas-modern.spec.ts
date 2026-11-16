@@ -16,7 +16,7 @@ test("independent historical fixtures cover all eight requested years", () => {
   };
   for (const [year, ids] of Object.entries(expected)) expect(PHILOSOPHERS.filter(person => isAliveAt(person, Number(year))).map(person => person.id).sort(), year).toEqual(ids.sort());
   expect(PHILOSOPHERS.filter(person => person.deathYear === null)).toHaveLength(9);
-  expect(PHILOSOPHERS.filter(person => !person.portrait).map(person => person.id).sort()).toEqual(["proclus", "wiredu"]);
+  expect(PHILOSOPHERS.filter(person => !person.portrait).map(person => person.id).sort()).toEqual(["dharmottara", "philoponus", "proclus", "wiredu"]);
   expect(PHILOSOPHERS.find(person => person.id === "avicenna")?.approximateBirth).toBe(true);
 });
 
