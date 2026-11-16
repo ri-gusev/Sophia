@@ -10,6 +10,9 @@
 .exercise { margin-top:28px; }
 .question { min-width:0; padding:0; border:0; margin:0; }
 .question legend { max-width:100%; padding:0; font-size:15px; line-height:1.8; font-weight:600; white-space:pre-line; }
+.questionHighlight { color:var(--green); }
+.question legend.highlightedQuestion { white-space:normal; }
+.highlightedQuestion .questionHighlight { display:block; margin-block:10px; }
 .options { display:grid; margin-top:14px; }
 .option { display:flex; align-items:flex-start; gap:12px; min-height:64px; padding:16px 4px; border-bottom:1px solid var(--line); cursor:pointer; transition:color 180ms; }
 .option:last-child { border-bottom:0; }
@@ -20,13 +23,10 @@
 .option:focus-within { outline:2px solid var(--green); outline-offset:4px; }
 .checkRow { min-height:60px; margin-top:18px; }
 .feedbackSlot { min-height:150px; }
+.exercise[data-exercise-type="ordering"] .checkRow,.exercise[data-exercise-type="ordering"] .feedbackSlot { width:100%; margin-inline:0; }
+.exercise[data-exercise-type="ordering"] .feedbackSlot { width:100%; margin-top:12px; border-top:1px solid var(--line); }
+.exercise[data-exercise-type="ordering"] .feedback { max-width:712px; margin-inline:0; border-top:0; }
 .feedback { padding:16px 0 0; border-top:1px solid var(--line); font-size:14px; line-height:1.9; color:var(--green); }
-.ordering { list-style:none; padding:0; margin:18px 0 0; }
-.ordering li { display:flex; align-items:center; gap:14px; min-height:70px; border-bottom:1px solid var(--line); font-size:15px; }
-.ordinal { font-size:11px; font-variant-numeric:tabular-nums; color:var(--muted); }
-.moveButtons { display:flex; margin-left:auto; gap:4px; }
-.moveButtons button { display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--line); border-radius:50%; background:transparent; color:var(--green); }
-.moveButtons button:disabled { opacity:.4; }
 .sources { margin:0 auto 30px; width:min(712px,calc(100% - 48px)); font-size:11px; line-height:1.9; color:var(--muted); }
 .sources summary { cursor:pointer; padding:12px 0; }
 .sources ul { padding-left:18px; }

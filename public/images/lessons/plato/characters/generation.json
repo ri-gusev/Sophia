@@ -1,0 +1,37 @@
+{
+  "created": "2026-11-16",
+  "tool": "built-in image_gen",
+  "purpose": "Full-length transparent characters for the sixth-scene ordering game",
+  "entries": [
+    {
+      "id": "aristotle",
+      "name": "Аристотель",
+      "src": "/images/lessons/plato/characters/aristotle.webp",
+      "width": 667,
+      "height": 1000,
+      "transparent": true,
+      "source": "C:/Users/user/.codex/generated_images/01a1df52-0d11-7563-b1d1-162c8d8e6a38/exec-0cff5232-f86d-49f3-badf-13152e39d318.png",
+      "prompt": "Use case: character assets for a draggable ordering game in Sophia, a refined philosophy learning website. Create ONE isolated ancient Greek philosopher, FULL LENGTH standing, complete head, both hands, robes and both sandalled feet entirely inside frame, with 10 percent transparent margin above and below. Portrait canvas. Transparent alpha background, no environment, no floor rectangle, no pedestal, no text, no lettering, no labels, no frame. Cohesive premium illustrated realism, realistic human anatomy, fine softly painted texture matching classical limestone and olive Sophia illustrations. Soft diffuse warm light from upper left, low contrast, muted ivory, sage, olive, restrained ochre. Front three-quarter view, relaxed calm standing pose, balanced silhouette suitable for dragging as one game piece. Avoid extending arms beyond body width, keep hands close to torso. No cropped feet, no cut off head. Adult historical artistic interpretation, no modern clothes. Aristotle, man about 45, short wavy chestnut hair, neatly trimmed short brown beard, thoughtful face. Muted sandy cream Greek chiton with subdued dusty teal mantle over one shoulder. Holds a small closed parchment scroll low near his waist with one hand, other hand relaxed. Lean average build, dignified approachable expression."
+    },
+    {
+      "id": "socrates",
+      "name": "Сократ",
+      "src": "/images/lessons/plato/characters/socrates.webp",
+      "width": 667,
+      "height": 1000,
+      "transparent": true,
+      "source": "C:/Users/user/.codex/generated_images/01a1df52-0d11-7563-b1d1-162c8d8e6a38/exec-99463bfe-fe58-4e6d-b74d-cfb932a4805b.png",
+      "prompt": "Use case: character assets for a draggable ordering game in Sophia, a refined philosophy learning website. Create ONE isolated ancient Greek philosopher, FULL LENGTH standing, complete head, both hands, robes and both sandalled feet entirely inside frame, with 10 percent transparent margin above and below. Portrait canvas. Transparent alpha background, no environment, no floor rectangle, no pedestal, no text, no lettering, no labels, no frame. Cohesive premium illustrated realism, realistic human anatomy, fine softly painted texture matching classical limestone and olive Sophia illustrations. Soft diffuse warm light from upper left, low contrast, muted ivory, sage, olive, restrained ochre. Front three-quarter view, relaxed calm standing pose, balanced silhouette suitable for dragging as one game piece. Avoid extending arms beyond body width, keep hands close to torso. No cropped feet, no cut off head. Adult historical artistic interpretation, no modern clothes. Socrates, elderly stocky man about 65, recognisable bald crown, sparse grey hair at sides, broad nose, thick short curly grey beard, weathered kind face. Simple off-white Greek himation with muted sage fold over shoulder, modest ancient sandals. One relaxed hand lightly open at waist height in a questioning gesture, other gathers garment. Human and wise, unidealized classical portrait features."
+    },
+    {
+      "id": "plato",
+      "name": "Платон",
+      "src": "/images/lessons/plato/characters/plato.webp",
+      "width": 667,
+      "height": 1000,
+      "transparent": true,
+      "source": "C:/Users/user/.codex/generated_images/01a1df52-0d11-7563-b1d1-162c8d8e6a38/exec-c2eee68f-57ed-4955-a001-75660381df5e.png",
+      "prompt": "Use case: character assets for a draggable ordering game in Sophia, a refined philosophy learning website. Create ONE isolated ancient Greek philosopher, FULL LENGTH standing, complete head, both hands, robes and both sandalled feet entirely inside frame, with 10 percent transparent margin above and below. Portrait canvas. Transparent alpha background, no environment, no floor rectangle, no pedestal, no text, no lettering, no labels, no frame. Cohesive premium illustrated realism, realistic human anatomy, fine softly painted texture matching classical limestone and olive Sophia illustrations. Soft diffuse warm light from upper left, low contrast, muted ivory, sage, olive, restrained ochre. Front three-quarter view, relaxed calm standing pose, balanced silhouette suitable for dragging as one game piece. Avoid extending arms beyond body width, keep hands close to torso. No cropped feet, no cut off head. Adult historical artistic interpretation, no modern clothes. Plato, mature broad-shouldered man about 55, full medium length curly grey beard, thick wavy dark grey hair, calm grave face. Ivory Greek tunic and draped muted olive green himation, warm cream folds, simple leather sandals. Holds a rolled parchment close to chest with one hand, other rests lightly at side. Broad strong build, reflective expression."
+    }
+  ]
+}

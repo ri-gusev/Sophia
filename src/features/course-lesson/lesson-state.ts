@@ -14,10 +14,14 @@ export function isCorrect(scene: ExerciseScene, answer: ExerciseAnswer): boolean
 }
 
 export function moveItem(order: readonly string[], index: number, direction: -1 | 1): readonly string[] {
-  const destination = index + direction;
-  if (index < 0 || index >= order.length || destination < 0 || destination >= order.length) return order;
+  return reorderItem(order, index, index + direction);
+}
+
+export function reorderItem(order: readonly string[], index: number, destination: number): readonly string[] {
+  if (!Number.isInteger(index) || !Number.isInteger(destination) || index < 0 || index >= order.length || destination < 0 || destination >= order.length || index === destination) return order;
   const result = [...order];
-  [result[index], result[destination]] = [result[destination], result[index]];
+  const [item] = result.splice(index, 1);
+  result.splice(destination, 0, item);
   return result;
 }
 
@@ -38,7 +42,7 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Treat tab storage as untrusted input; no completion or account state is persisted.
+// Validate supplied state. Passing null starts a fresh lesson run.
 export function restoreRun(lesson: IntroLesson, saved: unknown, sceneId?: string): LessonRun {
   const data = record(saved) && saved.version === 1 ? saved : {};
   const requested = sceneId ?? data.sceneId;
@@ -57,5 +61,3 @@ export function restoreRun(lesson: IntroLesson, saved: unknown, sceneId?: string
   }
   return { sceneId: current.id, exercises };
 }
-
-export const lessonStorageKey = (id: string) => `sophia:lesson:${id}:v1`;

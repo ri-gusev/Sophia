@@ -18,8 +18,9 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
   const [ready, setReady] = useState<string | null>(null);
   if (layers.current.src !== scene.image.src) setLayers({ current: scene.image, previous: layers.current });
   const delay = (index: number): CSSProperties => ({ animationDelay: `${Math.min(index, 7) * 40}ms` });
+  const navigationUnderStory = !children || scene.exercisePlacement === "right";
   const navigationElement = navigation && <nav aria-label="Навигация по уроку"
-    className={`${styles.navigation} ${!children ? styles.storyNavigation : ""} ${styles.reveal}`} style={delay(7)}>{navigation}</nav>;
+    className={`${styles.navigation} ${navigationUnderStory ? styles.storyNavigation : ""} ${styles.reveal}`} style={delay(7)}>{navigation}</nav>;
   return <section className={styles.scene} aria-labelledby={titleId} data-testid="lesson-scene" data-scene-id={scene.id}>
     <header className={styles.sceneHeader} data-testid="lesson-scene-header">
     <div className={styles.artwork}>
@@ -33,9 +34,9 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
     </div>
     <h2 key={scene.id} id={titleId} className={`${styles.title} ${styles.reveal}`} style={delay(0)} tabIndex={-1}>{scene.title}</h2>
     </header>
-    <div key={scene.id} className={styles.reading}>
+    <div key={scene.id} className={styles.reading} data-exercise-placement={scene.exercisePlacement} data-feedback-placement={scene.feedbackPlacement}>
       {scene.subtitle && <p className={`${styles.subtitle} ${styles.reveal}`} style={delay(2)}>{scene.subtitle}</p>}
-      <div className={scene.map ? `${styles.storyLayout} ${styles.mapLayout}` : scene.portrait ? styles.storyLayout : undefined}>
+      <div data-lesson-narrative data-side-image={scene.portrait?.presentation} className={scene.map ? `${styles.storyLayout} ${styles.mapLayout}` : scene.portrait ? styles.storyLayout : undefined}>
       <div className={styles.contentColumn}>
       <div className={styles.story}>
         {scene.paragraphs.map((paragraph, index) => <p key={`${scene.id}-${index}`} className={styles.reveal} style={delay(index + 2)}>{paragraph}</p>)}
@@ -47,16 +48,16 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
           <p>{scene.quote}</p><footer>{scene.quoteAttribution}</footer>
         </blockquote>}
       </div>
-      {!children && navigationElement}
+      {navigationUnderStory && navigationElement}
       </div>
       {scene.portrait && <figure className={`${styles.portrait} ${styles.reveal}`} style={delay(2)}>
         <Image src={scene.portrait.src} alt={scene.portrait.alt} width={scene.portrait.width} height={scene.portrait.height}
-          sizes="(max-width: 760px) 220px, (max-width: 1000px) 240px, 320px" />
+          sizes={scene.portrait.presentation === "story" ? "(max-width: 760px) 380px, (max-width: 1000px) 240px, 400px" : "(max-width: 760px) 220px, (max-width: 1000px) 240px, 320px"} />
       </figure>}
       {scene.map === "greece" && <figure className={`${styles.mapFigure} ${styles.reveal}`} style={delay(2)}><GreeceMap /></figure>}
       </div>
       {children && <div className={`${styles.interaction} ${styles.reveal}`} style={delay(6)}>{children}</div>}
-      {children && navigationElement}
+      {!navigationUnderStory && navigationElement}
     </div>
   </section>;
 }

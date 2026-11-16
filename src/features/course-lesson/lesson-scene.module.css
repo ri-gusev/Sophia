@@ -6,6 +6,35 @@
 .currentLayer { transition:opacity 650ms ease-in-out; }
 .reading { width:100%; padding:0 0 48px; }
 .interaction { width:100%; max-width:760px; margin-inline:auto; padding-inline:24px; }
+.interaction:has([data-exercise-type="ordering"]) { max-width:none; margin:24px 0 0; padding-inline:0; border-top:1px solid var(--line); }
+.reading[data-exercise-placement="right"] {
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+  align-items:start;
+  gap:28px 64px;
+}
+.reading[data-exercise-placement="right"] > .subtitle { grid-column:1 / -1; }
+.reading[data-exercise-placement="right"] > .interaction { max-width:none; margin:0; padding:0; }
+.reading[data-exercise-placement="right"] > .interaction > :first-child { margin-top:0; }
+@media(min-width:901px) {
+  .reading[data-feedback-placement="navigation"]:has([data-exercise-solved="true"]) {
+    grid-template-rows:auto auto;
+    & > [data-lesson-narrative], & > .interaction {
+      display:grid;
+      grid-template-rows:subgrid;
+      grid-row:1 / span 2;
+      align-self:stretch;
+    }
+    & > [data-lesson-narrative] { grid-column:1; }
+    & > .interaction { grid-column:2; }
+    & .contentColumn, & [data-exercise-solved] { display:contents; }
+    & .story, & [data-exercise-content] { grid-row:1; }
+    & [data-exercise-content] > :last-child { display:none; }
+    & .navigation { grid-row:2; align-self:start; margin-top:0; }
+    & [data-exercise-feedback] { grid-row:2; min-height:0; }
+    & [data-exercise-feedback] > p { padding:0; border-top:0; }
+  }
+}
 .title { margin:0; padding-right:24px; font-size:clamp(23px,2.6vw,32px); line-height:1.3; font-weight:550; letter-spacing:-.035em; }
 .title:focus-visible { outline:none; }
 .subtitle { max-width:712px; color:var(--green); font-size:15px; line-height:1.8; margin-bottom:20px; }
@@ -14,6 +43,24 @@
 .storyLayout { display:grid; grid-template-columns:minmax(0,712px) minmax(0,1fr); align-items:start; gap:48px; }
 .portrait { width:100%; max-width:320px; justify-self:end; margin:-118px 0 0; }
 .portrait img { display:block; width:100%; height:auto; }
+.storyLayout[data-side-image="story"] {
+  grid-template-rows:auto auto;
+  row-gap:28px;
+  & .contentColumn { display:contents; }
+  & .story { grid-column:1; grid-row:1; }
+  & .navigation { grid-column:1; grid-row:2; margin-top:0; }
+  & .portrait { position:relative; grid-column:2; grid-row:1; align-self:stretch; justify-self:center; max-width:260px; margin:-72px 0 -16px; }
+  & .portrait img {
+    position:absolute;
+    inset:0;
+    height:100%;
+    object-fit:cover;
+    object-position:center 20%;
+    border-radius:8px;
+    mask-image:linear-gradient(to right,transparent,#000 5%,#000 95%,transparent),linear-gradient(to bottom,transparent,#000 4%,#000 96%,transparent);
+    mask-composite:intersect;
+  }
+}
 .mapLayout { align-items:end; }
 .mapFigure { position:relative; align-self:stretch; width:100%; max-width:400px; justify-self:end; margin:0; }
 .mapFigure > svg { position:absolute; bottom:32px; left:0; }
@@ -24,6 +71,7 @@
 .quote footer { margin-top:12px; color:var(--muted); font-size:11px; letter-spacing:0; font-weight:400; }
 .navigation { display:flex; flex-wrap:wrap; align-items:center; gap:16px; width:100%; max-width:760px; margin:28px auto 0; padding-inline:24px; }
 .storyNavigation { max-width:712px; margin-inline:0; padding-inline:0; }
+.reading:has([data-exercise-type="ordering"]) > .navigation { margin-inline:0; padding-inline:0; }
 .navigation button:disabled { opacity:.45; }
 .reveal { animation:scene-reveal 1.2s both cubic-bezier(.2,.65,.3,1); }
 @keyframes scene-reveal { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
@@ -31,7 +79,16 @@
   .storyLayout { grid-template-columns:minmax(0,1fr) 240px; gap:24px; }
   .mapLayout { grid-template-columns:minmax(0,1fr) 280px; }
 }
+@media(max-width:900px) {
+  .reading[data-exercise-placement="right"] { grid-template-columns:minmax(0,1fr); }
+}
 @media(max-width:760px) {
+  .storyLayout[data-side-image="story"] {
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+    & .portrait { align-self:center; max-width:380px; margin:0; aspect-ratio:4 / 5; }
+  }
   .storyLayout { grid-template-columns:minmax(0,1fr); gap:24px; }
   .portrait { max-width:220px; justify-self:center; margin:0; }
   .mapFigure { max-width:380px; justify-self:center; margin:0; }

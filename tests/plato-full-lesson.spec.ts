@@ -51,17 +51,35 @@ test("complete nine-scene journey checks answers, retains work and returns to th
   await next().click();
   await expect(map).toHaveCount(0);
   await expect(heading).toHaveText("Философ, который мог стать поэтом");
+  const question = lesson.getByRole("group", { name: "Что мы можем сказать об истории с сожжёнными трагедиями?", exact: true });
+  const questionBox = await question.boundingBox();
+  const narrativeBox = await lesson.getByText("Согласно древнему преданию, в юности Платон увлекался поэзией и писал трагедии.", { exact: true }).boundingBox();
+  const checkBox = await lesson.getByRole("button", { name: "Проверить", exact: true }).boundingBox();
+  if (page.viewportSize()!.width > 900) expect(questionBox!.x).toBeGreaterThan(narrativeBox!.x + narrativeBox!.width);
+  else expect(questionBox!.y).toBeGreaterThan(narrativeBox!.y + narrativeBox!.height);
+  expect(checkBox!.y).toBeGreaterThanOrEqual(questionBox!.y + questionBox!.height);
+  expect(Math.abs(checkBox!.x - questionBox!.x)).toBeLessThan(1);
+  await lesson.screenshot({ path: testInfo.outputPath("03-question-right.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await expect(next()).toBeDisabled();
   await expect(lesson.getByRole("button", { name: "Проверить", exact: true })).toBeDisabled();
   await lesson.getByRole("radio").nth(0).check();
   await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
   await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
-  await expect(lesson.getByTestId("exercise-feedback")).toContainText("Это античное предание, но его достоверность неизвестна.");
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveText("Ответ неверный");
   await lesson.screenshot({ path: testInfo.outputPath("03-question.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
+  await expect(next()).toBeDisabled();
+  await page.reload();
+  await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(next()).toBeDisabled();
+  await lesson.getByRole("radio").nth(1).check();
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
+  await expect(next()).toBeDisabled();
+  await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
+  await expect(next()).toBeEnabled();
   await next().click();
   await expect(heading).toHaveText("Человек, который задавал вопросы");
   await lesson.getByRole("button", { name: "Назад", exact: true }).click();
-  await expect(lesson.getByRole("radio").nth(0)).toBeChecked();
+  await expect(lesson.getByRole("radio").nth(1)).toBeChecked();
   await expect(next()).toBeEnabled();
   await next().click();
   await lesson.getByRole("radio").nth(1).check();
@@ -72,10 +90,10 @@ test("complete nine-scene journey checks answers, retains work and returns to th
   await expect(lesson).toContainText("399 год до нашей эры");
   await next().click();
   await expect(heading).toHaveText("Место, где учились мыслить");
-  const down = lesson.getByRole("button", { name: "Аристотель: переместить ниже", exact: true });
+  const down = lesson.getByRole("button", { name: "Аристотель: переместить", exact: true });
   await down.focus();
-  await page.keyboard.press("Enter");
-  await lesson.getByRole("button", { name: "Аристотель: переместить ниже", exact: true }).click();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
   await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Сократ", "Платон", "Аристотель"]);
   await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
   await expect(lesson.getByTestId("exercise-feedback")).toContainText("Отлично!");
@@ -100,30 +118,45 @@ test("complete nine-scene journey checks answers, retains work and returns to th
   expect(apiCalls).toEqual([]);
 });
 
-test("reload restores the exact scene and checked exercise; incorrect ordering explains and permits progress", async ({ page }) => {
+test("reload resets ordering results and the exercise must be solved again", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/learn#lesson=plato-introduction&scene=academy");
   const lesson = page.getByTestId("lesson-introduction");
   await expect(lesson.getByRole("heading", { level: 2 })).toHaveText("Место, где учились мыслить");
   await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
-  await expect(lesson.getByTestId("exercise-feedback")).toContainText("Правильная последовательность: Сократ → Платон → Аристотель.");
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveText("Ответ неверный");
   await page.reload();
-  await expect(lesson.getByTestId("exercise-feedback")).toBeVisible();
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
   await expect(lesson.getByRole("heading", { level: 2 })).toBeInViewport();
+  const next = lesson.getByRole("button", { name: "Продолжить", exact: true });
+  await expect(next).toBeDisabled();
+  const down = lesson.getByRole("button", { name: "Аристотель: переместить", exact: true });
+  await down.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(next).toBeDisabled();
+  await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
+  await expect(next).toBeEnabled();
+  await page.reload();
+  await expect(next).toBeDisabled();
+  await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Аристотель", "Сократ", "Платон"]);
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
+  await down.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
   await lesson.getByRole("button", { name: "Продолжить", exact: true }).click();
   await lesson.getByRole("button", { name: "Назад", exact: true }).click();
-  await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Аристотель", "Сократ", "Платон"]);
+  await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Сократ", "Платон", "Аристотель"]);
   await expect(lesson.getByTestId("exercise-feedback")).toBeVisible();
   await lesson.getByRole("button", { name: "Закрыть урок", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Платон", exact: true })).toBeVisible();
 });
 
-test("other choice exercises explain mistakes and work entirely from the keyboard", async ({ page }) => {
+test("other choice exercises allow correcting mistakes entirely from the keyboard", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const [id, feedback] of [
-    ["socrates", "Главная задача здесь — не выяснить авторитет собеседника и не оскорбить его"],
-    ["dialogues", "Сократ был реальным историческим философом, а автором диалогов был Платон."],
-  ]) {
+  for (const id of ["socrates", "dialogues"]) {
     await page.goto(`/learn#lesson=plato-introduction&scene=${id}`);
     const lesson = page.getByTestId("lesson-introduction");
     await expect(lesson.getByTestId("lesson-scene")).toHaveAttribute("data-scene-id", id);
@@ -134,9 +167,20 @@ test("other choice exercises explain mistakes and work entirely from the keyboar
     await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
     await lesson.getByRole("button", { name: "Проверить", exact: true }).focus();
     await page.keyboard.press("Enter");
-    await expect(lesson.getByTestId("exercise-feedback")).toContainText(feedback);
+    await expect(lesson.getByTestId("exercise-feedback")).toHaveText("Ответ неверный");
     await expect(lesson.getByTestId("exercise-feedback")).toBeFocused();
-    await expect(lesson.getByRole("button", { name: "Продолжить", exact: true })).toBeEnabled();
+    const next = lesson.getByRole("button", { name: "Продолжить", exact: true });
+    await expect(next).toBeDisabled();
+    const correct = lesson.getByRole("radio").nth(1);
+    await correct.focus();
+    await page.keyboard.press("Space");
+    await expect(correct).toBeChecked();
+    await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
+    await expect(next).toBeDisabled();
+    await lesson.getByRole("button", { name: "Проверить", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(lesson.getByTestId("exercise-feedback")).toBeFocused();
+    await expect(next).toBeEnabled();
   }
 });
 
@@ -149,4 +193,26 @@ test("blocked tab storage does not prevent navigation or restoring the scene fro
   await expect(lesson.getByRole("heading", { level: 2 })).toHaveText("Афины, V век до н. э.");
   await page.reload();
   await expect(lesson.getByRole("heading", { level: 2 })).toHaveText("Афины, V век до н. э.");
+});
+
+test("old saved answers are ignored and a correct choice resets after reload", async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("sophia:lesson:plato-introduction:v1", JSON.stringify({
+      version: 1, sceneId: "poet", exercises: { poet: { selected: "b", order: ["a", "b", "c"], checked: true } },
+    }));
+  });
+  await page.goto("/learn#lesson=plato-introduction&scene=poet");
+  const lesson = page.getByTestId("lesson-introduction");
+  const next = lesson.getByRole("button", { name: "Продолжить", exact: true });
+  await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
+  await expect(next).toBeDisabled();
+  await lesson.getByRole("radio").nth(1).check();
+  await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
+  await expect(next).toBeEnabled();
+  await page.reload();
+  await expect(lesson.getByTestId("lesson-scene")).toHaveAttribute("data-scene-id", "poet");
+  await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
+  await expect(next).toBeDisabled();
 });

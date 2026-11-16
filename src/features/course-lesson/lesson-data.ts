@@ -11,15 +11,19 @@ type SceneBase = {
   buttonLabel: string;
   quote?: string;
   quoteAttribution?: string;
+  exercisePlacement?: "right";
+  feedbackPlacement?: "navigation";
   map?: "greece";
   portrait?: {
+    presentation?: "story";
     src: string; alt: string; width: number; height: number;
     title: string; credit: string; sourceUrl: string; license: string; licenseUrl: string;
   };
 };
 type ExerciseFields = {
   question: string;
-  options: readonly { id: string; text: string }[];
+  questionHighlight?: string;
+  options: readonly { id: string; text: string; image?: string }[];
   feedback: { correct: string; incorrect: string };
 };
 export type LessonSceneData = SceneBase & (
@@ -94,6 +98,7 @@ export const INTRO_LESSONS = {
       },
       {
         "id": "poet",
+        "exercisePlacement": "right",
         "lessonId": "plato-introduction",
         "type": "single-choice",
         "title": "Философ, который мог стать поэтом",
@@ -133,6 +138,8 @@ export const INTRO_LESSONS = {
       },
       {
         "id": "socrates",
+        "exercisePlacement": "right",
+        "feedbackPlacement": "navigation",
         "lessonId": "plato-introduction",
         "type": "single-choice",
         "title": "Человек, который задавал вопросы",
@@ -151,6 +158,7 @@ export const INTRO_LESSONS = {
         "imageAlt": "Сократ разговаривает с афинянами на площади. Молодой Платон среди слушателей. Художественная реконструкция.",
         "buttonLabel": "Продолжить",
         "question": "Представь, что человек говорит:\n\n«Я точно знаю, что такое справедливость».\n\nКакой вопрос лучше всего соответствует сократическому способу исследования?",
+        "questionHighlight": "«Я точно знаю, что такое справедливость».",
         "options": [
           {
             "id": "a",
@@ -173,6 +181,18 @@ export const INTRO_LESSONS = {
       },
       {
         "id": "trial",
+        "portrait": {
+          "presentation": "story",
+          "src": "/images/lessons/plato/05-socrates-prison-portrait-v2.webp",
+          "alt": "Сократ беседует с учениками в афинской тюрьме. Художественная интерпретация",
+          "width": 800,
+          "height": 1000,
+          "credit": "Sophia",
+          "title": "Сократ и ученики в афинской тюрьме",
+          "sourceUrl": "/images/lessons/plato/README.md",
+          "license": "Происхождение иллюстрации",
+          "licenseUrl": "/images/lessons/plato/README.md"
+        },
         "lessonId": "plato-introduction",
         "type": "story",
         "title": "Событие, изменившее многое",
@@ -213,14 +233,17 @@ export const INTRO_LESSONS = {
         "options": [
           {
             "id": "aristotle",
+            "image": "/images/lessons/plato/characters/aristotle.webp",
             "text": "Аристотель"
           },
           {
             "id": "socrates",
+            "image": "/images/lessons/plato/characters/socrates.webp",
             "text": "Сократ"
           },
           {
             "id": "plato",
+            "image": "/images/lessons/plato/characters/plato.webp",
             "text": "Платон"
           }
         ],

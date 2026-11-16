@@ -1,5 +1,9 @@
 # Plato lesson illustrations
 
+## Fifth-scene sidebar image, 2026-11-16
+
+`05-socrates-prison-portrait-v2.webp` was created with built-in image_gen specifically for the rectangular sidebar. It depicts Socrates calmly conversing with two anonymous adult pupils in an Athenian prison, with ivory clothing, limestone, sage and soft gold light. It is an artistic reconstruction with photographic realism. Main figures were composed centrally with background margins for the CSS edge fade. Original source is `C:/Users/user/.codex/generated_images/01a1df52-0d11-7563-b1d1-162c8d8e6a38/exec-312af90d-f6b8-43b7-9ded-b928abaad2e5.png`. Export uses Sharp, width 800 px, WebP quality 86, effort 6. The previous wide illustration is preserved.
+
 Active header artwork: [headers-v2/README.md](headers-v2/README.md). Nine new 3:1 panoramas were composed specifically for the narrow header, keeping the principal subjects intact. The assets and prompts below belong to the earlier full-scene revision and are preserved for compatibility/history.
 
 Previous presentation (2026-11-15): the lesson uses a compact 104 px desktop / 88 px mobile image strip beside the scene title; the remaining content is below on the Sophia white background. Per-image focal positions in `lesson-data.ts` adapt these originals for the header. The source files and their provenance remain unchanged.

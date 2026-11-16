@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { IntroLesson } from "./lesson-data";
 import { LessonScene } from "./lesson-scene";
 import { LessonExercise } from "./lesson-exercise";
-import { initialAnswer, lessonHash, lessonStorageKey, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
+import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
 import styles from "./lesson-introduction.module.css";
 
 export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
@@ -16,15 +16,12 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   onClose: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [run, setRun] = useState(() => {
-    let saved: unknown = null;
-    try { saved = JSON.parse(sessionStorage.getItem(lessonStorageKey(lesson.id)) ?? "null"); } catch { /* Storage is optional. */ }
-    return restoreRun(lesson, saved, initialSceneId);
-  });
+  const [run, setRun] = useState(() => restoreRun(lesson, null, initialSceneId));
   const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
   const scene = lesson.scenes[index];
   const exercise = scene.type === "single-choice" || scene.type === "ordering" ? scene : null;
   const answer = exercise ? run.exercises[scene.id] ?? initialAnswer(exercise) : null;
+  const canContinue = !exercise || Boolean(answer && answer.checked && isCorrect(exercise, answer));
   const nextImage = lesson.scenes[index + 1]?.image;
 
   useEffect(() => {
@@ -40,8 +37,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     const url = new URL(window.location.href);
     url.hash = lessonHash(lesson.id, run.sceneId);
     window.history.replaceState(window.history.state, "", url);
-    try { sessionStorage.setItem(lessonStorageKey(lesson.id), JSON.stringify({ version: 1, ...run })); } catch { /* Private or full storage must not block learning. */ }
-  }, [lesson.id, run]);
+  }, [lesson.id, run.sceneId]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -70,12 +66,8 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   }
   function move(direction: -1 | 1) {
     const destination = lesson.scenes[index + direction];
-    if (!destination || (direction === 1 && answer && !answer.checked)) return;
+    if (!destination || (direction === 1 && !canContinue)) return;
     setRun(previous => ({ ...previous, sceneId: destination.id }));
-  }
-  function finish() {
-    try { sessionStorage.removeItem(lessonStorageKey(lesson.id)); } catch { /* Optional tab cache. */ }
-    onClose();
   }
 
   return <div ref={root} className={styles.lesson} data-testid="lesson-introduction">
@@ -90,7 +82,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     <LessonScene scene={scene}
       navigation={<>
         <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
-        <Button type="button" disabled={Boolean(answer && !answer.checked)} onClick={scene.type === "completion" ? finish : () => move(1)}>
+        <Button type="button" disabled={!canContinue} onClick={scene.type === "completion" ? onClose : () => move(1)}>
           {scene.buttonLabel}{scene.type !== "completion" && <ArrowRight size={15} aria-hidden="true" />}
         </Button>
       </>}>
@@ -100,7 +92,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       <summary>Источники и иллюстрации</summary>
       <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
       {lesson.scenes.map(item => item.portrait && <p key={item.id}>
-        Фото: <a href={item.portrait.sourceUrl} target="_blank" rel="noreferrer">{item.portrait.title}</a>
+        Изображение: <a href={item.portrait.sourceUrl} target="_blank" rel="noreferrer">{item.portrait.title}</a>
         {" — "}{item.portrait.credit}{", "}<a href={item.portrait.licenseUrl} target="_blank" rel="noreferrer">{item.portrait.license}</a>.
       </p>)}
       <p>Иллюстрации сцен — художественные интерпретации, созданные для Sophia, а не документальные изображения.</p>
