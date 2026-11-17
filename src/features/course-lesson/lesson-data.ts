@@ -1,4 +1,5 @@
 import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
+import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data";
 export type LessonSceneImage = { src: string; position?: string };
 export type LessonSource = { title: string; url: string };
 type SceneBase = {
@@ -31,6 +32,7 @@ type ExerciseFields = {
 export type LessonSceneData = SceneBase & (
   | { type: "story" }
   | { type: "dialogue"; dialogue: DialogueContent }
+  | { type: "mentor-dialogue"; mentor: MentorContent }
   | ({ type: "single-choice"; correctAnswer: string } & ExerciseFields)
   | ({ type: "ordering"; correctAnswer: readonly string[] } & ExerciseFields)
   | { type: "completion"; bullets: readonly string[]; closing: readonly string[] }
@@ -46,12 +48,15 @@ export type IntroLesson = {
 // User-supplied lesson script, with subsequent user-requested revisions.
 export const INTRO_LESSONS = {
   "plato-socratic-question": {
-    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "2–3 минуты · первый слайд",
+    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "4–6 минут · первые два слайда",
     scenes: [{ id: "cephalus", lessonId: "plato-socratic-question", type: "dialogue",
       title: "Всегда ли поступать честно — значит поступать правильно?", paragraphs: [],
       image: { src: "/images/lessons/dialogue/courtyard.webp" },
       imageAlt: "Солнечный двор древнегреческого дома в Пирее: колонны, растения и каменная терраса",
-      buttonLabel: "Вернуться к курсу", dialogue: CEPHALUS_DIALOGUE }],
+      buttonLabel: "Вернуться к курсу", dialogue: CEPHALUS_DIALOGUE },
+      { id: "socratic-questions", lessonId: "plato-socratic-question", type: "mentor-dialogue",
+        title: "Почему Сократ задавал вопросы?", subtitle: "Теперь Сократ обращается к тебе", paragraphs: [],
+        image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", mentor: SOCRATIC_MENTOR }],
     sources: [{ title: "Платон, Государство, книга I, 331c–331d", url: "https://classics.mit.edu/Plato/republic.2.i.html" }],
   },
   "plato-introduction": {

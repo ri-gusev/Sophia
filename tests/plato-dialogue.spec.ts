@@ -1,4 +1,4 @@
-﻿import { test, expect } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 import AxeBuilder from "@axe-core/playwright";
 
@@ -21,6 +21,10 @@ test("Socratic dialogue has eight turns, back, explanation and replay", async ({
     await expect(scene.getByTestId("dialogue-counter")).toHaveText(`${i + 1} / 8`);
   }
   await expect(scene).toContainText("Так всегда ли справедливо");
+  await page.waitForTimeout(2600);
+  await expect(scene.getByRole("heading", { name: "Добро пожаловать в мир философии!" })).toHaveCount(0);
+  await scene.screenshot({ path: info.outputPath("eighth-before-explanation.png"), style: ".site-header,.skip-link {visibility:hidden!important}" });
+  await scene.getByRole("button", { name: "Разобрать разговор" }).click();
   await expect(scene.getByRole("heading", { name: "Добро пожаловать в мир философии!" })).toBeVisible();
   await expect(scene).toContainText("не являются дословным переводом");
   await scene.screenshot({ path: info.outputPath("dialogue-complete.png") });
@@ -35,4 +39,22 @@ test("Socratic dialogue has eight turns, back, explanation and replay", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await scene.getByRole("status").evaluate(node => getComputedStyle(node).animationName)).toBe("none");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("composition at required widths", async ({ page }, info) => {
+  for (const width of [390, 768, 1024, 1440]) {
+    await page.goto("about:blank");
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/learn#lesson=plato-socratic-question&scene=cephalus");
+    const scene = page.getByTestId("dialogue-scene");
+    await expect(scene).toBeVisible();
+    await page.waitForTimeout(600);
+    await scene.screenshot({ path: info.outputPath(`${width}-cephalus.png`), style: ".site-header,.skip-link {visibility:hidden!important}" });
+    await scene.getByRole("button", { name: "Далее", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(scene.getByRole("status")).toContainText("Значит, ты считаешь");
+    await page.waitForTimeout(450);
+    await scene.screenshot({ path: info.outputPath(`${width}-socrates.png`), style: ".site-header,.skip-link {visibility:hidden!important}" });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
 });

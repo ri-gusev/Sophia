@@ -530,3 +530,14 @@
 ## Next.js security upgrade - 2026-11-17
 
 In the separate security/next-16.4.6 worktree, upgraded Next.js 16.4.3 to exact 16.4.6 following next upgrade --agent=security. Enabled experimental.agentUpgrade: security. npm install, next --version, typecheck, lint and production build passed. All 10 plato-full-lesson Playwright checks passed on desktop/mobile. Full suite not run. npm audit reports no Next.js advisory, but retains 7 moderate findings in the development TypeScript/ESLint dependency chain. Original workspace changes were not included. No equivalent remote branches or open GitHub PRs were found; gh CLI unavailable, GitHub connector search used instead.
+## Рефакторинг диалога — 2026-11-17
+
+Облачка привязаны к разным сторонам (Сократ слева, Кефал справа); на ширинах до 1000 px размещаются над фигурами с указателем стороны. Сохранены исходные WebP и мягкое выделение говорящего. Удалены неиспользуемые стили eyebrow. Реплика и раскрытое пояснение имеют независимое состояние: на восьмой реплике появляется «Разобрать разговор», только нажатие раскрывает пояснение и прокручивает к нему. Переход назад скрывает пояснение; повтор сбрасывает состояние и возвращает к сцене. Таймеров раскрытия нет.
+
+Typecheck, lint и build прошли. Четыре профильных Playwright-проверки desktop/mobile прошли; проверены ширины 390/768/1024/1440, клавиатура, axe и reduced motion. Все десять проверок plato-full-lesson также прошли. Снимки обоих говорящих на четырёх ширинах и финала: test-results/dialogue-refactor-delivery/. Полный набор не запускался. Первый урок, каталог, атлас и тексты диалога не менялись.
+
+## Урок 2, слайд 2 — 2026-11-17
+
+Добавлен тип mentor-dialogue, отдельные mentor-data.ts, MentorScene и CSS module. Переиспользуется портрет Сократа и двор; шесть утверждённых реплик, этапы схемы после 2/4/5 реплики, заключение после шестой. Первый диалог предлагает «Продолжить урок». Он сохраняется смонтированным и скрытым при переходе ко второму слайду: возврат сохраняет реплику и раскрытое пояснение в текущем прохождении. Reload начинает состояние заново. Третьего слайда нет.
+
+Typecheck и production build прошли. ESLint прошёл с --ignore-pattern '.upgrade-security/**': обычный запуск захватывает артефакты вложенного worktree обновления безопасности. Попытка перенести worktree заблокирована Windows (permission denied). Правила исходного приложения не отключались. Все 16 выбранных Playwright-проверок (mentor, dialogue, full lesson), desktop/mobile прошли. Схема, клавиатура, axe, reduced motion и ширины 390/768/1024/1440 проверены; изображения просмотрены. Итоговые кадры: test-results/mentor-final/. Полный набор не запускался.

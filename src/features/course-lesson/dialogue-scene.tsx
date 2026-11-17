@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./dialogue-scene.module.css";
 
-export function DialogueScene({ scene, onClose }: { scene: Extract<LessonSceneData, { type: "dialogue" }>; onClose: () => void }) {
+export function DialogueScene({ scene, onClose, onContinue }: { scene: Extract<LessonSceneData, { type: "dialogue" }>; onClose: () => void; onContinue?: () => void }) {
   const [turn, setTurn] = useState(0);
 
   const lastAdvance = useRef(0);
@@ -14,11 +14,12 @@ export function DialogueScene({ scene, onClose }: { scene: Extract<LessonSceneDa
   const line = lines[turn];
   const speaker = characters.find(character => character.id === line.speaker)!;
   const final = turn === lines.length - 1;
-  const complete = final;
+  const [complete, setComplete] = useState(false);
   function move(direction: -1 | 1) {
     if (direction === 1 && performance.now() - lastAdvance.current < 400) return;
     lastAdvance.current = performance.now();
 
+    setComplete(false);
     setTurn(value => Math.max(0, Math.min(lines.length - 1, value + direction)));
   }
   return <section className={styles.scene} data-testid="dialogue-scene" aria-labelledby={`title-${scene.id}`}>
@@ -43,15 +44,15 @@ export function DialogueScene({ scene, onClose }: { scene: Extract<LessonSceneDa
     <nav className={styles.navigation} aria-label="Управление диалогом">
       <Button variant="ghost" size="sm" aria-label="Предыдущая реплика" disabled={turn === 0} onClick={() => move(-1)}>← Назад</Button>
       <span data-testid="dialogue-counter">{turn + 1} / {lines.length}</span>
-      <Button size="sm" disabled={final} onClick={() => move(1)}>Далее</Button>
+      <Button size="sm" disabled={complete} onClick={() => { if (final) { setComplete(true); requestAnimationFrame(() => document.getElementById(`explanation-${scene.id}`)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" })); } else move(1); }}>{final ? "Разобрать разговор" : "Далее"}</Button>
     </nav>
     <p className={styles.hint}>{final ? "Побудь немного с этим вопросом." : "Читай в своём темпе · Нажми на сцену или «Далее»"}</p>
-    {complete && <div className={styles.explanation}>
+    {complete && <div id={`explanation-${scene.id}`} className={styles.explanation}>
 
       <h3>{explanation.title}</h3>
       {explanation.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
       <p className={styles.note}>{explanation.note} <a href={explanation.source} target="_blank" rel="noreferrer">Первоисточник ↗</a></p>
-      <div className={styles.actions}><Button variant="ghost" onClick={() => { setTurn(0); lastAdvance.current = 0; }}>Повторить диалог</Button><Button onClick={onClose}>Вернуться к курсу</Button></div>
+      <div className={styles.actions}><Button variant="ghost" onClick={() => { setComplete(false); setTurn(0); lastAdvance.current = 0; document.getElementById(`title-${scene.id}`)?.scrollIntoView({ block: "start" }); }}>Повторить диалог</Button>{onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}{!onContinue && <Button variant="ghost" onClick={onClose}>Вернуться к курсу</Button>}</div>
     </div>}
   </section>;
 }

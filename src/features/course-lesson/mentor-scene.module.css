@@ -1,0 +1,36 @@
+.scene { color:var(--ink); padding:30px 0 36px; }
+.scene > header { text-align:center; padding:0 20px 30px; }
+.scene > header > p { color:var(--green); font-size:12px; margin-bottom:12px; }
+.scene h2 { font-size:clamp(25px,3vw,36px); font-weight:550; line-height:1.4; }
+.composition { display:grid; grid-template-columns:42% 58%; min-height:550px; overflow:hidden; border-radius:24px; background:#f3f5e9; }
+.art { position:relative; min-height:550px; overflow:hidden; isolation:isolate; }
+.background { object-fit:cover; opacity:.42; z-index:-2; }
+.art::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent 65%,#f3f5e9),linear-gradient(0deg,#f3f5e9,transparent 20%); pointer-events:none; }
+.figure { position:absolute; inset:15px -20px -260px; animation:highlight 500ms ease both; }
+.figure img { object-fit:cover; object-position:center top; }
+.reading { padding:40px 32px 30px 20px; min-width:0; }
+.bubbleSpace { min-height:240px; }
+.bubble { background:#fffdf5; border:1px solid #d4dac8; border-radius:22px; padding:24px 28px; position:relative; animation:appear 500ms ease both; }
+.bubble::before { content:""; position:absolute; left:-9px; top:35px; width:16px; height:16px; background:#fffdf5; border-left:1px solid #d4dac8; border-bottom:1px solid #d4dac8; transform:rotate(45deg); }
+.bubble span { color:var(--green); font-size:12px; }
+.bubble p { font-size:clamp(17px,1.6vw,20px); line-height:1.8; margin-top:12px; }
+.navigation { display:flex; align-items:center; justify-content:center; gap:22px; margin:16px 0 28px; }
+.navigation > span { color:var(--muted); font-size:12px; }
+.stages { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.stages li { border-top:2px solid var(--line); padding:12px 4px; min-height:160px; transition:border-color 400ms,background 400ms; }
+.stages li[data-active=true] { border-color:var(--green); background:#e6efdf; }
+.number { font-size:11px; color:var(--green); }
+.stages h3 { font-size:13px; margin:8px 0; }
+.stages p { font-size:12px; line-height:1.7; }
+.waiting { display:block; color:var(--muted); font-size:11px; margin-top:12px; }
+.conclusion { max-width:760px; margin:32px auto; padding:24px; animation:appear 500ms ease both; }
+.conclusion h3 { color:var(--green); font-size:26px; margin-bottom:18px; }
+.conclusion p { font-size:15px; line-height:1.9; margin:12px 0; }
+.conclusion .emphasis { color:var(--green); font-size:21px; font-weight:600; margin-top:24px; }
+.note { max-width:760px; margin:24px auto; padding-inline:24px; font-size:11px; line-height:1.9; color:var(--muted); }
+.actions { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; padding-inline:16px; }
+@keyframes appear { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+@keyframes highlight { from { filter:brightness(.96); } to { filter:brightness(1.03); } }
+@media(max-width:1000px) { .reading { padding:28px 20px; } .stages { grid-template-columns:1fr; gap:6px; } .stages li { min-height:85px; } .bubbleSpace { min-height:270px; } }
+@media(max-width:760px) { .composition { grid-template-columns:1fr; } .art { min-height:270px; } .figure { inset:0 0 -450px; max-width:400px; margin:auto; } .art::after { background:linear-gradient(0deg,#f3f5e9,transparent 35%); } .reading { padding:8px 20px 24px; } .bubbleSpace { min-height:270px; } .bubble::before { top:-9px; left:40px; transform:rotate(135deg); } }
+@media(prefers-reduced-motion:reduce) { .bubble,.figure,.conclusion { animation:none; } .stages li { transition:none; } }
