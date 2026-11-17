@@ -30,8 +30,7 @@ export function WorkshopScene({ scene, onBack, onClose }: { scene: Extract<Lesso
     {ready && <div className={styles.task}>
       <h3><label htmlFor={id}>{data.question}</label></h3>
       <p className={styles.assertion}>{data.assertion.before} <strong>{data.assertion.emphasis}</strong> {data.assertion.after}.</p>
-      <p id={`${id}-help`} className={styles.instruction}>{data.instruction}</p>
-      <textarea ref={input} id={id} aria-describedby={`${id}-help`} placeholder={data.placeholder} value={draft} onChange={event => setDraft(event.target.value)} rows={4} readOnly={example} />
+      <textarea ref={input} id={id} placeholder={data.placeholder} value={draft} onChange={event => setDraft(event.target.value)} rows={4} readOnly={example} />
       {!example && <div className={styles.buttons}><Button disabled={!draft.trim()} onClick={() => setExample(true)}>Сравнить с вопросом Сократа</Button><Button variant="ghost" onClick={() => setHint(value => !value)} aria-expanded={hint} aria-controls={`${id}-hint`}>Получить подсказку</Button>{!draft.trim() && <button className={styles.skip} onClick={() => setExample(true)}>Не знаю — покажи пример</button>}</div>}
       {hint && <div id={`${id}-hint`} className={styles.hint} role="status"><span>Сократ</span><p>{data.hint}</p></div>}
       {example && <Button variant="ghost" onClick={() => { setExample(false); requestAnimationFrame(() => input.current?.focus()); }}>Изменить свой вопрос</Button>}
