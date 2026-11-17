@@ -6,7 +6,7 @@ import type { LessonSceneData } from "./lesson-data";
 import shared from "./mentor-scene.module.css";
 import styles from "./practice-scene.module.css";
 
-export function PracticeScene({ scene, onBack }: { scene: Extract<LessonSceneData, { type: "guided-practice" }>; onBack: () => void }) {
+export function PracticeScene({ scene, onBack, onContinue }: { scene: Extract<LessonSceneData, { type: "guided-practice" }>; onBack: () => void; onContinue?: () => void }) {
   const [turn, setTurn] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
@@ -57,6 +57,6 @@ export function PracticeScene({ scene, onBack }: { scene: Extract<LessonSceneDat
       <h3>{data.discovery}.</h3><p>{data.closing}</p>
       <div className={styles.summary}>{data.summary.map((text, index) => <p key={text}>{index === 0 ? <strong>{text}</strong> : text}</p>)}</div>
     </div>}
-    <nav className={shared.actions} aria-label="Навигация по заданию"><Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>{correct && <Button variant="ghost" onClick={repeat}>Повторить задание</Button>}</nav>
+    <nav className={shared.actions} aria-label="Навигация по заданию"><Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>{correct && <Button variant="ghost" onClick={repeat}>Повторить задание</Button>}{correct && onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}</nav>
   </section>;
 }

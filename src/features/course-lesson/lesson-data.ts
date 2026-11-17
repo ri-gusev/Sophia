@@ -1,3 +1,4 @@
+import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data";
 import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
 import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
 import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data";
@@ -32,6 +33,7 @@ type ExerciseFields = {
 };
 export type LessonSceneData = SceneBase & (
   | { type: "story" }
+  | { type: "question-workshop"; workshop: WorkshopContent }
   | { type: "guided-practice"; practice: PracticeContent }
   | { type: "dialogue"; dialogue: DialogueContent }
   | { type: "mentor-dialogue"; mentor: MentorContent }
@@ -50,7 +52,7 @@ export type IntroLesson = {
 // User-supplied lesson script, with subsequent user-requested revisions.
 export const INTRO_LESSONS = {
   "plato-socratic-question": {
-    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "6–8 минут · первые три слайда",
+    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "8–10 минут · первые четыре слайда",
     scenes: [{ id: "cephalus", lessonId: "plato-socratic-question", type: "dialogue",
       title: "Всегда ли поступать честно — значит поступать правильно?", paragraphs: [],
       image: { src: "/images/lessons/dialogue/courtyard.webp" },
@@ -59,7 +61,8 @@ export const INTRO_LESSONS = {
       { id: "socratic-questions", lessonId: "plato-socratic-question", type: "mentor-dialogue",
         title: "Почему Сократ задавал вопросы?", subtitle: "Теперь Сократ обращается к тебе", paragraphs: [],
         image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", mentor: SOCRATIC_MENTOR },
-      { id: "always-true", lessonId: "plato-socratic-question", type: "guided-practice", title: "А всегда ли это так?", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", practice: SOCRATIC_PRACTICE }],
+      { id: "always-true", lessonId: "plato-socratic-question", type: "guided-practice", title: "А всегда ли это так?", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", practice: SOCRATIC_PRACTICE },
+      { id: "courage-question", lessonId: "plato-socratic-question", type: "question-workshop", title: "Теперь ты на месте Сократа", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Учебная сцена в Афинах", buttonLabel: "Вернуться к курсу", workshop: COURAGE_WORKSHOP }],
     sources: [{ title: "Платон, Государство, книга I, 331c–331d", url: "https://classics.mit.edu/Plato/republic.2.i.html" }],
   },
   "plato-introduction": {
