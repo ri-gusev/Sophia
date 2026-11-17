@@ -526,3 +526,7 @@
 ## Уточнение диалоговой сцены — 2026-11-17
 
 Убран автоматический фокус заголовка диалога; прокрутка к сцене сохранена. Заключение плавно появляется сразу на восьмой реплике, без таймера. Раскрывающийся блок источников скрыт для dialogue; историческая оговорка и первоисточник в заключении сохранены. Первый урок не изменён.
+
+## Next.js security upgrade - 2026-11-17
+
+In the separate security/next-16.4.6 worktree, upgraded Next.js 16.4.3 to exact 16.4.6 following next upgrade --agent=security. Enabled experimental.agentUpgrade: security. npm install, next --version, typecheck, lint and production build passed. All 10 plato-full-lesson Playwright checks passed on desktop/mobile. Full suite not run. npm audit reports no Next.js advisory, but retains 7 moderate findings in the development TypeScript/ESLint dependency chain. Original workspace changes were not included. No equivalent remote branches or open GitHub PRs were found; gh CLI unavailable, GitHub connector search used instead.
