@@ -46,11 +46,11 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       if (!heading) return;
       const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
       const banner = root.current?.querySelector<HTMLElement>('[data-testid="lesson-scene-header"]') ?? heading;
-      heading.focus({ preventScroll: true });
+      if (scene.type !== "dialogue") heading.focus({ preventScroll: true });
       window.scrollTo({ top: Math.max(0, window.scrollY + banner.getBoundingClientRect().top - headerHeight - 24), behavior: "instant" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [scene.id]);
+  }, [scene.id, scene.type]);
 
   useEffect(() => {
     if (!nextImage) return;
@@ -89,7 +89,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       </>}>
       {exercise && answer && <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />}
     </LessonScene>}
-    <details className={styles.sources}>
+    {scene.type !== "dialogue" && <details className={styles.sources}>
       <summary>Источники и иллюстрации</summary>
       <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
       {lesson.scenes.map(item => item.portrait && <p key={item.id}>
@@ -98,6 +98,6 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       </p>)}
       <p>Иллюстрации сцен — художественные интерпретации, созданные для Sophia, а не документальные изображения.</p>
       <a href="/images/lessons/plato/README.md" target="_blank" rel="noreferrer">Происхождение иллюстраций</a>
-    </details>
+    </details>}
   </div>;
 }
