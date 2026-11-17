@@ -1,0 +1,23 @@
+.assertion { font-size:18px; line-height:1.7; color:var(--green); margin:12px 0 22px; }
+.assertion strong { color:#80552e; }
+.exercise { animation:reveal 450ms ease both; }
+.exercise fieldset { border:0; padding:0; margin:0 0 20px; min-width:0; }
+.exercise legend { font-size:18px; line-height:1.7; margin-bottom:16px; font-weight:600; }
+.option { display:flex; align-items:flex-start; gap:12px; padding:20px; margin:12px 0; border:1px solid #ccd5c5; border-radius:18px; background:#fafbf5; cursor:pointer; transition:background 300ms,border-color 300ms; font-size:15px; line-height:1.8; }
+.option[data-selected=true] { background:#dfecda; border-color:var(--green); }
+.option:focus-within { outline:2px solid var(--green); outline-offset:3px; }
+.option input { margin-top:6px; accent-color:var(--green); flex-shrink:0; }
+.feedback { margin:24px 0; color:var(--green); font-size:15px; line-height:1.8; white-space:pre-line; animation:reveal 450ms ease both; }
+.feedback > span { font-size:12px; }
+.discovery { max-width:800px; padding:36px 24px; margin:auto; animation:reveal 450ms ease both; }
+.discovery > p { font-size:19px; line-height:1.9; margin:20px 0; }
+.discovery h3 { font-size:clamp(24px,3vw,32px); color:var(--green); line-height:1.5; margin:24px 0; }
+.strike { position:relative; display:inline-block; color:#80552e; }
+.strike::after { content:""; position:absolute; left:-3%; top:54%; width:106%; height:2px; background:var(--green); transform:rotate(-5deg); transform-origin:left; animation:cross 650ms 250ms ease both; }
+.summary { margin-top:30px; border-top:1px solid var(--line); padding-top:20px; font-size:15px; line-height:1.9; }
+.summary p { margin:12px 0; }
+@keyframes cross { from { scale:0 1; } to { scale:1 1; } }
+@keyframes reveal { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { .exercise,.feedback,.discovery,.strike::after { animation:none; } .option { transition:none; } }
+.portraitArea { align-self:start; height:550px; }
+@media(max-width:760px) { .portraitArea { height:270px; } }

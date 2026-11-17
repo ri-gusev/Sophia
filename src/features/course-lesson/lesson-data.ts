@@ -1,3 +1,4 @@
+import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
 import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
 import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data";
 export type LessonSceneImage = { src: string; position?: string };
@@ -31,6 +32,7 @@ type ExerciseFields = {
 };
 export type LessonSceneData = SceneBase & (
   | { type: "story" }
+  | { type: "guided-practice"; practice: PracticeContent }
   | { type: "dialogue"; dialogue: DialogueContent }
   | { type: "mentor-dialogue"; mentor: MentorContent }
   | ({ type: "single-choice"; correctAnswer: string } & ExerciseFields)
@@ -48,7 +50,7 @@ export type IntroLesson = {
 // User-supplied lesson script, with subsequent user-requested revisions.
 export const INTRO_LESSONS = {
   "plato-socratic-question": {
-    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "4–6 минут · первые два слайда",
+    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "6–8 минут · первые три слайда",
     scenes: [{ id: "cephalus", lessonId: "plato-socratic-question", type: "dialogue",
       title: "Всегда ли поступать честно — значит поступать правильно?", paragraphs: [],
       image: { src: "/images/lessons/dialogue/courtyard.webp" },
@@ -56,7 +58,8 @@ export const INTRO_LESSONS = {
       buttonLabel: "Вернуться к курсу", dialogue: CEPHALUS_DIALOGUE },
       { id: "socratic-questions", lessonId: "plato-socratic-question", type: "mentor-dialogue",
         title: "Почему Сократ задавал вопросы?", subtitle: "Теперь Сократ обращается к тебе", paragraphs: [],
-        image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", mentor: SOCRATIC_MENTOR }],
+        image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", mentor: SOCRATIC_MENTOR },
+      { id: "always-true", lessonId: "plato-socratic-question", type: "guided-practice", title: "А всегда ли это так?", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", practice: SOCRATIC_PRACTICE }],
     sources: [{ title: "Платон, Государство, книга I, 331c–331d", url: "https://classics.mit.edu/Plato/republic.2.i.html" }],
   },
   "plato-introduction": {

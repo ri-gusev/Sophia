@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./mentor-scene.module.css";
 
-export function MentorScene({ scene, onBack, onClose }: { scene: Extract<LessonSceneData, { type: "mentor-dialogue" }>; onBack: () => void; onClose: () => void }) {
+export function MentorScene({ scene, onBack, onContinue }: { scene: Extract<LessonSceneData, { type: "mentor-dialogue" }>; onBack: () => void; onContinue?: () => void }) {
   const [turn, setTurn] = useState(0);
   const lastAdvance = useRef(0);
   const { character, lines, stages, conclusion, note } = scene.mentor;
@@ -43,7 +43,8 @@ export function MentorScene({ scene, onBack, onClose }: { scene: Extract<LessonS
     <nav className={styles.actions} aria-label="Навигация по уроку">
       <Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>
       {final && <Button variant="ghost" onClick={() => { setTurn(0); lastAdvance.current = 0; }}>Повторить объяснение</Button>}
-      <Button onClick={onClose}>Вернуться к курсу</Button>
+      {final && onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}
+
     </nav>
   </section>;
 }
