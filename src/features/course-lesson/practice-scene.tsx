@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import shared from "./mentor-scene.module.css";
@@ -15,6 +15,23 @@ export function PracticeScene({ scene, onBack }: { scene: Extract<LessonSceneDat
   const data = scene.practice;
   const ready = turn === data.lines.length - 1;
   const correct = checked && selected === data.correctAnswer;
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!checked) return;
+    const frame = requestAnimationFrame(() => {
+      const feedback = feedbackRef.current;
+      if (!feedback || feedback.closest("[hidden]")) return;
+      const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
+      const top = feedback.getBoundingClientRect().top;
+      const targetTop = Math.max(headerHeight + 24, window.innerHeight * 0.22);
+      if (top <= targetTop) return;
+      window.scrollBy({
+        top: top - targetTop,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [checked]);
   function next() { if (performance.now() - lastAdvance.current < 400) return; lastAdvance.current = performance.now(); setTurn(value => Math.min(data.lines.length - 1, value + 1)); }
   function repeat() { setTurn(0); setSelected(null); setChecked(false); lastAdvance.current = 0; }
   return <section className={shared.scene} data-testid="practice-scene">
@@ -31,7 +48,7 @@ export function PracticeScene({ scene, onBack }: { scene: Extract<LessonSceneDat
             </label>)}
           </fieldset>
           <Button disabled={!selected || correct} onClick={() => setChecked(true)}>Проверить</Button>
-          {checked && <div className={styles.feedback} role="status" aria-live="polite"><span>{data.character.name}</span><p>{correct ? data.correct : data.incorrect}</p></div>}
+          {checked && <div ref={feedbackRef} className={styles.feedback} role="status" aria-live="polite"><span>{data.character.name}</span><p>{correct ? data.correct : data.incorrect}</p></div>}
         </div>}
       </div>
     </div>

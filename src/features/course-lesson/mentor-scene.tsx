@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./mentor-scene.module.css";
@@ -10,6 +10,18 @@ export function MentorScene({ scene, onBack, onContinue }: { scene: Extract<Less
   const lastAdvance = useRef(0);
   const { character, lines, stages, conclusion, note } = scene.mentor;
   const final = turn === lines.length - 1;
+  const conclusionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!final) return;
+    const timer = window.setTimeout(() => {
+      if (!conclusionRef.current || conclusionRef.current.closest("[hidden]")) return;
+      conclusionRef.current.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        block: "start",
+      });
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [final]);
   const active = stages.findLastIndex(stage => stage.afterTurn <= turn + 1);
   function move(direction: -1 | 1) {
     if (direction === 1 && performance.now() - lastAdvance.current < 400) return;
@@ -38,7 +50,7 @@ export function MentorScene({ scene, onBack, onContinue }: { scene: Extract<Less
         </ol>
       </div>
     </div>
-    {final && <div className={styles.conclusion}><h3>{conclusion.title}</h3>{conclusion.paragraphs.map(text => <p key={text}>{text}</p>)}<p className={styles.emphasis}>{conclusion.emphasis}</p></div>}
+    {final && <div ref={conclusionRef} className={styles.conclusion}><h3>{conclusion.title}</h3>{conclusion.paragraphs.map(text => <p key={text}>{text}</p>)}<p className={styles.emphasis}>{conclusion.emphasis}</p></div>}
     <p className={styles.note}>{note}</p>
     <nav className={styles.actions} aria-label="Навигация по уроку">
       <Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>

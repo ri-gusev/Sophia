@@ -8,6 +8,7 @@ export const COURSE_ERAS: readonly CourseEra[] = [
     { id: "plato", title: "Платон", description: "Знакомство с философией Платона." },
     { id: "aristotle", title: "Аристотель", description: "Знакомство с философией Аристотеля." },
     { id: "stoicism", title: "Стоицизм", description: "Знакомство со стоицизмом как философским направлением." },
+    { id: "glossary", title: "Изученные термины", description: "Словарик философских терминов готовится." },
   ] },
   { id: "medieval", title: "Средневековье", steps: [
     { id: "medieval-context", title: "Войти в эпоху", description: "Исторический контекст средневекового философского поиска." },

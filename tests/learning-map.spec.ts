@@ -6,15 +6,15 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
-test("course map exposes five eras with four ancient main nodes and five in each later era", async ({ page }) => {
+test("course map exposes five eras with five main nodes in each era", async ({ page }) => {
   await page.goto("/learn");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Основной курс философии");
   const map = page.getByRole("region", { name: "Карта основного курса", exact: true });
   await expect(map).toBeVisible();
-  await expect(map.getByTestId("course-step")).toHaveCount(25);
+  await expect(map.getByTestId("course-step")).toHaveCount(26);
   for (const era of eras) {
     await expect(page.getByRole("button", { name: era, exact: true })).toBeVisible();
-    const count = era === "Античность" ? 4 : 5;
+    const count = 5;
     await expect(map.getByRole("button", { name: new RegExp(`^${era}: шаг [1-5] — .+`) })).toHaveCount(count);
     for (let number = 1; number <= count; number += 1) {
       await expect(map.getByRole("button", { name: new RegExp(`^${era}: шаг ${number} — .+`) })).toHaveCount(1);
@@ -51,7 +51,7 @@ test("viewing a demo leaves steps uncompleted and reload closes the dialog", asy
   await steps.first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Вернуться к карте", exact: true }).click();
-  await expect(steps).toHaveCount(25);
+  await expect(steps).toHaveCount(26);
   expect(await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")))).toEqual(originalLabels);
   await expect(page.getByRole("main")).not.toContainText(/пройдено\s*[:：]?\s*[1-9]|завершено\s*[:：]?\s*[1-9]/i);
   await steps.first().click();

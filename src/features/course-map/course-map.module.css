@@ -39,7 +39,7 @@
 .branch { transform:translate(-50%,-33px); }
 .branch .step { width:66px; height:66px; }
 .branch .stepArtwork { transform:scale(.7); }
-.branch .stepLabel { max-width:124px; padding:4px 8px; font-size:10px; line-height:1.3; background:#faf8ed; }
+.branch .stepLabel { position:absolute; left:50%; top:-66px; transform:translateX(-50%); width:124px; max-width:124px; padding:4px 8px; font-size:10px; line-height:1.3; background:#faf8ed; }
 .branch .stepLabel small { display:block; margin-bottom:3px; font-size:8px; font-weight:500; color:#6b715e; }
 
 /* A physical base stays grounded while the beveled face moves on press. */
