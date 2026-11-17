@@ -513,3 +513,11 @@
 - `tests/learning-map.spec.ts` — сценарии карты; существующие сценарии Phase 2 сохраняют проверку главной и навигации.
 - `docs/superpowers/plans/2026-10-31-restore-map-scale.md` — выполненный план восстановления выбранного варианта.
 - Обновлены `README.md`, `docs/product/{MVP,ROADMAP}.md`, `docs/architecture/{OVERVIEW,STRUCTURE,DECISIONS}.md`, `docs/design/{DESIGN_SYSTEM,UX_GUIDELINES}.md`, `docs/development/{CURRENT_STATE,TESTING}.md`, `docs/references/README.md`.
+
+## Диалог Сократа и Кефала — 2026-11-17
+
+- В первый блок курса подключён урок «Как Сократ разрушал уверенность?» с одним слайдом. Тип dialogue, данные восьми реплик, реестр переиспользуемых персонажей и компонент отделены; первый урок сохранён.
+- Три локальных WebP-слоя: двор, Сократ слева, Кефал справа. Происхождение: public/images/lessons/dialogue/README.md и generation.json. Это художественная учебная адаптация; историческая оговорка и ссылка на Государство I, 331c–331d доступны после диалога.
+- Навигация назад/вперёд нативными кнопками, клик по сцене, защита от двойного клика 400 мс, пауза 2,4 с перед пояснением, повтор и возврат к курсу. На mobile облачко над персонажами; поддерживается reduced motion.
+- Typecheck, ESLint и production build успешны. Playwright: все 18 выбранных тестов desktop/mobile прошли (plato-dialogue, plato-full-lesson, plato-lesson-state), включая axe, локальные изображения и reduced motion. Полный набор проекта не запускался.
+- Десктопный и мобильный кадры просмотрены. Итоговые снимки: test-results/dialogue-reviewed/plato-dialogue-Socratic-di-ed11c-back-explanation-and-replay-desktop/dialogue-desktop.png и соответствующий каталог mobile.

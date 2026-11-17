@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { getImageProps } from "next/image";
 import { Button } from "@/components/ui/button";
 import type { IntroLesson } from "./lesson-data";
+import { DialogueScene } from "./dialogue-scene";
 import { LessonScene } from "./lesson-scene";
 import { LessonExercise } from "./lesson-exercise";
 import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
@@ -79,7 +80,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={1} aria-valuemax={lesson.scenes.length} aria-valuenow={index + 1}>
       <span style={{ width: `${(index + 1) / lesson.scenes.length * 100}%` }} />
     </div>
-    <LessonScene scene={scene}
+    {scene.type === "dialogue" ? <DialogueScene key={scene.id} scene={scene} onClose={onClose} /> : <LessonScene scene={scene}
       navigation={<>
         <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
         <Button type="button" disabled={!canContinue} onClick={scene.type === "completion" ? onClose : () => move(1)}>
@@ -87,7 +88,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
         </Button>
       </>}>
       {exercise && answer && <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />}
-    </LessonScene>
+    </LessonScene>}
     <details className={styles.sources}>
       <summary>Источники и иллюстрации</summary>
       <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>

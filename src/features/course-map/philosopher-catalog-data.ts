@@ -33,7 +33,7 @@ export const PHILOSOPHER_CATALOGS = {
     courseTitle: "Основной курс",
     sections: [
       { id: "themes", title: "Программа обучения", kind: "blocks", blocks: [
-        { id: "socrates", order: 1, title: "Сократ и рождение философского вопроса", question: "С чего начинается философия?", lessons: [{ id: "who-is-plato", title: "Кто такой Платон?", contentId: "plato-introduction" }], status: "partial" },
+        { id: "socrates", order: 1, title: "Сократ и рождение философского вопроса", question: "С чего начинается философия?", lessons: [{ id: "who-is-plato", title: "Кто такой Платон?", contentId: "plato-introduction" }, { id: "socratic-question", title: "Как Сократ разрушал уверенность?", contentId: "plato-socratic-question" }], status: "partial" },
         { id: "virtue", order: 2, title: "Добродетель и правильная жизнь", question: "Что значит быть хорошим человеком?", lessons: [], status: "planned" },
         { id: "knowledge", order: 3, title: "Познание и истина", question: "Что мы можем знать?", lessons: [], status: "planned" },
         { id: "world-of-ideas", order: 4, title: "Душа и мир идей", question: "Что существует на самом деле?", lessons: [], status: "planned" },
