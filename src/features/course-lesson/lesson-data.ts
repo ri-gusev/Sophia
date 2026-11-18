@@ -1,3 +1,4 @@
+import { SOCRATIC_REFLECTION, type ReflectionContent } from "./reflection-data";
 import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data";
 import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
 import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
@@ -33,6 +34,7 @@ type ExerciseFields = {
 };
 export type LessonSceneData = SceneBase & (
   | { type: "story" }
+  | { type: "lesson-reflection"; reflection: ReflectionContent }
   | { type: "question-workshop"; workshop: WorkshopContent }
   | { type: "guided-practice"; practice: PracticeContent }
   | { type: "dialogue"; dialogue: DialogueContent }
@@ -52,7 +54,7 @@ export type IntroLesson = {
 // User-supplied lesson script, with subsequent user-requested revisions.
 export const INTRO_LESSONS = {
   "plato-socratic-question": {
-    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "8–10 минут · первые четыре слайда",
+    id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "10–12 минут",
     scenes: [{ id: "cephalus", lessonId: "plato-socratic-question", type: "dialogue",
       title: "Всегда ли поступать честно — значит поступать правильно?", paragraphs: [],
       image: { src: "/images/lessons/dialogue/courtyard.webp" },
@@ -62,7 +64,8 @@ export const INTRO_LESSONS = {
         title: "Почему Сократ задавал вопросы?", subtitle: "Теперь Сократ обращается к тебе", paragraphs: [],
         image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", mentor: SOCRATIC_MENTOR },
       { id: "always-true", lessonId: "plato-socratic-question", type: "guided-practice", title: "А всегда ли это так?", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Двор Кефала", buttonLabel: "Вернуться к курсу", practice: SOCRATIC_PRACTICE },
-      { id: "courage-question", lessonId: "plato-socratic-question", type: "question-workshop", title: "Теперь ты на месте Сократа", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Учебная сцена в Афинах", buttonLabel: "Вернуться к курсу", workshop: COURAGE_WORKSHOP }],
+      { id: "courage-question", lessonId: "plato-socratic-question", type: "question-workshop", title: "Теперь ты на месте Сократа", paragraphs: [], image: { src: "/images/lessons/dialogue/courtyard.webp" }, imageAlt: "Учебная сцена в Афинах", buttonLabel: "Вернуться к курсу", workshop: COURAGE_WORKSHOP },
+      { id: "first-step", lessonId: "plato-socratic-question", type: "lesson-reflection", title: "Ты сделал первый шаг", subtitle: "Последние слова Сократа", paragraphs: [], image: { src: "/images/lessons/plato/06-academy.webp" }, imageAlt: "Тихий античный сад", buttonLabel: "Завершить урок", reflection: SOCRATIC_REFLECTION }],
     sources: [{ title: "Платон, Государство, книга I, 331c–331d", url: "https://classics.mit.edu/Plato/republic.2.i.html" }],
   },
   "plato-introduction": {

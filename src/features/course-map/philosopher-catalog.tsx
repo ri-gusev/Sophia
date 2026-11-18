@@ -6,6 +6,9 @@ import type { CatalogBlock, PhilosopherCatalog as CatalogData } from "./philosop
 import type { IntroLessonId } from "../course-lesson/lesson-data";
 import styles from "./philosopher-catalog.module.css";
 
+import { LESSON_PROGRESS_EVENT, LESSON_PROGRESS_KEY } from "../course-lesson/lesson-progress";
+function subscribeProgress(callback: () => void) { window.addEventListener(LESSON_PROGRESS_EVENT, callback); window.addEventListener("storage", callback); return () => { window.removeEventListener(LESSON_PROGRESS_EVENT, callback); window.removeEventListener("storage", callback); }; }
+function progressSnapshot() { try { return localStorage.getItem(LESSON_PROGRESS_KEY) ?? "[]"; } catch { return "[]"; } }
 const DESKTOP_QUERY = "(min-width: 1000px)";
 function subscribe(onChange: () => void) {
   const query = window.matchMedia(DESKTOP_QUERY);
@@ -89,6 +92,8 @@ function CourseBlock({ block, lessonPanelId, activeLessonId, onSelectLesson }: {
   activeLessonId: IntroLessonId | null;
   onSelectLesson: (id: IntroLessonId) => void;
 }) {
+  const rawProgress = useSyncExternalStore(subscribeProgress, progressSnapshot, () => "[]");
+  let completed: unknown = []; try { completed = JSON.parse(rawProgress); } catch {}
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
   return <li className={styles.lesson} data-block-id={block.id}>
@@ -108,7 +113,7 @@ function CourseBlock({ block, lessonPanelId, activeLessonId, onSelectLesson }: {
             aria-controls={lesson.contentId ? lessonPanelId : undefined}
             aria-expanded={lesson.contentId ? activeLessonId === lesson.contentId : undefined}
             onClick={() => { if (lesson.contentId) onSelectLesson(lesson.contentId); }}>
-            <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+            <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}{lesson.contentId && Array.isArray(completed) && completed.includes(lesson.contentId) && <small> · Пройдено (в этом браузере)</small>}</span>
             {lesson.contentId ? <ChevronDown size={17} aria-hidden="true" /> : <small className={styles.planned}>Скоро</small>}
           </button>
         </li>)}

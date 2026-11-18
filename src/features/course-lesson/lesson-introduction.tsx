@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { getImageProps } from "next/image";
 import { Button } from "@/components/ui/button";
 import type { IntroLesson } from "./lesson-data";
+import { LessonReflectionScene } from "./reflection-scene";
 import { WorkshopScene } from "./workshop-scene";
 import { PracticeScene } from "./practice-scene";
 import { MentorScene } from "./mentor-scene";
@@ -84,8 +85,8 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       <span style={{ width: `${(index + 1) / lesson.scenes.length * 100}%` }} />
     </div>
     {lesson.scenes.filter(item => item.type === "dialogue").map(item => item.type === "dialogue" && <div key={item.id} hidden={scene.id !== item.id}><DialogueScene scene={item} onContinue={() => move(1)} /></div>)}
-    {lesson.scenes.map(item => item.type === "mentor-dialogue" ? <div key={item.id} hidden={scene.id !== item.id}><MentorScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "guided-practice" ? <div key={item.id} hidden={scene.id !== item.id}><PracticeScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "question-workshop" ? <div key={item.id} hidden={scene.id !== item.id}><WorkshopScene scene={item} onBack={() => move(-1)} onClose={onClose} /></div> : null)}
-    {scene.type === "dialogue" || scene.type === "mentor-dialogue" || scene.type === "guided-practice" || scene.type === "question-workshop" ? null : <LessonScene scene={scene}
+    {lesson.scenes.map(item => item.type === "mentor-dialogue" ? <div key={item.id} hidden={scene.id !== item.id}><MentorScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "guided-practice" ? <div key={item.id} hidden={scene.id !== item.id}><PracticeScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "question-workshop" ? <div key={item.id} hidden={scene.id !== item.id}><WorkshopScene scene={item} onBack={() => move(-1)} onClose={onClose} onContinue={() => move(1)} /></div> : item.type === "lesson-reflection" ? <div key={item.id} hidden={scene.id !== item.id}><LessonReflectionScene scene={item} onBack={() => move(-1)} onComplete={onClose} /></div> : null)}
+    {scene.type === "dialogue" || scene.type === "mentor-dialogue" || scene.type === "guided-practice" || scene.type === "question-workshop" || scene.type === "lesson-reflection" ? null : <LessonScene scene={scene}
       navigation={<>
         <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
         <Button type="button" disabled={!canContinue} onClick={scene.type === "completion" ? onClose : () => move(1)}>
@@ -94,7 +95,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       </>}>
       {exercise && answer && <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />}
     </LessonScene>}
-    {scene.type !== "dialogue" && scene.type !== "mentor-dialogue" && scene.type !== "guided-practice" && scene.type !== "question-workshop" && <details className={styles.sources}>
+    {scene.type !== "dialogue" && scene.type !== "mentor-dialogue" && scene.type !== "guided-practice" && scene.type !== "question-workshop" && scene.type !== "lesson-reflection" && <details className={styles.sources}>
       <summary>Источники и иллюстрации</summary>
       <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
       {lesson.scenes.map(item => item.portrait && <p key={item.id}>
