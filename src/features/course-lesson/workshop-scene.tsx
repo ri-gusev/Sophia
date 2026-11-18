@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./workshop-scene.module.css";
 
-export function WorkshopScene({ scene, onBack, onClose, onContinue }: { scene: Extract<LessonSceneData, { type: "question-workshop" }>; onBack: () => void; onClose: () => void; onContinue?: () => void }) {
+export function WorkshopScene({ scene, onBack, onContinue }: { scene: Extract<LessonSceneData, { type: "question-workshop" }>; onBack: () => void; onContinue?: () => void }) {
   const [turn, setTurn] = useState(0);
   const [draft, setDraft] = useState("");
   const [hint, setHint] = useState(false);
@@ -45,6 +45,6 @@ export function WorkshopScene({ scene, onBack, onClose, onContinue }: { scene: E
       <div className={styles.final}><span>Сократ</span><p>{data.reaction}</p><strong>{data.closing}.</strong></div>
     </div>}
     <p className={styles.note}>{data.note}</p>
-    <nav className={styles.actions} aria-label="Навигация по заданию"><Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>{example && <><Button variant="ghost" onClick={repeat}>Повторить задание</Button>{onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}<Button variant="ghost" onClick={onClose}>Вернуться к курсу</Button></>}</nav>
+    <nav className={styles.actions} aria-label="Навигация по заданию"><Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>{example && <><Button variant="ghost" onClick={repeat}>Повторить задание</Button>{onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}</>}</nav>
   </section>;
 }

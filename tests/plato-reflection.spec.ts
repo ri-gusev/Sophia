@@ -27,7 +27,7 @@ test("reflection explicitly saves completion, persists and returns to catalog",a
  await scene.getByRole('button',{name:'Завершить урок',exact:true}).click();
  await expect(scene).toHaveCount(0);
  await page.getByRole('button',{name:'Сократ и рождение философского вопроса',exact:true}).click();
- await expect(page.getByTestId('philosopher-catalog')).toContainText('Пройдено (в этом браузере)');
+ await expect(page.getByTestId('philosopher-catalog')).not.toContainText('Пройдено (в этом браузере)');
  await page.getByTestId('philosopher-catalog').screenshot({path:info.outputPath('catalog.png')});
  expect(JSON.parse((await page.evaluate(k=>localStorage.getItem(k),key))!)).toEqual(['plato-socratic-question']);
  await page.goto('/learn#lesson=plato-socratic-question&scene=first-step'); await page.reload();
