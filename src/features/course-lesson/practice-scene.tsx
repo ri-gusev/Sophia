@@ -54,7 +54,7 @@ export function PracticeScene({ scene, onBack, onContinue }: { scene: Extract<Le
     </div>
     {correct && <div className={styles.discovery}>
       <p>{data.assertion.before} <span className={styles.strike}>{data.assertion.word}</span> {data.assertion.after}.</p>
-      <h3>{data.discovery}.</h3><p>{data.closing}</p>
+      <h3>{data.discovery}.</h3>
       <div className={styles.summary}>{data.summary.map((text, index) => <p key={text}>{index === 0 ? <strong>{text}</strong> : text}</p>)}</div>
     </div>}
     <nav className={shared.actions} aria-label="Навигация по заданию"><Button variant="ghost" onClick={onBack}>К предыдущему слайду</Button>{correct && <Button variant="ghost" onClick={repeat}>Повторить задание</Button>}{correct && onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}</nav>

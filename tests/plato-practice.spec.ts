@@ -19,14 +19,14 @@ test("practice retry, discovery, navigation and responsive composition", async (
   await scene.getByRole("radio", { name: "Нет. Даже умный человек иногда ошибается" }).check();
   await scene.getByRole("button", { name: "Проверить", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(scene).toContainText("Именно!");
+  await expect(scene).toContainText("Мы нашли случай, в котором правило не работает. Значит, утверждение со словом „никогда“ оказалось неверным");
   await expect(scene.getByRole("heading", { name: "Даже умный человек может ошибаться." })).toBeVisible();
   await scene.screenshot({ animations: "disabled", path: info.outputPath("correct-answer.png"), style: ".site-header,.skip-link{visibility:hidden!important}" });
   expect((await new AxeBuilder({ page }).include('[data-testid="practice-scene"]').withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
   await scene.getByRole("button", { name: "К предыдущему слайду" }).click();
   await expect(mentor.getByRole("button", { name: "Продолжить урок" })).toBeVisible();
   await mentor.getByRole("button", { name: "Продолжить урок" }).click();
-  await expect(scene).toContainText("Именно!");
+  await expect(scene).toContainText("Мы нашли случай, в котором правило не работает");
   for (const width of [390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height:1000 });
     await scene.screenshot({ animations: "disabled", path:info.outputPath(`${width}-correct.png`), style: ".site-header,.skip-link{visibility:hidden!important}" });

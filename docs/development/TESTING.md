@@ -1,5 +1,13 @@
 # Стратегия проверок
 
+## Рефакторинг второго урока — 2026-11-19
+
+Команда: `$env:SOPHIA_TEST_PORT='3252'; npm.cmd test -- tests/plato-dialogue.spec.ts tests/plato-mentor.spec.ts tests/plato-practice.spec.ts tests/plato-workshop.spec.ts tests/plato-reflection.spec.ts tests/plato-full-lesson.spec.ts tests/plato-lesson-state.spec.ts tests/plato-lesson.spec.ts --output=test-results/plato-lesson-two-final`.
+
+Все 38 сценариев desktop/mobile выдали `ok`. Добавлен полный проход второго урока с проверкой пяти шагов, сохранения собственного вопроса и выбранного ответа при возврате и явного завершения. Ожидания обновлены под новый контент; отдельно проверены нейтральный placeholder, доступное описание поля и отсутствие подсказки до нажатия. После тестов процесс не завершился и был остановлен, итоговый exit code не получен. Полный набор проекта не запускался.
+
+Typecheck и build успешны. Обычный lint падает на сгенерированных файлах `.upgrade-security/.next`; `npm.cmd run lint -- --ignore-pattern '.upgrade-security/**'` прошёл без изменения правил. Снимки пяти слайдов просмотрены; артефакты — `test-results/plato-lesson-two-final/`.
+
 ## Панорамные изображения шапок — 2026-11-15
 
 `plato-header-artwork.spec.ts` проходит все девять сцен desktop/mobile и проверяет новые пути `headers-v2`, успешную загрузку, панорамное соотношение сторон ≥2.8 и contain на desktop. Сохраняются реальные кадры каждой шапки и отдельной картинки. Все девять пар кадров просмотрены на контактном листе `test-results/plato-header-contact-sheet.png`.

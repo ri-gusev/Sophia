@@ -22,15 +22,16 @@ test("Socratic dialogue has eight turns, back, explanation and replay", async ({
   }
   await expect(scene).toContainText("Так всегда ли справедливо");
   await page.waitForTimeout(2600);
-  await expect(scene.getByRole("heading", { name: "Добро пожаловать в мир философии!" })).toHaveCount(0);
+  await expect(scene.getByRole("heading", { name: "Что только что произошло?" })).toHaveCount(0);
   await scene.screenshot({ path: info.outputPath("eighth-before-explanation.png"), style: ".site-header,.skip-link {visibility:hidden!important}" });
   await scene.getByRole("button", { name: "Разобрать разговор" }).click();
-  await expect(scene.getByRole("heading", { name: "Добро пожаловать в мир философии!" })).toBeVisible();
+  await expect(scene.getByRole("heading", { name: "Что только что произошло?" })).toBeVisible();
+  await expect(scene.locator("strong")).toHaveText("Сократ не дал готового ответа. Он задал вопрос, который заставил собеседника задуматься.");
   await expect(scene).toContainText("не являются дословным переводом");
   await scene.screenshot({ path: info.outputPath("dialogue-complete.png") });
   await scene.getByRole("button", { name: "Повторить диалог" }).click();
   await expect(scene.getByTestId("dialogue-counter")).toHaveText("1 / 8");
-  await expect(scene.getByRole("heading", { name: "Добро пожаловать в мир философии!" })).toHaveCount(0);
+  await expect(scene.getByRole("heading", { name: "Что только что произошло?" })).toHaveCount(0);
   await page.waitForTimeout(500);
   for (const image of await scene.locator("img").all()) expect(await image.evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await scene.screenshot({ path: info.outputPath("dialogue-desktop.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });

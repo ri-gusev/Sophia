@@ -19,6 +19,8 @@ test("mentor six turns, staged diagram, replay and previous dialogue", async ({ 
     if (turn === 4) await scene.screenshot({ animations: "disabled", path: info.outputPath("fourth.png"), style: ".site-header,.skip-link{visibility:hidden!important}" });
   }
   await expect(scene.getByRole("heading", { name: "Главная мысль" })).toBeVisible();
+  await expect(scene.getByRole("status")).toContainText("Прежде чем спорить о справедливости или смелости");
+  await expect(scene).toContainText("помочь собеседнику лучше понять собственные убеждения");
   await scene.screenshot({ animations: "disabled", path: info.outputPath("final.png"), style: ".site-header,.skip-link{visibility:hidden!important}" });
   expect((await new AxeBuilder({ page }).include('[data-testid="mentor-scene"]').withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
   await scene.getByRole("button", { name: "Повторить объяснение" }).click();

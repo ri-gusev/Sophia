@@ -9,6 +9,10 @@ test("workshop free question, hint, example, editing and skip", async ({ page },
   await scene.screenshot({ animations:"disabled", path:info.outputPath("01-athenian.png"), style:".site-header,.skip-link{visibility:hidden!important}" });
   for (let i = 1; i < 3; i++) { await page.waitForTimeout(450); await scene.getByRole("button", { name:"Далее", exact:true }).click(); await scene.screenshot({ animations:"disabled", path:info.outputPath(`0${i+1}-socrates.png`), style:".site-header,.skip-link{visibility:hidden!important}" }); }
   const input = scene.getByRole("textbox");
+  await expect(input).toHaveAttribute("placeholder", "Напиши свой вопрос здесь…");
+  await expect(input).toHaveAccessibleDescription("Афинянин утверждает, что смелый человек ничего не боится. Какой вопрос ты мог бы задать, чтобы проверить его слова?");
+  await expect(scene).not.toContainText("боится войти в горящий дом");
+  await expect(scene).not.toContainText("Представь, что человек испытывает страх");
   await expect(scene.getByRole("button", { name:"Сравнить с вопросом Сократа", exact:true })).toBeDisabled();
   await input.fill("   ");
   await expect(scene.getByRole("button", { name:"Не знаю — покажи пример" })).toBeVisible();

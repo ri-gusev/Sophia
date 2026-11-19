@@ -50,7 +50,7 @@ export function DialogueScene({ scene, onContinue }: { scene: Extract<LessonScen
     {complete && <div id={`explanation-${scene.id}`} className={styles.explanation}>
 
       <h3>{explanation.title}</h3>
-      {explanation.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+      {explanation.paragraphs.map(paragraph => <p key={paragraph}>{paragraph === explanation.emphasis ? <strong>{paragraph}</strong> : paragraph}</p>)}
       <p className={styles.note}>{explanation.note} <a href={explanation.source} target="_blank" rel="noreferrer">Первоисточник ↗</a></p>
       <div className={styles.actions}><Button variant="ghost" onClick={() => { setComplete(false); setTurn(0); lastAdvance.current = 0; document.getElementById(`title-${scene.id}`)?.scrollIntoView({ block: "start" }); }}>Повторить диалог</Button>{onContinue && <Button onClick={onContinue}>Продолжить урок</Button>}</div>
     </div>}
