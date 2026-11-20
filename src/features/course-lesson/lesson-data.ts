@@ -3,6 +3,7 @@ import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data";
 import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
 import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
 import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data";
+import { MENO_QUESTION, type VirtueIntroContent } from "./virtue-intro-data";
 export type LessonSceneImage = { src: string; position?: string };
 export type LessonSource = { title: string; url: string };
 type SceneBase = {
@@ -34,6 +35,7 @@ type ExerciseFields = {
 };
 export type LessonSceneData = SceneBase & (
   | { type: "story" }
+  | { type: "virtue-intro"; virtue: VirtueIntroContent }
   | { type: "lesson-reflection"; reflection: ReflectionContent }
   | { type: "question-workshop"; workshop: WorkshopContent }
   | { type: "guided-practice"; practice: PracticeContent }
@@ -53,6 +55,15 @@ export type IntroLesson = {
 
 // User-supplied lesson script, with subsequent user-requested revisions.
 export const INTRO_LESSONS = {
+  "plato-virtue-definition": {
+    id: "plato-virtue-definition", title: "Что значит быть хорошим человеком?", duration: "Первый слайд · 3–5 минут",
+    scenes: [{ id: "meno-question", lessonId: "plato-virtue-definition", type: "virtue-intro",
+      title: "Можно ли научиться быть хорошим?", paragraphs: [],
+      image: { src: "/images/lessons/virtue/socrates-meno.webp" },
+      imageAlt: "Сократ слева и молодой Менон справа беседуют в солнечном древнегреческом дворе среди олив и светлых колонн",
+      buttonLabel: "Вернуться в каталог", virtue: MENO_QUESTION }],
+    sources: [{ title: "Платон, «Менон», 70a–71b", url: "https://classics.mit.edu/Plato/meno.html" }],
+  },
   "plato-socratic-question": {
     id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "10–12 минут",
     scenes: [{ id: "cephalus", lessonId: "plato-socratic-question", type: "dialogue",

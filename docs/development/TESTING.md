@@ -1,5 +1,13 @@
 # Стратегия проверок
 
+## Менон: первый слайд второго блока — 2026-11-20
+
+`tests/plato-virtue.spec.ts`: **12 passed (35.9s), exit 0**, desktop/mobile Chromium. Регистрация ровно одной незавершающей сцены; открытие из второго блока; три нейтральных предположения и «Пока не знаю»; сохранение выбора при возврате; центральный вопрос и реплика; ἀρετή; повтор, выход и отсутствие localStorage completion. Четыре независимых сценария размеров проверяют пять этапов на 390/768/1024/1440 px, загрузку оригинальной иллюстрации, отсутствие переполнения, axe WCAG A/AA и reduced motion. Отдельные тесты размеров исключают сохранение последнего этапа при повторной навигации к тому же URL.
+
+Команда при уже запущенной production-сборке: `$env:SOPHIA_TEST_PORT='3263'; npx.cmd playwright test tests/plato-virtue.spec.ts --output=artifacts/meno-delivery`. Все основные состояния просмотрены; [снимки и полный отчёт](MENO_SLIDE_REPORT.md). Полный промежуточный набор не зелёный: 155 passed / 7 skipped / 10 failed; причины и последующая коррекция нашего теста перечислены в отчёте. Обычный lint блокирует прежний вложенный `.upgrade-security/.next`, scoped lint и production build проходят. Проверка на реальных телефонах и Safari не выполнялась.
+
+Итоговый объединённый прогон новых и прежних уроков с двумя оставшимися сценариями каталога: **54 passed (2.0m), exit 0**, production 3264; точная команда и явные исключения — в отчёте. Его нельзя называть полным зелёным набором.
+
 ## Рефакторинг второго урока — 2026-11-19
 
 Команда: `$env:SOPHIA_TEST_PORT='3252'; npm.cmd test -- tests/plato-dialogue.spec.ts tests/plato-mentor.spec.ts tests/plato-practice.spec.ts tests/plato-workshop.spec.ts tests/plato-reflection.spec.ts tests/plato-full-lesson.spec.ts tests/plato-lesson-state.spec.ts tests/plato-lesson.spec.ts --output=test-results/plato-lesson-two-final`.

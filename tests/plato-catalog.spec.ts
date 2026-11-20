@@ -100,7 +100,7 @@ test("Plato's seven blocks expand independently and scroll while the header stay
   const titles = ["Сократ и рождение философского вопроса", "Добродетель и правильная жизнь", "Познание и истина", "Душа и мир идей", "Справедливость и государство", "Бытие, небытие и диалектика", "Благо, счастье и философское наследие Платона"];
   await expect(catalog.getByTestId("catalog-block-title")).toHaveText(titles);
   for (const question of ["С чего начинается философия?", "Что значит быть хорошим человеком?", "Что мы можем знать?", "Что существует на самом деле?", "Как должно быть устроено общество?", "Как устроена реальность и как её мыслить?", "Как жить и чему нас научил Платон?"]) {
-    await expect(catalog.getByText(question, { exact: true })).toBeVisible();
+    await expect(catalog.getByText(question, { exact: true }).first()).toBeVisible();
   }
   await expect(catalog).toContainText("7 блоков · Основной курс");
   for (const title of titles) {
@@ -109,7 +109,8 @@ test("Plato's seven blocks expand independently and scroll while the header stay
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
   }
-  await expect(catalog.getByText("Уроки в разработке", { exact: true })).toHaveCount(6);
+  await expect(catalog.getByText("Уроки в разработке", { exact: true })).toHaveCount(5);
+  await expect(catalog.getByRole("button", { name: "Что значит быть хорошим человеком?", exact: true })).toBeEnabled();
   await expect(catalog.getByRole("button", { name: "Кто такой Платон?", exact: true })).toBeEnabled();
   const first = catalog.getByRole("button", { name: titles[0], exact: true });
   await first.focus();
