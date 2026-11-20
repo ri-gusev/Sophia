@@ -1,5 +1,11 @@
 # Сократ и Менон
 
+Для слайда «У добродетели много лиц» добавлены `city.webp`, `home.webp` и `ages.webp`. Это три художественные интерпретации, созданные встроенным ImageGen в виде одного триптиха. Из исходника `exec-d887601a-c658-4cdd-8c09-77e081e4e176.png` выделены три независимых кадра 512 × 580 px, сохранённые в WebP с качеством 85.
+
+Промпт для триптиха:
+
+> A production triptych sprite sheet for a historical educational website, landscape 1536x1024. THREE EXACT EQUAL WIDTH VERTICAL PANELS with hard cuts exactly at x=one third and x=two thirds, no gutters no borders. Each panel is an independent centered painting, all leave generous air around their people, comparable lighting. Panel left: male ancient Greek citizen speaking with one hand to small civic assembly, limestone steps, ancient Athens. Center panel: ancient Greek domestic courtyard, adult woman arranging ceramic household jars and folded cloth, home and olive tree. Right panel: young adult and elderly resident walking together in ancient Greek town, dignified, shown conversing near pale column. Restrained sage green, limestone ivory, sand, soft warm daylight, painterly realistic fine brushwork historical novel matching Sophia Socrates and Meno illustration. Three distinctly different settings and silhouettes. Keep subjects' faces and gestures inside middle 55% height of each panel so cards can use a centered square crop. No lettering, no emblems, no modern elements. Exact vertical divisions, paintings do not cross panel boundaries.
+
 `socrates-meno.webp` — оригинальная художественная интерпретация для Sophia, созданная встроенным `image_gen` 2026-11-20. Не документальное изображение встречи и не портрет молодого Платона. Единая сцена с общей перспективой; образ Сократа опирается на `../dialogue/socrates.webp`. Исходник: `exec-55462d63-a59b-4a4b-8ca9-26adb714b373.png`, WebP quality 90, 1536 × 1024. Внешние стоковые изображения не использованы.
 
 ## Prompt

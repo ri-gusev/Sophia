@@ -1,0 +1,103 @@
+.scene {
+  color: var(--ink);
+  padding: 28px 0 32px;
+}
+.scene :is(h2, h3, [tabindex="-1"]) { scroll-margin-top: 108px; }
+.header { text-align: center; margin-bottom: 26px; }
+.header h2 { font-size: clamp(26px, 3vw, 38px); font-weight: 550; }
+.header a { display: inline-block; margin-top: 9px; font-size: 12px; color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
+.meeting {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: #f5f6ee;
+}
+.meeting img { width: 100%; height: auto; }
+.speech { padding: clamp(20px, 4vw, 56px); }
+.speech h3, .galleryHeader h3, .reaction h3, .discovery h3 { color: var(--green); font-weight: 600; font-size: clamp(20px, 2.4vw, 29px); line-height: 1.4; }
+.speech blockquote, .reaction blockquote { margin: 14px 0 20px; font-size: clamp(16px, 1.7vw, 21px); line-height: 1.7; }
+.speech blockquote p + p { margin-top: 12px; }
+.galleryHeader, .galleryFooter, .navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.galleryHeader { justify-content: space-between; margin-bottom: 16px; }
+.galleryHeader p, .galleryFooter p { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.board { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px); align-items: start; }
+.tile {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  overflow: hidden;
+  transform-origin: top left;
+  border: 1px solid #cdd6c9;
+  border-radius: 18px;
+  background: #fffdf7;
+}
+.galleryHeader + .board .tile {
+  animation: reveal 420ms var(--stagger) ease-out backwards;
+  transition: border-color 220ms, scale 220ms, box-shadow 220ms;
+}
+.tile[data-expanded="true"] { border-color: var(--green); box-shadow: 0 8px 24px #36574719; scale: 1.014; }
+.tile:focus-within { outline: 2px solid var(--green); outline-offset: 3px; }
+.cardButton { display: block; width: 100%; color: inherit; text-align: left; }
+button.cardButton:hover { background: #eef3e9; }
+.cardButton img { display: block; width: 100%; height: auto; aspect-ratio: 1.3; object-fit: cover; object-position: center top; }
+.cardLabel { display: grid; align-content: center; gap: 4px; min-height: 72px; padding: 10px 14px; font-size: 15px; font-weight: 650; line-height: 1.4; }
+.cardLabel small { display: flex; align-items: center; gap: 4px; color: var(--green); font-size: 11px; }
+.details { padding: 0 14px 16px; font-size: 14px; line-height: 1.65; }
+.details:not([hidden]) { animation: reveal 260ms ease-out both; }
+.galleryFooter { margin-top: 20px; justify-content: space-between; }
+.galleryFooter p { max-width: 68ch; }
+.reaction { max-width: 760px; margin: 0 auto 20px; text-align: center; }
+.reaction h3:focus-visible, .galleryHeader h3:focus-visible, .speech h3:focus-visible { outline-offset: 4px; }
+.speaker { color: var(--green); font-size: 13px; margin-bottom: 6px; }
+.board[data-layout="mosaic"] { width: min(100%, 640px); margin: 0 auto; gap: 18px 12px; grid-template-rows: repeat(2, auto); }
+.board[data-layout="mosaic"] .tile { border-radius: 12px; }
+.board[data-layout="mosaic"] .tile:nth-of-type(1) { grid-area: 1 / 2; }
+.board[data-layout="mosaic"] .tile:nth-of-type(2) { grid-area: 2 / 1; }
+.board[data-layout="mosaic"] .tile:nth-of-type(3) { grid-area: 2 / 3; }
+.board[data-layout="mosaic"] img { aspect-ratio: 1.6; }
+.board[data-layout="mosaic"] .cardLabel { font-size: clamp(11px, 1.7vw, 13px); min-height: 49px; padding: 6px; text-align: center; }
+.connections { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #789782; stroke-width: 1.4; animation: reveal 350ms 410ms ease-out both; }
+.center {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 53%;
+  transform: translateX(-50%);
+  width: 32%;
+  text-align: center;
+  color: var(--green);
+  pointer-events: none;
+}
+.center span { display: block; font: clamp(42px, 7vw, 62px)/.95 Georgia, serif; animation: question 340ms 560ms ease-out both; }
+.center p { margin-top: 4px; font-size: clamp(12px, 2vw, 17px); font-weight: 650; animation: reveal 290ms 640ms ease-out both; }
+.discovery { max-width: 720px; margin: 20px auto 0; text-align: center; }
+.discovery > button { margin-top: 14px; }
+.reflection { margin-top: 17px; text-align: left; font-size: 15px; line-height: 1.75; animation: reveal 380ms ease-out both; }
+.reflection p + p { margin-top: 7px; }
+.reflection .speaker { margin-top: 17px; }
+.thought { margin: 20px 0 0; padding: 10px 16px; border-left: 2px solid #87a08a; color: var(--green); background: #f1f5eb; }
+.thought blockquote { font-size: 18px; font-weight: 650; }
+.thought figcaption { font-size: 11px; margin-top: 4px; }
+.navigation { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line); }
+.navigation > :last-child { margin-left: auto; }
+@keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes question { from { opacity: 0; transform: scale(.76); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) {
+  .meeting { grid-template-columns: 1fr; }
+  .meeting img { max-height: 280px; object-fit: cover; object-position: center 32%; }
+}
+@media (max-width: 540px) {
+  .board[data-layout="gallery"] { grid-template-columns: 1fr; }
+  .board[data-layout="gallery"] .cardButton { display: grid; grid-template-columns: 106px 1fr; align-items: center; }
+  .board[data-layout="gallery"] img { aspect-ratio: .9; object-position: center; }
+  .details { padding-top: 10px; }
+  .board[data-layout="mosaic"] .cardLabel { min-height: 56px; }
+  .navigation { gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .galleryHeader + .board .tile, .details:not([hidden]), .connections, .center span, .center p, .reflection { animation: none; transition: none; }
+  .tile[data-expanded="true"] { scale: none; }
+}

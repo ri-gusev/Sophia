@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./virtue-intro-scene.module.css";
 
-export function VirtueIntroScene({ scene, onClose }: {
+export function VirtueIntroScene({ scene, onClose, onContinue }: {
   scene: Extract<LessonSceneData, { type: "virtue-intro" }>;
   onClose: () => void;
+  onContinue: () => void;
 }) {
   const [stage, setStage] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -69,12 +70,12 @@ export function VirtueIntroScene({ scene, onClose }: {
         {stage === 4 && <div key="thought" className={`${styles.reveal} ${styles.thought}`}>
           <p className={styles.speaker}>{content.attribution}</p>
           <h3 tabIndex={-1}>{content.thought}.</h3>
-          <p className={styles.note}>Это конец первого слайда. Продолжение урока готовится.</p>
         </div>}
         <nav className={styles.navigation} aria-label="Этапы сцены">
           <Button variant="ghost" size="sm" disabled={stage === 0} onClick={() => setStage(value => Math.max(0, value - 1))}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
           {stage < 4 && <Button size="sm" disabled={stage === 1 && selected === null} onClick={() => setStage(value => Math.min(4, value + 1))}>Продолжить<ArrowRight size={15} aria-hidden="true" /></Button>}
           {stage === 4 && <Button variant="ghost" size="sm" onClick={() => { setSelected(null); setStage(0); }}><RotateCcw size={15} aria-hidden="true" />Повторить сцену</Button>}
+          {stage === 4 && <Button size="sm" onClick={onContinue}>{scene.buttonLabel}<ArrowRight size={15} aria-hidden="true" /></Button>}
         </nav>
       </div>
     </div>

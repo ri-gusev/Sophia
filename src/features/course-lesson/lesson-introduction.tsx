@@ -11,6 +11,7 @@ import { PracticeScene } from "./practice-scene";
 import { MentorScene } from "./mentor-scene";
 import { DialogueScene } from "./dialogue-scene";
 import { VirtueIntroScene } from "./virtue-intro-scene";
+import { VirtueGalleryScene } from "./virtue-gallery-scene";
 import { LessonScene } from "./lesson-scene";
 import { LessonExercise } from "./lesson-exercise";
 import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
@@ -25,6 +26,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   const [run, setRun] = useState(() => restoreRun(lesson, null, initialSceneId));
   const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
   const scene = lesson.scenes[index];
+  const virtueScene = scene.type === "virtue-intro" || scene.type === "virtue-gallery";
   const exercise = scene.type === "single-choice" || scene.type === "ordering" ? scene : null;
   const answer = exercise ? run.exercises[scene.id] ?? initialAnswer(exercise) : null;
   const canContinue = !exercise || Boolean(answer && answer.checked && isCorrect(exercise, answer));
@@ -79,16 +81,20 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   return <div ref={root} className={styles.lesson} data-testid="lesson-introduction">
     <header className={styles.toolbar}>
       <div><p className={styles.lessonName}>{lesson.title}</p><span className={styles.duration}>{lesson.duration} · Платон</span></div>
-      <span className={styles.step} aria-live="polite">{scene.type === "virtue-intro" ? "Слайд 1 · начало урока" : `Шаг ${index + 1} из ${lesson.scenes.length}`}</span>
+      <span className={styles.step} aria-live="polite">{lesson.plannedSlides ? `Слайд ${index + 1} из ${lesson.plannedSlides}` : `Шаг ${index + 1} из ${lesson.scenes.length}`}</span>
       <button type="button" className={styles.close} aria-label="Закрыть урок" onClick={onClose}><X size={20} aria-hidden="true" /></button>
     </header>
-    {scene.type !== "virtue-intro" && <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={1} aria-valuemax={lesson.scenes.length} aria-valuenow={index + 1}>
+    {!virtueScene && <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={1} aria-valuemax={lesson.scenes.length} aria-valuenow={index + 1}>
       <span style={{ width: `${(index + 1) / lesson.scenes.length * 100}%` }} />
     </div>}
-    {scene.type === "virtue-intro" && <VirtueIntroScene scene={scene} onClose={onClose} />}
+    {lesson.scenes.map(item => {
+      if (item.type === "virtue-intro") return <div key={item.id} hidden={scene.id !== item.id}><VirtueIntroScene scene={item} onClose={onClose} onContinue={() => move(1)} /></div>;
+      if (item.type === "virtue-gallery") return <div key={item.id} hidden={scene.id !== item.id}><VirtueGalleryScene scene={item} onBack={() => move(-1)} onClose={onClose} /></div>;
+      return null;
+    })}
     {lesson.scenes.filter(item => item.type === "dialogue").map(item => item.type === "dialogue" && <div key={item.id} hidden={scene.id !== item.id}><DialogueScene scene={item} onContinue={() => move(1)} /></div>)}
     {lesson.scenes.map(item => item.type === "mentor-dialogue" ? <div key={item.id} hidden={scene.id !== item.id}><MentorScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "guided-practice" ? <div key={item.id} hidden={scene.id !== item.id}><PracticeScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "question-workshop" ? <div key={item.id} hidden={scene.id !== item.id}><WorkshopScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "lesson-reflection" ? <div key={item.id} hidden={scene.id !== item.id}><LessonReflectionScene scene={item} onBack={() => move(-1)} onComplete={onClose} /></div> : null)}
-    {scene.type === "virtue-intro" || scene.type === "dialogue" || scene.type === "mentor-dialogue" || scene.type === "guided-practice" || scene.type === "question-workshop" || scene.type === "lesson-reflection" ? null : <LessonScene scene={scene}
+    {virtueScene || scene.type === "dialogue" || scene.type === "mentor-dialogue" || scene.type === "guided-practice" || scene.type === "question-workshop" || scene.type === "lesson-reflection" ? null : <LessonScene scene={scene}
       navigation={<>
         <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
         <Button type="button" disabled={!canContinue} onClick={scene.type === "completion" ? onClose : () => move(1)}>
@@ -97,7 +103,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       </>}>
       {exercise && answer && <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />}
     </LessonScene>}
-    {scene.type !== "virtue-intro" && scene.type !== "dialogue" && scene.type !== "mentor-dialogue" && scene.type !== "guided-practice" && scene.type !== "question-workshop" && scene.type !== "lesson-reflection" && <details className={styles.sources}>
+    {!virtueScene && scene.type !== "dialogue" && scene.type !== "mentor-dialogue" && scene.type !== "guided-practice" && scene.type !== "question-workshop" && scene.type !== "lesson-reflection" && <details className={styles.sources}>
       <summary>Источники и иллюстрации</summary>
       <ul>{lesson.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
       {lesson.scenes.map(item => item.portrait && <p key={item.id}>

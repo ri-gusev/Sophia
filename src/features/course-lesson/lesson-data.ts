@@ -4,6 +4,7 @@ import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
 import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
 import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data";
 import { MENO_QUESTION, type VirtueIntroContent } from "./virtue-intro-data";
+import { VIRTUE_GALLERY, type VirtueGalleryContent } from "./virtue-gallery-data";
 export type LessonSceneImage = { src: string; position?: string };
 export type LessonSource = { title: string; url: string };
 type SceneBase = {
@@ -36,6 +37,7 @@ type ExerciseFields = {
 export type LessonSceneData = SceneBase & (
   | { type: "story" }
   | { type: "virtue-intro"; virtue: VirtueIntroContent }
+  | { type: "virtue-gallery"; gallery: VirtueGalleryContent }
   | { type: "lesson-reflection"; reflection: ReflectionContent }
   | { type: "question-workshop"; workshop: WorkshopContent }
   | { type: "guided-practice"; practice: PracticeContent }
@@ -49,6 +51,7 @@ export type IntroLesson = {
   id: string;
   title: string;
   duration: string;
+  plannedSlides?: number;
   scenes: readonly LessonSceneData[];
   sources: readonly LessonSource[];
 };
@@ -56,12 +59,17 @@ export type IntroLesson = {
 // User-supplied lesson script, with subsequent user-requested revisions.
 export const INTRO_LESSONS = {
   "plato-virtue-definition": {
-    id: "plato-virtue-definition", title: "Что значит быть хорошим человеком?", duration: "Первый слайд · 3–5 минут",
+    id: "plato-virtue-definition", title: "Что значит быть хорошим человеком?", duration: "6–10 минут", plannedSlides: 5,
     scenes: [{ id: "meno-question", lessonId: "plato-virtue-definition", type: "virtue-intro",
       title: "Можно ли научиться быть хорошим?", paragraphs: [],
       image: { src: "/images/lessons/virtue/socrates-meno.webp" },
       imageAlt: "Сократ слева и молодой Менон справа беседуют в солнечном древнегреческом дворе среди олив и светлых колонн",
-      buttonLabel: "Вернуться в каталог", virtue: MENO_QUESTION }],
+      buttonLabel: "Продолжить урок", virtue: MENO_QUESTION },
+      { id: "virtue-many-faces", lessonId: "plato-virtue-definition", type: "virtue-gallery",
+        title: "У добродетели много лиц", paragraphs: [],
+        image: { src: "/images/lessons/virtue/socrates-meno.webp" },
+        imageAlt: "Сократ и Менон беседуют в древнегреческом дворе",
+        buttonLabel: "Вернуться в каталог", gallery: VIRTUE_GALLERY }],
     sources: [{ title: "Платон, «Менон», 70a–71b", url: "https://classics.mit.edu/Plato/meno.html" }],
   },
   "plato-socratic-question": {
