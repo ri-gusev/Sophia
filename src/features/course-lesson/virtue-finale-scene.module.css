@@ -1,0 +1,54 @@
+.scene { color: var(--ink); padding: 28px 0 32px; }
+.header { text-align: center; margin-bottom: 24px; }
+.header h2 { font-size: clamp(27px, 4vw, 42px); font-weight: 550; }
+.header a { display: inline-block; margin-top: 10px; color: var(--green); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.garden { position: relative; overflow: hidden; isolation: isolate; margin: 0; height: clamp(190px, 30vw, 370px); border-radius: 24px; background: #ddd4b9; }
+.backdrop { object-fit: cover; object-position: center 8%; animation: appear var(--virtue-stage) var(--virtue-out) both; }
+.garden[data-summary=true] .backdrop { object-position: 44% center; }
+.garden::after { content: ''; position: absolute; inset: 0; background: linear-gradient(5deg, #362a1d9c, transparent 50%), linear-gradient(95deg, transparent 52%, #d4903b35); pointer-events: none; }
+.garden[data-summary=true]::after { background: linear-gradient(to top, #362a1d52, transparent 32%); }
+.garden figcaption { position: absolute; z-index: 1; left: 20px; bottom: 15px; color: #fff8e9; background: #392f24e8; border-radius: 8px; padding: 4px 9px; font-size: 12px; }
+.reading { max-width: 930px; margin: 24px auto 0; padding: clamp(16px, 3vw, 35px); background: #f2f3e9; border: 1px solid #d5ddcd; border-radius: 20px; }
+.reading h3 { font-size: clamp(23px, 3vw, 34px); color: var(--green); font-weight: 550; margin-bottom: 14px; }
+.reading p, .reading li { line-height: 1.65; }
+.speaker { color: var(--green); font-weight: 650; font-size: 13px; margin-bottom: 8px; }
+.reading blockquote { font-size: clamp(18px, 2.2vw, 24px); line-height: 1.6; }
+.story { position: relative; isolation: isolate; }
+.story [data-retreat=true] { position: absolute; inset: 0; pointer-events: none; z-index: -1; animation: retreat var(--virtue-stage) ease-out both; }
+.reveal { animation: appear var(--virtue-text) var(--virtue-out) both; }
+.path { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; position: relative; }
+.path::before { content: ''; position: absolute; inset: 28px 0 auto; height: 1px; background: #a6ae8e; opacity: 0; transition: opacity var(--virtue-stage); }
+.path:has([data-lit=true])::before { opacity: 1; }
+.path li { position: relative; color: #384939; background: #ebe8da; border: 1px solid #d4ccb6; padding: 12px; border-radius: 13px 18px 12px 16px; transition: background var(--virtue-text), border-color var(--virtue-text); }
+.path li:nth-child(even) { border-radius: 18px 12px 17px 13px; }
+.path li[data-lit=true] { background: #e3ead7; border-color: #91a37e; transition-delay: var(--delay); }
+.path li .reveal { animation-delay: var(--delay); }
+.path h4 { font-size: 15px; margin: 6px 0; font-weight: 700; }
+.path p { font-size: 14px; }
+.open { display: flex; align-items: center; gap: 12px; margin-top: 18px; color: var(--green); font-weight: 650; animation: appear var(--virtue-text) 410ms var(--virtue-out) both; }
+.open::before { content: ''; width: clamp(16px, 8vw, 100px); height: 1px; background: linear-gradient(to right, transparent, #8c9b79); }
+.open span { font: 30px Georgia, serif; }
+.question { text-align: center; font-family: Georgia, serif; }
+.directions { margin-top: 18px; animation: appear var(--virtue-reveal) var(--virtue-out) both; }
+.directions ul, .outcomes { padding-left: 22px; list-style: disc; margin: 14px 0; }
+.directions p + p { margin-top: 8px; }
+.outcomes li { animation: appear var(--virtue-text) var(--delay) var(--virtue-out) both; }
+.thought { margin: 20px 0 0; padding-left: 16px; border-left: 2px solid #8e9f7e; color: var(--green); }
+.thought figcaption { margin-top: 6px; font-size: 13px; }
+.actions { margin-top: 20px; }
+.actions p { margin-bottom: 10px; }
+.actions button { max-width: 100%; white-space: normal; height: auto; min-height: 44px; text-align: left; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.nav > :last-child { margin-left: auto; }
+@keyframes appear { from { opacity: 0; translate: 0 5px; } to { opacity: 1; translate: 0 0; } }
+@keyframes retreat { from { opacity: .25; } to { opacity: 0; visibility: hidden; translate: 0 4px; } }
+@media (max-width: 680px) {
+  .garden { border-radius: 16px; }
+  .path { grid-template-columns: 1fr; }
+  .path::before { inset: 0 auto 0 24px; width: 1px; height: auto; }
+  .nav > :last-child { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene *, .scene *::before { animation: none !important; transition: none !important; }
+  .story [data-retreat=true] { visibility: hidden; }
+}

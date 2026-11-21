@@ -38,6 +38,12 @@ export function readSceneField(lessonId: string, sceneId: string, field: string)
 export function writeSceneField(lessonId: string, sceneId: string, field: string, value: unknown) {
   update(lessonId, snapshot => { snapshot.scenes[sceneId] = { ...snapshot.scenes[sceneId], [field]: value }; });
 }
+export function resetSceneResume(lessonId: string, sceneId: string) {
+  update(lessonId, snapshot => {
+    delete snapshot.scenes[sceneId];
+    delete snapshot.scrollOffsets[sceneId];
+  });
+}
 export function readResumeScroll(lessonId: string, sceneId: string): number | undefined { return read(lessonId).scrollOffsets[sceneId]; }
 export function writeResumeScroll(lessonId: string, sceneId: string, offset: number) {
   if (Number.isFinite(offset)) update(lessonId, snapshot => { snapshot.scrollOffsets[sceneId] = offset; });

@@ -16,7 +16,7 @@ async function examineExamples(scene: Locator) {
   }
 }
 
-test("the two slides preserve their state, reveal the mosaic and support replay", async ({ page }, info) => {
+test("the gallery reverses its stages, restarts after leaving and supports replay", async ({ page }, info) => {
   await page.goto(firstUrl);
   const intro = page.getByTestId("virtue-intro-scene");
   const scene = page.getByTestId("virtue-gallery-scene");
@@ -55,9 +55,6 @@ test("the two slides preserve their state, reveal the mosaic and support replay"
   await age.click();
   await expect(scene.getByRole("status")).toHaveText("Изучено: 3 из 3");
   await shot("04-all-visited.png");
-  await scene.getByRole("button", { name: "К первому слайду" }).click();
-  await continueLesson.click();
-  await expect(scene.getByRole("status")).toHaveText("Изучено: 3 из 3");
   await socrates.click();
   await expect(scene.getByText("Ты рассказал о разных проявлениях", { exact: false })).toBeVisible();
   await shot("05-socrates.png");
@@ -78,14 +75,25 @@ test("the two slides preserve their state, reveal the mosaic and support replay"
   await expect(scene.getByRole("group", { name: "Объяснение" })).toBeFocused();
   await expect(scene.getByText("Назвать примеры", { exact: false })).toBeVisible();
   await shot("07-reflection.png");
-  await scene.getByRole("button", { name: "К первому слайду" }).click();
+  const previous = scene.getByRole("button", { name: "Назад", exact: true });
+  await previous.click();
+  await expect(scene.getByRole("group", { name: "Объяснение" })).toHaveCount(0);
+  await expect(scene.locator('[data-layout="mosaic"]')).toBeVisible();
+  await previous.click();
+  await expect(scene.getByText("Ты рассказал о разных проявлениях", { exact: false })).toBeVisible();
+  await scene.getByRole("button", { name: "Далее" }).click();
+  await scene.getByRole("button", { name: "Открыть объяснение" }).click();
+  await expect(scene.getByRole("button", { name: "Продолжить урок" })).toBeVisible();
+  await scene.getByRole("button", { name: "К предыдущему" }).click();
   await expect(page).toHaveURL(new RegExp("scene=meno-question$"));
   await expect(continueLesson).toBeVisible();
   await continueLesson.click();
-  await expect(scene.getByText("Назвать примеры", { exact: false })).toBeVisible();
+  await expect(scene.getByRole("button", { name: "Посмотреть примеры" })).toBeVisible();
   await expect(scene.getByRole("button", { name: "Завершить урок" })).toHaveCount(0);
-  await expect(scene.getByRole("button", { name: "Продолжить урок" })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("sophia.lesson-completions.v1"))).toBeNull();
+  await scene.getByRole("button", { name: "Посмотреть примеры" }).click();
+  await expect(scene.getByRole("status")).toHaveText("Изучено: 0 из 3");
+  await age.click();
   await scene.getByRole("button", { name: "Повторить сцену" }).click();
   await scene.getByRole("button", { name: "Посмотреть примеры" }).click();
   await expect(scene.getByRole("status")).toHaveText("Изучено: 0 из 3");

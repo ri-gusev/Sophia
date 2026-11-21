@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useLayoutEffect, useRef, type CSSProperties } from "react";
-import { ArrowRight, BookOpen, Fingerprint, ScanSearch } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Fingerprint, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
 import { boundedIndex, oneOf } from "./lesson-resume";
@@ -13,15 +13,19 @@ import {
   type DefinitionCategory, type DefinitionStage,
 } from "./virtue-definition-practice-data";
 import { DefinitionSituationArt } from "./virtue-definition-situation-art";
+import { useFlipLayout } from "./use-flip-layout";
+import { MotionRegion } from "./motion-region";
+import { revealLessonTarget, VIRTUE_MOTION, VIRTUE_MOTION_STYLE } from "./virtue-motion";
 import styles from "./virtue-definition-practice-scene.module.css";
 
 const icons = { example: Fingerprint, definition: BookOpen, test: ScanSearch };
 
-export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }: {
+export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose, onContinue }: {
   scene: Extract<LessonSceneData, { type: "virtue-definition-practice" }>;
   active: boolean;
   onBack: () => void;
   onClose: () => void;
+  onContinue: () => void;
 }) {
   const content = scene.definitionPractice;
   const [stage, setStage] = useSceneState<DefinitionStage>(scene, "stage", "intro", oneOf(["intro", "sort", "test", "final"] as const));
@@ -34,7 +38,8 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }
   const [closingLine, setClosingLine] = useSceneState(scene, "closingLine", 0, boundedIndex(content.closing.length));
   const area = useRef<HTMLDivElement>(null);
   const board = useRef<HTMLDivElement>(null);
-  const before = useRef(new Map<string, DOMRect>());
+  const caseAnchor = useRef<HTMLDivElement>(null);
+  const captureLayout = useFlipLayout(board, "[data-statement]", assignments, active, VIRTUE_MOTION.card);
   const shouldScroll = useRef(false);
   const card = content.cards.find(item => item.id === selected);
   const sorted = Object.keys(assignments).length;
@@ -49,42 +54,74 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }
     if (!shouldScroll.current || !active) return;
     shouldScroll.current = false;
     area.current?.querySelector<HTMLElement>("[data-stage-action]:not(:disabled)")?.focus({ preventScroll: true });
-    area.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    revealLessonTarget(stage === "test" ? caseAnchor.current : area.current);
   }, [stage, line, caseIndex, closingLine, active]);
 
-  useLayoutEffect(() => {
-    if (!before.current.size || !active) return;
-    const old = before.current;
-    before.current = new Map();
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const animations: Animation[] = [];
-    board.current?.querySelectorAll<HTMLElement>("[data-statement]").forEach(tile => {
-      const start = old.get(tile.dataset.statement ?? "");
-      if (!start) return;
-      const end = tile.getBoundingClientRect();
-      animations.push(tile.animate([
-        { transform: `translate(${start.left - end.left}px, ${start.top - end.top}px) scale(${start.width / end.width}, ${start.height / end.height})` },
-        { transform: "none" },
-      ], { duration: 440, easing: "cubic-bezier(.22,.75,.25,1)" }));
-    });
-    return () => animations.forEach(animation => animation.cancel());
-  }, [assignments, active]);
 
   function advance(next: DefinitionStage) { shouldScroll.current = true; setStage(next); }
   function classify(category: DefinitionCategory) {
     if (!card || assignments[card.id]) return;
     setAttempt(category);
     if (card.category !== category) return;
-    before.current = new Map(Array.from(board.current?.querySelectorAll<HTMLElement>("[data-statement]") ?? [], tile => [tile.dataset.statement ?? "", tile.getBoundingClientRect()]));
+    captureLayout();
     setAssignments(previous => ({ ...previous, [card.id]: category }));
   }
   function replay() {
-    before.current.clear();
     setLine(0); setAssignments({}); setSelected(null); setAttempt(null);
     setCaseIndex(0); setAnswers({}); setClosingLine(0); advance("intro");
   }
 
-  return <section className={styles.scene} data-testid="virtue-definition-practice-scene" data-stage={stage}>
+  function previousStep() {
+    switch (stage) {
+      case "intro":
+        shouldScroll.current = true;
+        setLine(line - 1);
+        break;
+      case "sort": {
+        if (attempt && card && !assignments[card.id]) {
+          setAttempt(null);
+          break;
+        }
+        const lastCard = Object.keys(assignments).at(-1) as DefinitionCardId | undefined;
+        if (lastCard) {
+          captureLayout();
+          const remaining = { ...assignments };
+          delete remaining[lastCard];
+          setAssignments(remaining);
+          setSelected(lastCard);
+          setAttempt(null);
+        } else if (selected) {
+          setSelected(null);
+        } else {
+          advance("intro");
+        }
+        break;
+      }
+      case "test":
+        if (answer) {
+          const remaining = { ...answers };
+          delete remaining[situation.id];
+          setAnswers(remaining);
+        } else if (caseIndex > 0) {
+          shouldScroll.current = true;
+          setCaseIndex(caseIndex - 1);
+        } else {
+          setAnswers({});
+          advance("sort");
+        }
+        break;
+      case "final":
+        if (closingLine > 0) {
+          shouldScroll.current = true;
+          setClosingLine(closingLine - 1);
+        } else {
+          advance("test");
+        }
+        break;
+    }
+  }
+
+  return <section className={styles.scene} style={VIRTUE_MOTION_STYLE} data-testid="virtue-definition-practice-scene" data-stage={stage}>
     <header className={styles.header} data-testid="lesson-scene-header">
       <h2>{scene.title}</h2>
       <a href="https://classics.mit.edu/Plato/meno.html" target="_blank" rel="noreferrer">{content.adaptation}</a>
@@ -128,8 +165,8 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }
         </div>
         <div className={styles.sortFooter}>
           <p className={styles.count}>Распределено: {sorted} из {content.cards.length}</p>
-          <div className={styles.feedback} role="status" aria-live="polite" aria-atomic="true">{feedback && <p>{feedback}</p>}</div>
-          {allSorted && <div className={styles.discovery}><h3>{content.classified}</h3><p>{content.invitation}</p><Button onClick={() => advance("test")}>Проверить определение<ArrowRight size={16} aria-hidden="true" /></Button></div>}
+          <MotionRegion active={active}><div className={styles.feedback} role="status" aria-live="polite" aria-atomic="true">{feedback && <p key={feedback}>{feedback}</p>}</div></MotionRegion>
+          <MotionRegion active={active}>{allSorted && <div className={styles.discovery}><h3>{content.classified}</h3><p>{content.invitation}</p><Button onClick={() => advance("test")}>Проверить определение<ArrowRight size={16} aria-hidden="true" /></Button></div>}</MotionRegion>
         </div>
       </>}
 
@@ -137,10 +174,10 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }
         <div className={styles.definition} data-problem={correct}>
           <p className={styles.eyebrow}>{content.definitionCredit}</p><h3>{content.definition}</h3>
           <p>{content.testQuestion}</p>
-          {correct && <span className={styles.badge}>{content.finding}</span>}
+          <div className={styles.badgeSlot}>{correct && <span className={styles.badge}>{content.finding}</span>}</div>
         </div>
         <div className={styles.connection} data-problem={correct} aria-hidden="true"><span /></div>
-        <div className={styles.case} key={situation.id}>
+        <MotionRegion active={active}><div ref={caseAnchor} className={styles.case} key={situation.id}>
           <figure className={styles.caseArt}><DefinitionSituationArt kind={situation.art} /><figcaption>{situation.caption}</figcaption></figure>
           <div className={styles.caseReading}>
             <p className={styles.eyebrow}>Ситуация {caseIndex + 1} из 2 · {situation.title}</p>
@@ -150,15 +187,15 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }
               {situation.options.map(option => <button type="button" key={option.id} data-stage-action
                 aria-pressed={answer === option.id} disabled={correct} onClick={() => setAnswers(previous => ({ ...previous, [situation.id]: option.id }))}>{option.text}</button>)}
             </div>
-            {answer && <div role="status" className={styles.caseFeedback}><p>{correct ? situation.feedback : situation.incorrect}</p>{correct && <strong>{situation.finding}</strong>}</div>}
+            {answer && <div role="status" key={answer} className={styles.caseFeedback}><p>{correct ? situation.feedback : situation.incorrect}</p>{correct && <strong>{situation.finding}</strong>}</div>}
             <div className={styles.caseActions}>
               {caseIndex === 1 && <Button variant="ghost" onClick={() => { shouldScroll.current = true; setCaseIndex(0); }}>Предыдущая ситуация</Button>}
               {caseIndex === 0 && correct && <Button onClick={() => { shouldScroll.current = true; setCaseIndex(1); }}>Вторая ситуация<ArrowRight size={16} aria-hidden="true" /></Button>}
             </div>
           </div>
-        </div>
+        </div></MotionRegion>
         <p className={styles.note}>{content.situationsNote}</p>
-        {tested && <div className={styles.method}><h3>{content.conclusion}</h3><p>{content.explanation}</p><small>{content.conclusionNote}</small><Button onClick={() => advance("final")}>Подвести итог</Button></div>}
+        <MotionRegion active={active}>{tested && <div className={styles.method}><h3>{content.conclusion}</h3><p>{content.explanation}</p><small>{content.conclusionNote}</small><Button onClick={() => advance("final")}>Подвести итог</Button></div>}</MotionRegion>
       </>}
 
       {stage === "final" && closingLine === 1 && <div className={styles.final}>
@@ -168,10 +205,12 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose }
         })}</ol>
         <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · Sophia</figcaption></figure>
         <p className={styles.note}>{content.conclusionNote}</p>
+        <Button className="mt-4" onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>
       </div>}
     </div>
     <nav className={styles.navigation} aria-label="Навигация по практике">
-      <Button variant="ghost" size="sm" onClick={onBack}>К третьему слайду</Button>
+      <Button variant="ghost" size="sm" disabled={stage === "intro" && line === 0} onClick={previousStep}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
+      <Button variant="ghost" size="sm" onClick={onBack}>К предыдущему</Button>
       <Button variant="ghost" size="sm" onClick={replay}>Повторить практику</Button>
       <Button variant="ghost" size="sm" onClick={onClose}>Вернуться в каталог</Button>
     </nav>

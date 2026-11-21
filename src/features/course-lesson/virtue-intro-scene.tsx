@@ -7,28 +7,29 @@ import { Button } from "@/components/ui/button";
 import { useSceneState } from "./use-scene-state";
 import { boundedIndex, oneOf } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
+import { MotionRegion } from "./motion-region";
+import { revealLessonTarget, VIRTUE_MOTION_STYLE } from "./virtue-motion";
 import styles from "./virtue-intro-scene.module.css";
 
-export function VirtueIntroScene({ scene, onClose, onContinue }: {
+export function VirtueIntroScene({ scene, active, onClose, onContinue }: {
   scene: Extract<LessonSceneData, { type: "virtue-intro" }>;
+  active: boolean;
   onClose: () => void;
   onContinue: () => void;
 }) {
   const [stage, setStage] = useSceneState(scene, "stage", 0, boundedIndex(5));
   const [selected, setSelected] = useSceneState<string | null>(scene, "selected", null, oneOf([null, "unknown", ...scene.virtue.hypotheses.map(option => option.id)]));
   const contentRef = useRef<HTMLDivElement>(null);
-  const firstRender = useRef(true);
+  const previousStage = useRef(stage);
   const content = scene.virtue;
 
   useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
-    contentRef.current?.scrollIntoView({
-      block: "nearest",
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-    });
-  }, [stage]);
+    if (previousStage.current === stage) return;
+    previousStage.current = stage;
+    if (active) revealLessonTarget(contentRef.current);
+  }, [stage, active]);
 
-  return <section className={styles.scene} data-testid="virtue-intro-scene" data-stage={stage}>
+  return <section className={styles.scene} style={VIRTUE_MOTION_STYLE} data-testid="virtue-intro-scene" data-stage={stage}>
     <header data-testid="lesson-scene-header" className={styles.header}>
       <p>Добродетель и правильная жизнь · «Менон»</p>
       <h2>{scene.title}</h2>
@@ -38,7 +39,7 @@ export function VirtueIntroScene({ scene, onClose, onContinue }: {
         <Image src={scene.image.src} alt={scene.imageAlt} width={1536} height={1024} priority sizes="(max-width: 760px) 100vw, 48vw" />
         <figcaption>Сократ и Менон · художественная интерпретация</figcaption>
       </figure>
-      <div ref={contentRef} className={styles.reading}>
+      <div className={styles.reading}><MotionRegion active={active}><div ref={contentRef}>
         <p className={styles.step}>Этап {stage + 1} из 5</p>
         {stage === 0 && <div key="meeting" className={styles.reveal}>
           <h3>Менон</h3>
@@ -71,6 +72,7 @@ export function VirtueIntroScene({ scene, onClose, onContinue }: {
           <p className={styles.speaker}>{content.attribution}</p>
           <h3>{content.thought}.</h3>
         </div>}
+        </div></MotionRegion>
         <nav className={styles.navigation} aria-label="Этапы сцены">
           <Button variant="ghost" size="sm" disabled={stage === 0} onClick={() => setStage(value => Math.max(0, value - 1))}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
           {stage < 4 && <Button size="sm" disabled={stage === 1 && selected === null} onClick={() => setStage(value => Math.min(4, value + 1))}>Продолжить<ArrowRight size={15} aria-hidden="true" /></Button>}

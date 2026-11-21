@@ -15,17 +15,18 @@
 .note { font-size:11px; line-height:1.8; color:var(--muted); margin-top:18px; }
 .hint { font-size:12px; line-height:1.8; color:var(--muted); margin:10px 0 18px; }
 .cards { display:grid; gap:10px; }
-.cards button { display:flex; gap:14px; align-items:center; width:100%; text-align:left; background:#fffdf7; border:1px solid #cdd6c9; border-radius:14px; padding:16px; min-height:64px; font-size:14px; line-height:1.7; animation:appear 400ms ease both; transition:transform 200ms,border-color 200ms,background 200ms; }
+.cards button { display:flex; gap:14px; align-items:center; width:100%; text-align:left; background:#fffdf7; border:1px solid #cdd6c9; border-radius:14px; padding:16px; min-height:64px; font-size:14px; line-height:1.7; animation:appear var(--virtue-text) var(--virtue-out) both; transition:transform 160ms var(--virtue-out),border-color 240ms,background 240ms; }
 .cards button:hover { transform:translateY(-2px); border-color:var(--green); }
 .cards button[aria-pressed=true],.unknown[aria-pressed=true] { background:#dfeadb; border-color:var(--green); }
 .unknown { display:block; border:1px solid transparent; background:transparent; border-radius:10px; padding:12px 16px; margin:10px 0 0; color:var(--green); font-size:13px; transition:background 200ms; }
-.questionSpace { position:relative; }
-.choices { transition:transform 600ms ease,opacity 600ms ease,filter 600ms ease; }
-.choices[data-retreat=true] { transform:scale(.88) translateY(-16px); opacity:.08; filter:blur(2px); pointer-events:none; position:absolute; inset:0; }
+.questionSpace { position:relative; display:grid; }
+.choices, .turn { grid-area:1 / 1; min-width:0; }
+.choices { transition:transform var(--virtue-stage) var(--virtue-layout),opacity var(--virtue-stage) ease-out; }
+.choices[data-retreat=true] { transform:scale(.94) translateY(-8px); opacity:.04; pointer-events:none; }
 .turn { position:relative; text-align:center; }
-.questionMark { display:block; color:var(--green); font-family:Georgia,serif; font-size:84px; line-height:1; animation:appear 500ms 350ms ease both; }
-.turn > h3 { margin:12px 0 24px; animation:question 650ms 550ms ease both; }
-.socrates { text-align:left; background:#fffdf7; border-left:2px solid #9fb197; padding:16px 20px; animation:appear 400ms 1050ms ease both; }
+.questionMark { display:block; color:var(--green); font-family:Georgia,serif; font-size:84px; line-height:1; animation:appear var(--virtue-text) 140ms var(--virtue-out) both; }
+.turn > h3 { margin:12px 0 24px; animation:question var(--virtue-text) 220ms var(--virtue-out) both; }
+.socrates { text-align:left; background:#fffdf7; border-left:2px solid #9fb197; padding:16px 20px; animation:appear var(--virtue-text) 320ms var(--virtue-out) both; }
 .speaker { color:var(--green); font-size:12px; margin-bottom:12px; }
 .socrates blockquote { font-size:16px; line-height:1.85; }
 .explanation { font-size:15px; line-height:1.9; padding-top:18px; }
@@ -33,7 +34,7 @@
 .greek small { font-family:var(--font-manrope),sans-serif; font-size:15px; }
 .thought { border-left:2px solid #9fb197; padding:8px 0 8px 24px; }
 .thought h3 { font-size:clamp(24px,2.7vw,34px); line-height:1.55; }
-.reveal { animation:appear 400ms ease both; }
+.reveal { animation:appear var(--virtue-text) var(--virtue-out) both; }
 .navigation { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:26px; padding-top:18px; border-top:1px solid var(--line); }
 .footer { display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; padding:18px 4px 0; }
 .footer a { font-size:11px; line-height:1.8; color:var(--muted); text-decoration:underline; text-underline-offset:3px; }

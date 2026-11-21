@@ -8,13 +8,17 @@ import { useSceneState } from "./use-scene-state";
 import { isBoolean, listOf, oneOf } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import type { VirtueGalleryContent } from "./virtue-gallery-data";
+import { useFlipLayout } from "./use-flip-layout";
+import { MotionRegion } from "./motion-region";
+import { revealLessonTarget, VIRTUE_MOTION, VIRTUE_MOTION_STYLE } from "./virtue-motion";
 import styles from "./virtue-gallery-scene.module.css";
 
 type Stage = "meno" | "gallery" | "socrates" | "mosaic";
 type CardId = VirtueGalleryContent["cards"][number]["id"];
 
-export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
+export function VirtueGalleryScene({ scene, active, onBack, onClose, onContinue }: {
   scene: Extract<LessonSceneData, { type: "virtue-gallery" }>;
+  active: boolean;
   onBack: () => void;
   onContinue: () => void;
   onClose: () => void;
@@ -26,43 +30,23 @@ export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
   const [reflection, setReflection] = useSceneState(scene, "reflection", false, isBoolean);
   const focusTarget = useRef<HTMLElement | null>(null);
   const board = useRef<HTMLDivElement>(null);
-  const before = useRef<DOMRect[]>([]);
   const shouldFocus = useRef(false);
   const detailsId = useId();
   const mosaic = stage === "mosaic";
+  const captureLayout = useFlipLayout(board, "[data-virtue-tile]", mosaic, active, VIRTUE_MOTION.composition);
 
   useLayoutEffect(() => {
-    if (shouldFocus.current) {
-      if (mosaic && !reflection && board.current) {
-        board.current.focus({ preventScroll: true });
-        const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
-        window.scrollTo({
-          top: Math.max(0, window.scrollY + board.current.getBoundingClientRect().top - headerHeight - 24),
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-        });
-      } else {
-        const target = focusTarget.current;
-        if (target?.matches("h2, h3")) target.scrollIntoView({ block: "nearest" });
-        else target?.focus();
-      }
-      shouldFocus.current = false;
+    if (!shouldFocus.current || !active) return;
+    shouldFocus.current = false;
+    if (mosaic && !reflection && board.current) {
+      board.current.focus({ preventScroll: true });
+      revealLessonTarget(board.current, true);
+    } else {
+      const target = focusTarget.current;
+      if (!target?.matches("h2, h3")) target?.focus({ preventScroll: true });
+      revealLessonTarget(target);
     }
-    if (!mosaic || !before.current.length) return;
-    const tiles = board.current?.querySelectorAll<HTMLElement>("[data-virtue-tile]");
-    const oldRects = before.current;
-    before.current = [];
-    if (!tiles || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    // Measure after the responsive grid changes so both layouts use the same cards.
-    const animations = Array.from(tiles, (tile, i) => {
-      const end = tile.getBoundingClientRect();
-      const start = oldRects[i];
-      return tile.animate([
-        { transform: `translate(${start.left - end.left}px, ${start.top - end.top}px) scale(${start.width / end.width}, ${start.height / end.height})` },
-        { transform: "none" },
-      ], { duration: 850, easing: "cubic-bezier(.22,.75,.25,1)" });
-    });
-    return () => animations.forEach(animation => animation.cancel());
-  }, [mosaic, stage, reflection]);
+  }, [mosaic, stage, reflection, active]);
 
   function advance(next: Stage) {
     shouldFocus.current = true;
@@ -75,8 +59,24 @@ export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
   }
 
   function rearrange() {
-    before.current = Array.from(board.current?.querySelectorAll("[data-virtue-tile]") ?? [], tile => tile.getBoundingClientRect());
+    captureLayout();
     advance("mosaic");
+  }
+
+  function previousStep() {
+    if (reflection) {
+      shouldFocus.current = true;
+      setReflection(false);
+    } else if (stage === "mosaic") {
+      captureLayout();
+      advance("socrates");
+    } else if (stage === "socrates") {
+      advance("gallery");
+    } else if (selected) {
+      setSelected(null);
+    } else {
+      advance("meno");
+    }
   }
 
   function replay() {
@@ -86,7 +86,7 @@ export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
     advance("meno");
   }
 
-  return <section className={styles.scene} data-testid="virtue-gallery-scene">
+  return <section className={styles.scene} style={VIRTUE_MOTION_STYLE} data-testid="virtue-gallery-scene">
     <header className={styles.header} data-testid="lesson-scene-header">
       <h2>{scene.title}</h2>
       <a href="https://classics.mit.edu/Plato/meno.html" target="_blank" rel="noreferrer">{content.adaptation}</a>
@@ -136,7 +136,7 @@ export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
                   {visited.includes(card.id) && <small><Check size={13} aria-hidden="true" />Изучено</small>}
                 </span>
               </button>
-              <p className={styles.details} id={`${detailsId}-${card.id}`} hidden={!expanded}>{card.text}</p>
+              <MotionRegion active={active}><p className={styles.details} id={`${detailsId}-${card.id}`} hidden={!expanded}>{card.text}</p></MotionRegion>
             </> : <div className={styles.cardButton}>
               {picture}
               <p className={styles.cardLabel}>{card.title}</p>
@@ -153,7 +153,7 @@ export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
       {mosaic && <div className={styles.discovery}>
         <h3>{content.discovery}</h3>
         {!reflection && <Button onClick={() => { shouldFocus.current = true; setReflection(true); }}>Открыть объяснение<ArrowRight size={16} aria-hidden="true" /></Button>}
-        {reflection && <div className={styles.reflection}>
+        <MotionRegion active={active}>{reflection && <div className={styles.reflection}>
           <div tabIndex={-1} ref={element => { if (element) focusTarget.current = element; }} role="group" aria-label="Объяснение">
             {content.explanation.map(text => <p key={text}>{text}</p>)}
           </div>
@@ -163,13 +163,14 @@ export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
             <blockquote>{content.thought}.</blockquote>
             <figcaption>Мысль урока · Sophia</figcaption>
           </figure>
-        </div>}
+        </div>}</MotionRegion>
       </div>}
     </>}
 
     {reflection && <Button onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>}
     <nav className={styles.navigation} aria-label="Навигация по слайду">
-      <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft size={15} aria-hidden="true" />К первому слайду</Button>
+      <Button variant="ghost" size="sm" disabled={stage === "meno"} onClick={previousStep}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
+      <Button variant="ghost" size="sm" onClick={onBack}>К предыдущему</Button>
       {stage !== "meno" && <Button variant="ghost" size="sm" onClick={replay}><RotateCcw size={15} aria-hidden="true" />Повторить сцену</Button>}
       <Button variant="ghost" size="sm" onClick={onClose}>{scene.buttonLabel}</Button>
     </nav>

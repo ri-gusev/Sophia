@@ -35,10 +35,10 @@
   background: #fffdf7;
 }
 .galleryHeader + .board .tile {
-  animation: reveal 420ms var(--stagger) ease-out backwards;
-  transition: border-color 220ms, scale 220ms, box-shadow 220ms;
+  animation: fade var(--virtue-text) var(--stagger) ease-out backwards;
+  transition: border-color 240ms, box-shadow 240ms;
 }
-.tile[data-expanded="true"] { border-color: var(--green); box-shadow: 0 8px 24px #36574719; scale: 1.014; }
+.tile[data-expanded="true"] { border-color: var(--green); box-shadow: 0 8px 24px #36574719; }
 .tile:focus-within { outline: 2px solid var(--green); outline-offset: 3px; }
 .cardButton { display: block; width: 100%; color: inherit; text-align: left; }
 button.cardButton:hover { background: #eef3e9; }
@@ -46,7 +46,7 @@ button.cardButton:hover { background: #eef3e9; }
 .cardLabel { display: grid; align-content: center; gap: 4px; min-height: 72px; padding: 10px 14px; font-size: 15px; font-weight: 650; line-height: 1.4; }
 .cardLabel small { display: flex; align-items: center; gap: 4px; color: var(--green); font-size: 11px; }
 .details { padding: 0 14px 16px; font-size: 14px; line-height: 1.65; }
-.details:not([hidden]) { animation: reveal 260ms ease-out both; }
+.details:not([hidden]) { animation: reveal var(--virtue-text) var(--virtue-out) both; }
 .galleryFooter { margin-top: 20px; justify-content: space-between; }
 .galleryFooter p { max-width: 68ch; }
 .reaction { max-width: 760px; margin: 0 auto 20px; text-align: center; }
@@ -75,7 +75,7 @@ button.cardButton:hover { background: #eef3e9; }
 .center p { margin-top: 4px; font-size: clamp(12px, 2vw, 17px); font-weight: 650; animation: reveal 290ms 640ms ease-out both; }
 .discovery { max-width: 720px; margin: 20px auto 0; text-align: center; }
 .discovery > button { margin-top: 14px; }
-.reflection { margin-top: 17px; text-align: left; font-size: 15px; line-height: 1.75; animation: reveal 380ms ease-out both; }
+.reflection { margin-top: 17px; text-align: left; font-size: 15px; line-height: 1.75; animation: reveal var(--virtue-reveal) var(--virtue-out) both; }
 .reflection p + p { margin-top: 7px; }
 .reflection .speaker { margin-top: 17px; }
 .thought { margin: 20px 0 0; padding: 10px 16px; border-left: 2px solid #87a08a; color: var(--green); background: #f1f5eb; }
@@ -84,6 +84,7 @@ button.cardButton:hover { background: #eef3e9; }
 .navigation { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line); }
 .navigation > :last-child { margin-left: auto; }
 @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes question { from { opacity: 0; transform: scale(.76); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) {
   .meeting { grid-template-columns: 1fr; }

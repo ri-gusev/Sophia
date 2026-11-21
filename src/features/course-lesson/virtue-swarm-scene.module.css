@@ -7,23 +7,26 @@
 .portrait img { width: auto; height: 370px; object-fit: contain; }
 .gardenWrap { min-width: 0; }
 .garden { position: relative; overflow: hidden; isolation: isolate; aspect-ratio: 4 / 3; border-radius: 44% 44% 20px 20px; background: #f4efdb; animation: reveal 650ms both; }
-.landscape { width: 100%; height: 100%; transition: opacity 900ms; }
-.position { position: absolute; left: var(--x); top: var(--y); width: clamp(48px, 7vw, 78px); transform: translate(-50%, -50%) scale(var(--size)); transition: left 1.6s, top 1.6s, opacity 900ms, transform 900ms; }
+.landscape { width: 100%; height: 100%; transition: opacity var(--virtue-stage) ease-out; }
+.position { position: absolute; inset:0; pointer-events:none; transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%)); transition: opacity var(--virtue-stage) ease-out, transform 1200ms var(--virtue-layout); }
+.beeScale { position:absolute; left:50%; top:50%; width:clamp(48px, 7vw, 78px); transform:translate(-50%, -50%) scale(var(--size)); transition:transform var(--virtue-stage) var(--virtue-layout); }
 .arrival { animation: arrive 1.8s var(--delay) ease-out backwards; }
 .flight { position: relative; animation: fly var(--duration) calc(var(--delay) + 1.8s) ease-in-out infinite; }
 .bee { display: block; width: 100%; overflow: visible; }
-.body { transform-origin: 60px 45px; animation: sway 3.7s ease-in-out infinite alternate; }
-.wings { transform-origin: 50px 43px; animation: wings 130ms ease-in-out infinite alternate; }
-.garden[data-mode="differences"] .flight { animation-duration: calc(var(--duration) * 1.7); }
-.garden[data-mode="common"] .flight { animation-duration: calc(var(--duration) * 2); }
-.garden[data-mode="common"] .position { transform: translate(-50%, -50%) scale(calc(var(--size) * .83)); }
-.garden[data-gathered="true"] .position { left: var(--gather-x); top: var(--gather-y); transform: translate(-50%, -50%) scale(calc(var(--size) * .8)); }
+.body { transform-origin: 60px 45px; animation: sway calc(3.7s + var(--delay)) calc(-1 * var(--delay)) ease-in-out infinite alternate; }
+.wings { transform-origin: 50px 43px; animation: wings 130ms calc(-1 * var(--delay)) ease-in-out infinite alternate; }
+.garden[data-mode="common"] .beeScale { transform: translate(-50%, -50%) scale(calc(var(--size) * .83)); }
+.garden[data-gathered="true"] .position { transform: translate(calc(var(--gather-x) - 50%), calc(var(--gather-y) - 50%)); }
+.garden[data-gathered="true"] .beeScale { transform: translate(-50%, -50%) scale(calc(var(--size) * .8)); }
 .garden[data-muted="true"] .landscape { opacity: .45; }
-.garden[data-muted="true"] .position { opacity: .25; transform: translate(-50%, -50%) scale(.55); }
+.garden[data-muted="true"] .position { opacity: .25; }
+.garden[data-muted="true"] .beeScale { transform: translate(-50%, -50%) scale(.55); }
 .garden[data-paused="true"] * { animation-play-state: paused !important; }
-.marker { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; color: #344d3a; background: #fffdf3f2; border: 1px solid #bbc8ad; border-radius: 8px; padding: 4px 7px; font-size: 11px; box-shadow: 0 3px 12px #344d3a13; animation: reveal 300ms both; }
+.marker { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; color: #344d3a; background: #fffdf3f2; border: 1px solid #bbc8ad; border-radius: 8px; padding: 4px 7px; font-size: 11px; box-shadow: 0 3px 12px #344d3a13; opacity:0; visibility:hidden; transition:opacity 240ms ease-out, visibility 0s 240ms; }
+.marker[data-visible="true"] { opacity:1; visibility:visible; transition-delay:0s; }
 .marker::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: 10px; border-left: 1px solid #708366; }
-.common { position: absolute; top: 38%; left: 32%; width: 36%; text-align: center; color: #304b37; animation: reveal 500ms both; }
+.common { position: absolute; top: 38%; left: 32%; width: 36%; text-align: center; color: #304b37; opacity:0; visibility:hidden; translate:0 5px; transition:opacity var(--virtue-text) ease-out, translate var(--virtue-text) var(--virtue-out), visibility 0s var(--virtue-text); }
+.common[data-visible="true"] { opacity:1; visibility:visible; translate:0 0; transition-delay:0s; }
 .common span { font: clamp(40px, 6vw, 70px)/1 Georgia, serif; }
 .common p { font-size: clamp(13px, 1.7vw, 18px); font-weight: 650; line-height: 1.45; background: #fffdf2d9; border-radius: 12px; padding: 6px; }
 .reminders { position: absolute; inset: 15% 12%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; color: #38523e; text-align: center; font-size: clamp(14px, 1.7vw, 20px); }
@@ -35,8 +38,8 @@
 .dialogue { min-width: 0; padding: 12px 0; }
 .speaker { color: var(--green); font-size: 13px; margin-bottom: 10px; }
 .stageTitle { font-size: clamp(21px, 2.2vw, 29px); font-weight: 550; color: var(--green); line-height: 1.4; }
-.dialogue > blockquote { margin: 18px 0 22px; font-size: clamp(16px, 1.65vw, 20px); line-height: 1.7; animation: reveal 350ms both; }
-.dialogue > button { height: auto; min-height: 44px; white-space: normal; text-align: left; }
+.speechContent > blockquote { margin: 18px 0 22px; font-size: clamp(16px, 1.65vw, 20px); line-height: 1.7; animation: reveal var(--virtue-text) var(--virtue-out) both; }
+.speechContent > button { height: auto; min-height: 44px; white-space: normal; text-align: left; }
 .modes, .options { display: grid; gap: 10px; margin: 20px 0 12px; }
 .modes button, .options button { padding: 13px 16px; border: 1px solid #a6b59d; border-radius: 12px; text-align: left; background: #fafbf4; color: #344b39; font-size: 14px; line-height: 1.5; min-height: 48px; }
 .modes button[aria-pressed="true"], .options button[aria-pressed="true"] { background: #e4ecd9; border-color: #536e50; }
@@ -55,5 +58,5 @@
 @keyframes sway { from { transform: rotate(-3deg); } to { transform: rotate(4deg); } }
 @keyframes wings { from { transform: scaleY(.45) rotate(-8deg); } to { transform: scaleY(1) rotate(8deg); } }
 @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 760px) { .composition { grid-template-columns: minmax(0, 1fr); gap: 12px; } .garden { max-height: 370px; } .portrait { min-height: 200px; } .portrait img { height: 210px; } .position { width: 60px; } .dialogue { padding: 10px 4px; } .header { margin-bottom: 18px; } .marker { font-size: 10px; padding: 3px 5px; } .navigation > :last-child { margin-left: 0; } }
+@media (max-width: 760px) { .composition { grid-template-columns: minmax(0, 1fr); gap: 12px; } .garden { max-height: 370px; } .portrait { min-height: 200px; } .portrait img { height: 210px; } .beeScale { width: 60px; } .dialogue { padding: 10px 4px; } .header { margin-bottom: 18px; } .marker { font-size: 10px; padding: 3px 5px; } .navigation > :last-child { margin-left: 0; } }
 @media (prefers-reduced-motion: reduce) { .scene *, .scene *::before { animation: none !important; transition: none !important; } }

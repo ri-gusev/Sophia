@@ -12,13 +12,14 @@ import { MentorScene } from "./mentor-scene";
 import { DialogueScene } from "./dialogue-scene";
 import { VirtueIntroScene } from "./virtue-intro-scene";
 import { VirtueSwarmScene } from "./virtue-swarm-scene";
+import { VirtueFinaleScene } from "./virtue-finale-scene";
 import { VirtueDefinitionPracticeScene } from "./virtue-definition-practice-scene";
 import { VirtueGalleryScene } from "./virtue-gallery-scene";
 import { LessonScene } from "./lesson-scene";
 import { LessonExercise } from "./lesson-exercise";
 import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
 import { useSceneState } from "./use-scene-state";
-import { isBoolean, readResumeRun, readResumeScroll, writeResumeRun, writeResumeScroll } from "./lesson-resume";
+import { isBoolean, readResumeRun, readResumeScroll, resetSceneResume, writeResumeRun, writeResumeScroll } from "./lesson-resume";
 import styles from "./lesson-introduction.module.css";
 
 export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
@@ -28,9 +29,11 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [run, setRun] = useState(() => restoreRun(lesson, readResumeRun(lesson.id), initialSceneId));
+  const [sceneVersions, setSceneVersions] = useState<Record<string, number>>({});
+  const discardedScroll = useRef<string | null>(null);
   const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
   const scene = lesson.scenes[index];
-  const virtueScene = scene.type === "virtue-intro" || scene.type === "virtue-gallery" || scene.type === "virtue-swarm" || scene.type === "virtue-definition-practice";
+  const virtueScene = scene.type === "virtue-intro" || scene.type === "virtue-gallery" || scene.type === "virtue-swarm" || scene.type === "virtue-definition-practice" || scene.type === "virtue-finale";
   const exercise = scene.type === "single-choice" || scene.type === "ordering" ? scene : null;
   const answer = exercise ? run.exercises[scene.id] ?? initialAnswer(exercise) : null;
   const canContinue = !exercise || Boolean(answer && answer.checked && isCorrect(exercise, answer));
@@ -60,7 +63,9 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     let lastOffset = savedOffset ?? 0;
     let banner: HTMLElement | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    function save() { writeResumeScroll(lesson.id, scene.id, lastOffset); }
+    function save() {
+      if (discardedScroll.current !== scene.id) writeResumeScroll(lesson.id, scene.id, lastOffset);
+    }
     function saveOnExit() { if (banner) lastOffset = -banner.getBoundingClientRect().top; save(); }
     function remember() {
       if (banner) lastOffset = -banner.getBoundingClientRect().top;
@@ -84,6 +89,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       cancelAnimationFrame(frame);
       clearTimeout(timer);
       if (attached) save();
+      if (discardedScroll.current === scene.id) discardedScroll.current = null;
       window.removeEventListener("scroll", remember);
       window.removeEventListener("pagehide", saveOnExit);
       window.history.scrollRestoration = previousRestoration;
@@ -106,6 +112,12 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   function move(direction: -1 | 1) {
     const destination = lesson.scenes[index + direction];
     if (!destination || (direction === 1 && !canContinue)) return;
+    if (direction === -1 && virtueScene) {
+      // The previous slide keeps its state. Restart the departed slide on the next visit.
+      discardedScroll.current = scene.id;
+      resetSceneResume(lesson.id, scene.id);
+      setSceneVersions(previous => ({ ...previous, [scene.id]: (previous[scene.id] ?? 0) + 1 }));
+    }
     setRun(previous => ({ ...previous, sceneId: destination.id }));
   }
 
@@ -119,10 +131,12 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       <span style={{ width: `${(index + 1) / lesson.scenes.length * 100}%` }} />
     </div>}
     {lesson.scenes.map(item => {
-      if (item.type === "virtue-intro") return <div key={item.id} hidden={scene.id !== item.id}><VirtueIntroScene scene={item} onClose={onClose} onContinue={() => move(1)} /></div>;
-      if (item.type === "virtue-gallery") return <div key={item.id} hidden={scene.id !== item.id}><VirtueGalleryScene scene={item} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
-      if (item.type === "virtue-swarm") return <div key={item.id} hidden={scene.id !== item.id}><VirtueSwarmScene scene={item} active={scene.id === item.id} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
-      if (item.type === "virtue-definition-practice") return <div key={item.id} hidden={scene.id !== item.id}><VirtueDefinitionPracticeScene scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
+      const key = `${item.id}:${sceneVersions[item.id] ?? 0}`;
+      if (item.type === "virtue-intro") return <div key={key} hidden={scene.id !== item.id}><VirtueIntroScene scene={item} active={scene.id === item.id} onClose={onClose} onContinue={() => move(1)} /></div>;
+      if (item.type === "virtue-gallery") return <div key={key} hidden={scene.id !== item.id}><VirtueGalleryScene scene={item} active={scene.id === item.id} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
+      if (item.type === "virtue-swarm") return <div key={key} hidden={scene.id !== item.id}><VirtueSwarmScene scene={item} active={scene.id === item.id} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
+      if (item.type === "virtue-definition-practice") return <div key={key} hidden={scene.id !== item.id}><VirtueDefinitionPracticeScene onContinue={() => move(1)} scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
+      if (item.type === "virtue-finale") return <div key={key} hidden={scene.id !== item.id}><VirtueFinaleScene scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
       return null;
     })}
     {lesson.scenes.filter(item => item.type === "dialogue").map(item => item.type === "dialogue" && <div key={item.id} hidden={scene.id !== item.id}><DialogueScene scene={item} onContinue={() => move(1)} /></div>)}

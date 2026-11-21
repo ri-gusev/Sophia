@@ -25,10 +25,10 @@ async function solveCases(scene: Locator) {
   await scene.getByRole("button", { name: "Нет, нужно исследовать и то, как он использует власть", exact: true }).click();
 }
 
-test("exactly four of five planned slides remain unfinished", () => {
+test("all five planned slides are registered", () => {
   const lesson = INTRO_LESSONS["plato-virtue-definition"];
   expect(lesson.plannedSlides).toBe(5);
-  expect(lesson.scenes.map(scene => scene.id)).toEqual(["meno-question", "virtue-many-faces", "virtue-swarm", "virtue-definition-practice"]);
+  expect(lesson.scenes.map(scene => scene.id)).toEqual(["meno-question", "virtue-many-faces", "virtue-swarm", "virtue-definition-practice", "virtue-lesson-finale"]);
   expect(lesson.scenes.some(scene => ["completion", "lesson-reflection"].includes(scene.type))).toBe(false);
 });
 
@@ -110,17 +110,30 @@ test("third slide leads into the workshop, retries explain reasons and reload pr
   await scene.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(scene.getByRole("list", { name: "Пример, определение, проверка" }).getByRole("listitem")).toHaveCount(3);
   await shot("08-final-schema.png");
-  await scene.getByRole("button", { name: "К третьему слайду" }).click();
-  await expect(swarm.getByText("Мысль урока · Sophia")).toBeVisible();
-  await swarm.getByRole("button", { name: "Продолжить урок" }).click();
-  await expect(scene.getByText("Мысль урока · Sophia")).toBeVisible();
+  const previous = scene.getByRole("button", { name: "Назад", exact: true });
+  await previous.click();
+  await expect(scene.getByRole("list", { name: "Пример, определение, проверка" })).toHaveCount(0);
+  await previous.click();
+  await expect(scene).toContainText("Ситуация 2 из 2");
+  await scene.getByRole("button", { name: "Подвести итог" }).click();
+  await scene.getByRole("button", { name: "Далее", exact: true }).click();
   await page.reload();
   await expect(scene.getByText("Мысль урока · Sophia")).toBeVisible();
   await expect(page.locator("h2:focus, h3:focus")).toHaveCount(0);
   await expect(page.getByText("Слайд 4 из 5")).toBeVisible();
-  await expect(scene.getByRole("button", { name: /Завершить урок|Продолжить урок/ })).toHaveCount(0);
+  await expect(scene.getByRole("button", { name: /Завершить урок/ })).toHaveCount(0);
+  await scene.getByRole("button", { name: "Продолжить урок", exact: true }).click();
+  const finale = page.getByTestId("virtue-finale-scene");
+  await expect(finale).toBeVisible();
+  await finale.getByRole("button", { name: "К предыдущему" }).click();
+  await expect(scene.getByText("Мысль урока · Sophia")).toBeVisible();
+  await scene.getByRole("button", { name: "К предыдущему" }).click();
+  await expect(swarm.getByText("Мысль урока · Sophia")).toBeVisible();
+  await swarm.getByRole("button", { name: "Продолжить урок" }).click();
+  await expect(scene).toHaveAttribute("data-stage", "intro");
   await expect(page.getByRole("progressbar", { name: "Прогресс урока" })).toHaveCount(0);
   expect(await page.evaluate(k => localStorage.getItem(k), key)).toBeNull();
+  await start(scene);
   await scene.getByRole("button", { name: "Повторить практику" }).click();
   await page.reload();
   await expect(scene).toHaveAttribute("data-stage", "intro");

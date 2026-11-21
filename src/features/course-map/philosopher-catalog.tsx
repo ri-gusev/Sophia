@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalSto
 import { BookOpen, ChevronDown, X } from "lucide-react";
 import type { CatalogBlock, PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
 import type { IntroLessonId } from "../course-lesson/lesson-data";
+import { LESSON_PROGRESS_EVENT, LESSON_PROGRESS_KEY, readCompletedLessons } from "../course-lesson/lesson-progress";
 import styles from "./philosopher-catalog.module.css";
 
 const DESKTOP_QUERY = "(min-width: 1000px)";
@@ -14,6 +15,19 @@ function subscribe(onChange: () => void) {
 }
 const desktopSnapshot = () => window.matchMedia(DESKTOP_QUERY).matches;
 const serverSnapshot = () => false;
+function subscribeCompletion(onChange: () => void) {
+  function storage(event: StorageEvent) { if (!event.key || event.key === LESSON_PROGRESS_KEY) onChange(); }
+  window.addEventListener("storage", storage);
+  window.addEventListener(LESSON_PROGRESS_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", storage);
+    window.removeEventListener(LESSON_PROGRESS_EVENT, onChange);
+  };
+}
+function completionSnapshot() {
+  try { return JSON.stringify(readCompletedLessons()); } catch { return "[]"; }
+}
+const emptyCompletion = () => "[]";
 
 export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLessonId, lessonPanelId }: {
   catalog: CatalogData;
@@ -23,6 +37,7 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
   lessonPanelId: string;
 }) {
   const desktop = useSyncExternalStore(subscribe, desktopSnapshot, serverSnapshot);
+  const completed = new Set<string>(JSON.parse(useSyncExternalStore(subscribeCompletion, completionSnapshot, emptyCompletion)));
   const desktopPanel = useRef<HTMLElement>(null);
   const mobileDialog = useRef<HTMLDialogElement>(null);
   const titleId = useId(), descriptionId = useId();
@@ -60,7 +75,7 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
         <h3 id={`${titleId}-${section.id}`}>{section.title}</h3>
         {section.kind === "blocks" ? <ol className={styles.lessons} role="list" aria-label={`Программа: ${catalog.title}`}>
           {section.blocks.map(block => <CourseBlock key={block.id} block={block}
-            lessonPanelId={lessonPanelId} activeLessonId={activeLessonId}
+            lessonPanelId={lessonPanelId} activeLessonId={activeLessonId} completed={completed}
             onSelectLesson={id => onSelectLesson(id, !desktop)} />)}
         </ol> : <p>{section.emptyMessage}</p>}
       </section>)}
@@ -83,10 +98,11 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
   >{contents}</dialog>;
 }
 
-function CourseBlock({ block, lessonPanelId, activeLessonId, onSelectLesson }: {
+function CourseBlock({ block, lessonPanelId, activeLessonId, completed, onSelectLesson }: {
   block: CatalogBlock;
   lessonPanelId: string;
   activeLessonId: IntroLessonId | null;
+  completed: ReadonlySet<string>;
   onSelectLesson: (id: IntroLessonId) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -105,10 +121,13 @@ function CourseBlock({ block, lessonPanelId, activeLessonId, onSelectLesson }: {
       {block.lessons.length > 0 && <ul className={styles.lessons}>
         {block.lessons.map(lesson => <li key={lesson.id} data-lesson-id={lesson.id}>
           <button type="button" className={styles.lessonButton} disabled={!lesson.contentId}
+            aria-labelledby={`${contentId}-${lesson.id}-title`}
+            aria-describedby={lesson.contentId && completed.has(lesson.contentId) ? `${contentId}-${lesson.id}-status` : undefined}
             aria-controls={lesson.contentId ? lessonPanelId : undefined}
             aria-expanded={lesson.contentId ? activeLessonId === lesson.contentId : undefined}
             onClick={() => { if (lesson.contentId) onSelectLesson(lesson.contentId); }}>
-            <span className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+            <span id={`${contentId}-${lesson.id}-title`} className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
+            {lesson.contentId && completed.has(lesson.contentId) && <small id={`${contentId}-${lesson.id}-status`} className={styles.completed}>Пройдено</small>}
             {lesson.contentId ? <ChevronDown size={17} aria-hidden="true" /> : <small className={styles.planned}>Скоро</small>}
           </button>
         </li>)}

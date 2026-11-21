@@ -1,3 +1,4 @@
+import { VIRTUE_FINALE, type VirtueFinaleContent } from "./virtue-finale-data";
 import { VIRTUE_SWARM, type VirtueSwarmContent } from "./virtue-swarm-data";
 import { VIRTUE_DEFINITION_PRACTICE, type DefinitionPracticeContent } from "./virtue-definition-practice-data";
 import { SOCRATIC_REFLECTION, type ReflectionContent } from "./reflection-data";
@@ -41,6 +42,7 @@ export type LessonSceneData = SceneBase & (
   | { type: "virtue-intro"; virtue: VirtueIntroContent }
   | { type: "virtue-gallery"; gallery: VirtueGalleryContent }
   | { type: "virtue-swarm"; swarm: VirtueSwarmContent }
+  | { type: "virtue-finale"; finale: VirtueFinaleContent }
   | { type: "virtue-definition-practice"; definitionPractice: DefinitionPracticeContent }
   | { type: "lesson-reflection"; reflection: ReflectionContent }
   | { type: "question-workshop"; workshop: WorkshopContent }
@@ -79,7 +81,10 @@ export const INTRO_LESSONS = {
         imageAlt: "Сад Сократа", buttonLabel: "Вернуться в каталог", swarm: VIRTUE_SWARM },
       { id: "virtue-definition-practice", lessonId: "plato-virtue-definition", type: "virtue-definition-practice",
         title: "Пример или определение?", paragraphs: [], image: { src: "/images/lessons/dialogue/socrates.webp" },
-        imageAlt: "Сократ в философской мастерской", buttonLabel: "Вернуться в каталог", definitionPractice: VIRTUE_DEFINITION_PRACTICE }],
+        imageAlt: "Сократ в философской мастерской", buttonLabel: "Вернуться в каталог", definitionPractice: VIRTUE_DEFINITION_PRACTICE },
+      { id: "virtue-lesson-finale", lessonId: "plato-virtue-definition", type: "virtue-finale",
+        title: "Мы только начали", paragraphs: [], image: { src: "/images/lessons/virtue/socrates-meno.webp" },
+        imageAlt: "Сократ и Менон беседуют в саду", buttonLabel: VIRTUE_FINALE.buttons.finish, finale: VIRTUE_FINALE }],
     sources: [{ title: "Платон, «Менон», 70a–73e", url: "https://classics.mit.edu/Plato/meno.html" }],
   },
   "plato-socratic-question": {

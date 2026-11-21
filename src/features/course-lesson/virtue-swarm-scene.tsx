@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import { useLayoutEffect, useRef, type CSSProperties } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSceneState } from "./use-scene-state";
 import { boundedIndex, isBoolean, listOf, oneOf } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import type { SwarmMode, SwarmStage } from "./virtue-swarm-data";
 import { VirtueBee } from "./virtue-bee";
+import { MotionRegion } from "./motion-region";
+import { revealLessonTarget, VIRTUE_MOTION_STYLE } from "./virtue-motion";
 import styles from "./virtue-swarm-scene.module.css";
 
 export function VirtueSwarmScene({ scene, active, onBack, onClose, onContinue }: {
@@ -26,21 +29,53 @@ export function VirtueSwarmScene({ scene, active, onBack, onClose, onContinue }:
   const focus = useRef<HTMLHeadingElement>(null);
   const shouldFocus = useRef(false);
   useLayoutEffect(() => {
-    if (shouldFocus.current) { focus.current?.scrollIntoView({ block: "nearest" }); shouldFocus.current = false; }
-  }, [stage, line, parallel]);
+    if (shouldFocus.current && active) { revealLessonTarget(focus.current); shouldFocus.current = false; }
+  }, [stage, line, mode, answer, parallel, active]);
   function advance(next: SwarmStage) { shouldFocus.current = true; setStage(next); }
   function replay() {
     setLine(0); setMode(null); setVisited([]); setAnswer(null); setParallel(false); setPaused(false); advance("intro");
   }
   function chooseMode(next: SwarmMode) {
-    setMode(next); setVisited(previous => previous.includes(next) ? previous : [...previous, next]);
+    setMode(next);
+    setVisited(previous => [...previous.filter(item => item !== next), next]);
+  }
+  function previousStep() {
+    shouldFocus.current = true;
+    switch (stage) {
+      case "intro":
+        setLine(line - 1);
+        break;
+      case "garden":
+        setLine(content.intro.length - 1);
+        advance("intro");
+        break;
+      case "explore":
+        if (mode) {
+          const earlier = visited.filter(item => item !== mode);
+          setVisited(earlier);
+          setMode(earlier.at(-1) ?? null);
+        } else advance("garden");
+        break;
+      case "bridge":
+        if (line > 0) setLine(line - 1);
+        else advance("explore");
+        break;
+      case "practice":
+        if (answer) setAnswer(null);
+        else advance("bridge");
+        break;
+      case "final":
+        if (parallel) setParallel(false);
+        else advance("practice");
+        break;
+    }
   }
   const correct = answer === content.correctAnswer;
   const gathered = stage === "final";
   const bridge = stage === "bridge" || stage === "practice";
   const speech = stage === "intro" ? content.intro[line] : stage === "garden" ? content.observation : stage === "explore" ? content.modes.find(item => item.id === mode)?.speech ?? content.observation : stage === "bridge" ? content.bridge[line] : stage === "final" ? content.closing : null;
 
-  return <section className={styles.scene} data-testid="virtue-swarm-scene">
+  return <section className={styles.scene} style={VIRTUE_MOTION_STYLE} data-testid="virtue-swarm-scene">
     <header className={styles.header} data-testid="lesson-scene-header">
       <h2>{scene.title}</h2>
       <a href="https://classics.mit.edu/Plato/meno.html" target="_blank" rel="noreferrer">{content.adaptation}</a>
@@ -67,16 +102,16 @@ export function VirtueSwarmScene({ scene, active, onBack, onClose, onContinue }:
             <g fill="#b397ac">{[[92,449],[161,470],[714,448],[746,487],[206,538]].map(([x,y],i)=><g key={i}><ellipse cx={x} cy={y} rx="12" ry="24"/><ellipse cx={x} cy={y} rx="12" ry="24" transform={`rotate(60 ${x} ${y})`}/><ellipse cx={x} cy={y} rx="12" ry="24" transform={`rotate(-60 ${x} ${y})`}/><circle cx={x} cy={y} r="6" fill="#e4c27f"/></g>)}</g>
           </svg>
           {content.bees.map((bee, i) => <div key={i} className={styles.position} data-bee={i} style={{ "--x": `${bee.x}%`, "--y": `${bee.y}%`, "--gather-x": `${34 + (i % 3) * 16}%`, "--gather-y": `${36 + Math.floor(i / 3) * 22}%`, "--size": bee.size, "--duration": `${bee.duration}s`, "--delay": `${bee.delay}s`, "--tilt": `${bee.tilt}deg` } as CSSProperties}>
-            <div className={styles.arrival}><div className={styles.flight}><VirtueBee shade={bee.shade} body={bee.body}/>
-              {stage === "explore" && mode === "differences" && bee.label && <span className={styles.marker}>{bee.label}</span>}
-            </div></div>
+            <div className={styles.beeScale}><div className={styles.arrival}><div className={styles.flight}><VirtueBee shade={bee.shade} body={bee.body}/>
+              {bee.label && <span className={styles.marker} data-visible={stage === "explore" && mode === "differences"} aria-hidden={stage !== "explore" || mode !== "differences"}>{bee.label}</span>}
+            </div></div></div>
           </div>)}
-          {stage === "explore" && mode === "common" && <div className={styles.common}><span aria-hidden="true">?</span><p>{content.beeQuestion}</p></div>}
+          <div className={styles.common} data-visible={stage === "explore" && mode === "common"} aria-hidden={stage !== "explore" || mode !== "common"}><span aria-hidden="true">?</span><p>{content.beeQuestion}</p></div>
           {bridge && <div className={styles.reminders}>{content.reminders.map(text => <span key={text}>{text}</span>)}</div>}
         </div>
         <div className={styles.caption}><span>Сад Сократа · условная иллюстрация</span><button type="button" aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "Продолжить движение" : "Приостановить движение"}</button></div>
       </div>}
-      <div className={styles.dialogue}>
+      <div className={styles.dialogue}><MotionRegion active={active}><div className={styles.speechContent}>
         <p className={styles.speaker}>Сократ</p>
         <h3 ref={focus} className={styles.stageTitle}>{stage === "intro" ? "Неожиданная аналогия" : stage === "practice" ? content.question : stage === "final" ? content.parallel[parallel ? 1 : 0] : stage === "bridge" ? "Вернёмся к добродетели" : "Два способа смотреть"}</h3>
         {speech && <blockquote key={`${stage}-${line}-${mode}`}>{speech}</blockquote>}
@@ -96,12 +131,13 @@ export function VirtueSwarmScene({ scene, active, onBack, onClose, onContinue }:
         {gathered && <>{!parallel ? <Button onClick={() => { shouldFocus.current = true; setParallel(true); }}>А добродетели?</Button> : <>
           <p className={styles.explanation}>{content.explanation}</p>
           <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · Sophia</figcaption></figure>
-          <Button onClick={onContinue}>Продолжить урок</Button>
+          <Button className="mt-4" onClick={onContinue}>Продолжить урок</Button>
         </>}</>}
-      </div>
+      </div></MotionRegion></div>
     </div>
     <nav className={styles.navigation} aria-label="Навигация по слайду">
-      <Button variant="ghost" size="sm" onClick={onBack}>Ко второму слайду</Button>
+      <Button variant="ghost" size="sm" disabled={stage === "intro" && line === 0} onClick={previousStep}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
+      <Button variant="ghost" size="sm" onClick={onBack}>К предыдущему</Button>
       <Button variant="ghost" size="sm" onClick={replay}>Повторить сцену</Button>
       <Button variant="ghost" size="sm" onClick={onClose}>Вернуться в каталог</Button>
     </nav>

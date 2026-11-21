@@ -25,6 +25,8 @@
 .lessonButton:disabled { cursor:default; opacity:1; }
 .lessonButton svg,.planned { flex-shrink:0; margin-left:auto; }
 .planned { color:#617169; font-size:10px; }
+.completed { margin-left: auto; flex-shrink: 0; color: #385b43; font-size: 11px; }
+.completed + svg { margin-left: 0; }
 .lessonNumber { flex-shrink:0; min-width:23px; color:#597063; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
 .lessonTitle { min-width:0; color:var(--ink); font-size:13px; font-weight:650; line-height:1.65; overflow-wrap:anywhere; }
 .mobileDialog { position:fixed; inset:0; width:100%; height:100dvh; max-width:none; max-height:none; margin:0; border:0; border-radius:0; }
