@@ -1,4 +1,5 @@
 import { VIRTUE_SWARM, type VirtueSwarmContent } from "./virtue-swarm-data";
+import { VIRTUE_DEFINITION_PRACTICE, type DefinitionPracticeContent } from "./virtue-definition-practice-data";
 import { SOCRATIC_REFLECTION, type ReflectionContent } from "./reflection-data";
 import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data";
 import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
@@ -40,6 +41,7 @@ export type LessonSceneData = SceneBase & (
   | { type: "virtue-intro"; virtue: VirtueIntroContent }
   | { type: "virtue-gallery"; gallery: VirtueGalleryContent }
   | { type: "virtue-swarm"; swarm: VirtueSwarmContent }
+  | { type: "virtue-definition-practice"; definitionPractice: DefinitionPracticeContent }
   | { type: "lesson-reflection"; reflection: ReflectionContent }
   | { type: "question-workshop"; workshop: WorkshopContent }
   | { type: "guided-practice"; practice: PracticeContent }
@@ -74,8 +76,11 @@ export const INTRO_LESSONS = {
         buttonLabel: "Вернуться в каталог", gallery: VIRTUE_GALLERY },
       { id: "virtue-swarm", lessonId: "plato-virtue-definition", type: "virtue-swarm",
         title: "Рой добродетелей", paragraphs: [], image: { src: "/images/lessons/virtue/socrates-meno.webp" },
-        imageAlt: "Сад Сократа", buttonLabel: "Вернуться в каталог", swarm: VIRTUE_SWARM }],
-    sources: [{ title: "Платон, «Менон», 70a–72d", url: "https://classics.mit.edu/Plato/meno.html" }],
+        imageAlt: "Сад Сократа", buttonLabel: "Вернуться в каталог", swarm: VIRTUE_SWARM },
+      { id: "virtue-definition-practice", lessonId: "plato-virtue-definition", type: "virtue-definition-practice",
+        title: "Пример или определение?", paragraphs: [], image: { src: "/images/lessons/dialogue/socrates.webp" },
+        imageAlt: "Сократ в философской мастерской", buttonLabel: "Вернуться в каталог", definitionPractice: VIRTUE_DEFINITION_PRACTICE }],
+    sources: [{ title: "Платон, «Менон», 70a–73e", url: "https://classics.mit.edu/Plato/meno.html" }],
   },
   "plato-socratic-question": {
     id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "10–12 минут",

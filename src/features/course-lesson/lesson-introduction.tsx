@@ -12,6 +12,7 @@ import { MentorScene } from "./mentor-scene";
 import { DialogueScene } from "./dialogue-scene";
 import { VirtueIntroScene } from "./virtue-intro-scene";
 import { VirtueSwarmScene } from "./virtue-swarm-scene";
+import { VirtueDefinitionPracticeScene } from "./virtue-definition-practice-scene";
 import { VirtueGalleryScene } from "./virtue-gallery-scene";
 import { LessonScene } from "./lesson-scene";
 import { LessonExercise } from "./lesson-exercise";
@@ -29,7 +30,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   const [run, setRun] = useState(() => restoreRun(lesson, readResumeRun(lesson.id), initialSceneId));
   const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
   const scene = lesson.scenes[index];
-  const virtueScene = scene.type === "virtue-intro" || scene.type === "virtue-gallery" || scene.type === "virtue-swarm";
+  const virtueScene = scene.type === "virtue-intro" || scene.type === "virtue-gallery" || scene.type === "virtue-swarm" || scene.type === "virtue-definition-practice";
   const exercise = scene.type === "single-choice" || scene.type === "ordering" ? scene : null;
   const answer = exercise ? run.exercises[scene.id] ?? initialAnswer(exercise) : null;
   const canContinue = !exercise || Boolean(answer && answer.checked && isCorrect(exercise, answer));
@@ -120,7 +121,8 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     {lesson.scenes.map(item => {
       if (item.type === "virtue-intro") return <div key={item.id} hidden={scene.id !== item.id}><VirtueIntroScene scene={item} onClose={onClose} onContinue={() => move(1)} /></div>;
       if (item.type === "virtue-gallery") return <div key={item.id} hidden={scene.id !== item.id}><VirtueGalleryScene scene={item} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
-      if (item.type === "virtue-swarm") return <div key={item.id} hidden={scene.id !== item.id}><VirtueSwarmScene scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
+      if (item.type === "virtue-swarm") return <div key={item.id} hidden={scene.id !== item.id}><VirtueSwarmScene scene={item} active={scene.id === item.id} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
+      if (item.type === "virtue-definition-practice") return <div key={item.id} hidden={scene.id !== item.id}><VirtueDefinitionPracticeScene scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
       return null;
     })}
     {lesson.scenes.filter(item => item.type === "dialogue").map(item => item.type === "dialogue" && <div key={item.id} hidden={scene.id !== item.id}><DialogueScene scene={item} onContinue={() => move(1)} /></div>)}

@@ -10,9 +10,10 @@ import type { SwarmMode, SwarmStage } from "./virtue-swarm-data";
 import { VirtueBee } from "./virtue-bee";
 import styles from "./virtue-swarm-scene.module.css";
 
-export function VirtueSwarmScene({ scene, active, onBack, onClose }: {
+export function VirtueSwarmScene({ scene, active, onBack, onClose, onContinue }: {
   scene: Extract<LessonSceneData, { type: "virtue-swarm" }>;
   active: boolean; onBack: () => void; onClose: () => void;
+  onContinue: () => void;
 }) {
   const content = scene.swarm;
   const [stage, setStage] = useSceneState<SwarmStage>(scene, "stage", "intro", oneOf(["intro", "garden", "explore", "bridge", "practice", "final"] as const));
@@ -95,6 +96,7 @@ export function VirtueSwarmScene({ scene, active, onBack, onClose }: {
         {gathered && <>{!parallel ? <Button onClick={() => { shouldFocus.current = true; setParallel(true); }}>А добродетели?</Button> : <>
           <p className={styles.explanation}>{content.explanation}</p>
           <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · Sophia</figcaption></figure>
+          <Button onClick={onContinue}>Продолжить урок</Button>
         </>}</>}
       </div>
     </div>

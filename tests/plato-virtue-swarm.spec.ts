@@ -1,4 +1,4 @@
-﻿import { test, expect, type Locator } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { INTRO_LESSONS } from '../src/features/course-lesson/lesson-data';
 
@@ -14,8 +14,8 @@ async function explore(scene: Locator) {
   await scene.getByRole('button', { name: 'Что их объединяет?', exact: true }).click();
 }
 
-test('exactly three unfinished slides', () => {
-  expect(INTRO_LESSONS['plato-virtue-definition'].scenes.map(scene => scene.id)).toEqual(['meno-question', 'virtue-many-faces', 'virtue-swarm']);
+test('exactly four unfinished slides', () => {
+  expect(INTRO_LESSONS['plato-virtue-definition'].scenes.map(scene => scene.id)).toEqual(['meno-question', 'virtue-many-faces', 'virtue-swarm', 'virtue-definition-practice']);
 });
 
 test('swarm exploration, retry, state preservation and replay', async ({ page }, info) => {
