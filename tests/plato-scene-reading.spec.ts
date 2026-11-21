@@ -6,7 +6,7 @@ test("scene changes align a compact illustrated header above the plain reading a
   const lesson = page.getByTestId("lesson-introduction");
   const heading = lesson.getByRole("heading", { level: 2 });
   async function expectReadingStart() {
-    await expect(heading).toBeFocused();
+    await expect(heading).not.toBeFocused();
     await expect.poll(async () => {
       const title = await lesson.getByTestId("lesson-scene-header").boundingBox();
       const header = await page.locator(".site-header").boundingBox();

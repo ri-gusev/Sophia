@@ -1,15 +1,17 @@
 "use client";
 import Image from "next/image";
-import { useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useSceneState } from "./use-scene-state";
+import { boundedIndex, isBoolean, isText } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./workshop-scene.module.css";
 
 export function WorkshopScene({ scene, onBack, onContinue }: { scene: Extract<LessonSceneData, { type: "question-workshop" }>; onBack: () => void; onContinue?: () => void }) {
-  const [turn, setTurn] = useState(0);
-  const [draft, setDraft] = useState("");
-  const [hint, setHint] = useState(false);
-  const [example, setExample] = useState(false);
+  const [turn, setTurn] = useSceneState(scene, "turn", 0, boundedIndex(scene.workshop.lines.length));
+  const [draft, setDraft] = useSceneState(scene, "draft", "", isText);
+  const [hint, setHint] = useSceneState(scene, "hint", false, isBoolean);
+  const [example, setExample] = useSceneState(scene, "example", false, isBoolean);
   const lastAdvance = useRef(0);
   const input = useRef<HTMLTextAreaElement>(null);
   const id = useId();

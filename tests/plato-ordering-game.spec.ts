@@ -12,7 +12,7 @@ async function openGame(page: Page) {
   return { scene, figures };
 }
 
-test("figures drag with mouse or touch, require checking and reset on reload", async ({ page }, testInfo) => {
+test("figures drag with mouse or touch, require checking and survive reload", async ({ page }, testInfo) => {
   const { scene, figures } = await openGame(page);
   await figures.scrollIntoViewIfNeeded();
   await figures.screenshot({ path: testInfo.outputPath("scattered-figures.png") });
@@ -44,9 +44,9 @@ test("figures drag with mouse or touch, require checking and reset on reload", a
   await expect(next).toBeEnabled();
   for (const figure of await figures.getByRole("button").all()) await expect(figure).toBeDisabled();
   await page.reload();
-  await expect(scene.getByTestId("ordering-item-name")).toHaveText(["Аристотель", "Сократ", "Платон"]);
-  await expect(scene.getByTestId("exercise-feedback")).toHaveCount(0);
-  await expect(next).toBeDisabled();
+  await expect(scene.getByTestId("ordering-item-name")).toHaveText(["Сократ", "Платон", "Аристотель"]);
+  await expect(scene.getByTestId("exercise-feedback")).toBeVisible();
+  await expect(next).toBeEnabled();
 });
 
 test("selection and keyboard reorder figures, mistakes allow retry, game is accessible", async ({ page }, testInfo) => {

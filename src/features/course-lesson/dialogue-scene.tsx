@@ -1,20 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useSceneState } from "./use-scene-state";
+import { boundedIndex, isBoolean } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./dialogue-scene.module.css";
 
 export function DialogueScene({ scene, onContinue }: { scene: Extract<LessonSceneData, { type: "dialogue" }>; onContinue?: () => void }) {
-  const [turn, setTurn] = useState(0);
+  const [turn, setTurn] = useSceneState(scene, "turn", 0, boundedIndex(scene.dialogue.lines.length));
 
   const lastAdvance = useRef(0);
   const { characters, lines, explanation } = scene.dialogue;
   const line = lines[turn];
   const speaker = characters.find(character => character.id === line.speaker)!;
   const final = turn === lines.length - 1;
-  const [complete, setComplete] = useState(false);
+  const [complete, setComplete] = useSceneState(scene, "complete", false, isBoolean);
   function move(direction: -1 | 1) {
     if (direction === 1 && performance.now() - lastAdvance.current < 400) return;
     lastAdvance.current = performance.now();

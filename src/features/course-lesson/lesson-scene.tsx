@@ -36,7 +36,7 @@ export function LessonScene({ scene, children, navigation }: LessonSceneProps) {
           onLoad={() => setReady(scene.image.src)} onError={() => setReady(null)} data-testid="lesson-artwork" />
       </div>
     </div>
-    <h2 key={scene.id} id={titleId} className={`${styles.title} ${styles.reveal}`} style={delay(0)} tabIndex={-1}>{scene.title}</h2>
+    <h2 key={scene.id} id={titleId} className={`${styles.title} ${styles.reveal}`} style={delay(0)}>{scene.title}</h2>
     </header>
     <div key={scene.id} className={styles.reading} data-exercise-placement={scene.exercisePlacement} data-feedback-placement={scene.feedbackPlacement}>
       {scene.subtitle && <p className={`${styles.subtitle} ${styles.reveal}`} style={delay(2)}>{scene.subtitle}</p>}

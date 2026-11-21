@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSceneState } from "./use-scene-state";
+import { isBoolean, listOf, oneOf } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import type { VirtueGalleryContent } from "./virtue-gallery-data";
 import styles from "./virtue-gallery-scene.module.css";
@@ -11,16 +13,17 @@ import styles from "./virtue-gallery-scene.module.css";
 type Stage = "meno" | "gallery" | "socrates" | "mosaic";
 type CardId = VirtueGalleryContent["cards"][number]["id"];
 
-export function VirtueGalleryScene({ scene, onBack, onClose }: {
+export function VirtueGalleryScene({ scene, onBack, onClose, onContinue }: {
   scene: Extract<LessonSceneData, { type: "virtue-gallery" }>;
   onBack: () => void;
+  onContinue: () => void;
   onClose: () => void;
 }) {
   const content = scene.gallery;
-  const [stage, setStage] = useState<Stage>("meno");
-  const [visited, setVisited] = useState<readonly CardId[]>([]);
-  const [selected, setSelected] = useState<CardId | null>(null);
-  const [reflection, setReflection] = useState(false);
+  const [stage, setStage] = useSceneState<Stage>(scene, "stage", "meno", oneOf(["meno", "gallery", "socrates", "mosaic"] as const));
+  const [visited, setVisited] = useSceneState<readonly CardId[]>(scene, "visited", [], listOf(content.cards.map(card => card.id)));
+  const [selected, setSelected] = useSceneState<CardId | null>(scene, "selected", null, oneOf([null, ...content.cards.map(card => card.id)]));
+  const [reflection, setReflection] = useSceneState(scene, "reflection", false, isBoolean);
   const focusTarget = useRef<HTMLElement | null>(null);
   const board = useRef<HTMLDivElement>(null);
   const before = useRef<DOMRect[]>([]);
@@ -30,7 +33,18 @@ export function VirtueGalleryScene({ scene, onBack, onClose }: {
 
   useLayoutEffect(() => {
     if (shouldFocus.current) {
-      focusTarget.current?.focus();
+      if (mosaic && !reflection && board.current) {
+        board.current.focus({ preventScroll: true });
+        const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
+        window.scrollTo({
+          top: Math.max(0, window.scrollY + board.current.getBoundingClientRect().top - headerHeight - 24),
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        });
+      } else {
+        const target = focusTarget.current;
+        if (target?.matches("h2, h3")) target.scrollIntoView({ block: "nearest" });
+        else target?.focus();
+      }
       shouldFocus.current = false;
     }
     if (!mosaic || !before.current.length) return;
@@ -74,14 +88,14 @@ export function VirtueGalleryScene({ scene, onBack, onClose }: {
 
   return <section className={styles.scene} data-testid="virtue-gallery-scene">
     <header className={styles.header} data-testid="lesson-scene-header">
-      <h2 tabIndex={-1}>{scene.title}</h2>
+      <h2>{scene.title}</h2>
       <a href="https://classics.mit.edu/Plato/meno.html" target="_blank" rel="noreferrer">{content.adaptation}</a>
     </header>
 
     {stage === "meno" && <div className={styles.meeting}>
       <Image src={scene.image.src} alt={scene.imageAlt} width={1536} height={1024} sizes="(max-width: 760px) 100vw, 48vw" />
       <div className={styles.speech}>
-        <h3 tabIndex={-1} ref={element => { focusTarget.current = element; }}>Менон</h3>
+        <h3 ref={element => { focusTarget.current = element; }}>Менон</h3>
         <blockquote>{content.meno.map(text => <p key={text}>{text}</p>)}</blockquote>
         <Button onClick={() => advance("gallery")}>Посмотреть примеры<ArrowRight size={16} aria-hidden="true" /></Button>
       </div>
@@ -89,20 +103,21 @@ export function VirtueGalleryScene({ scene, onBack, onClose }: {
 
     {stage !== "meno" && <>
       {stage === "gallery" && <div className={styles.galleryHeader}>
-        <h3 tabIndex={-1} ref={element => { focusTarget.current = element; }}>Примеры Менона</h3>
+        <h3 ref={element => { focusTarget.current = element; }}>Примеры Менона</h3>
         <p role="status">Изучено: {visited.length} из {content.cards.length}</p>
       </div>}
       {stage === "socrates" && <div className={styles.reaction}>
-        <h3 tabIndex={-1} ref={element => { focusTarget.current = element; }}>Сократ</h3>
+        <h3 ref={element => { focusTarget.current = element; }}>Сократ</h3>
         <blockquote>{content.reaction}</blockquote>
         <Button onClick={rearrange}>Далее<ArrowRight size={16} aria-hidden="true" /></Button>
       </div>}
       {mosaic && <div className={styles.reaction}>
         <p className={styles.speaker}>Сократ</p>
-        <h3 tabIndex={-1} ref={element => { if (!reflection) focusTarget.current = element; }}>{content.challenge}</h3>
+        <h3 ref={element => { if (!reflection) focusTarget.current = element; }}>{content.challenge}</h3>
       </div>}
 
-      <div ref={board} className={styles.board} data-layout={mosaic ? "mosaic" : "gallery"}>
+      <div ref={board} className={styles.board} data-layout={mosaic ? "mosaic" : "gallery"}
+        tabIndex={mosaic ? -1 : undefined} role={mosaic ? "group" : undefined} aria-label={mosaic ? "Анимация примеров Менона" : undefined}>
         {mosaic && <svg className={styles.connections} viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden="true">
           <path d="M150 50V103 M50 150L124 111 M250 150L176 111" vectorEffect="non-scaling-stroke" />
         </svg>}
@@ -152,6 +167,7 @@ export function VirtueGalleryScene({ scene, onBack, onClose }: {
       </div>}
     </>}
 
+    {reflection && <Button onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>}
     <nav className={styles.navigation} aria-label="Навигация по слайду">
       <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft size={15} aria-hidden="true" />К первому слайду</Button>
       {stage !== "meno" && <Button variant="ghost" size="sm" onClick={replay}><RotateCcw size={15} aria-hidden="true" />Повторить сцену</Button>}

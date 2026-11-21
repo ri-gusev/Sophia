@@ -1,3 +1,4 @@
+import { VIRTUE_SWARM, type VirtueSwarmContent } from "./virtue-swarm-data";
 import { SOCRATIC_REFLECTION, type ReflectionContent } from "./reflection-data";
 import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data";
 import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
@@ -38,6 +39,7 @@ export type LessonSceneData = SceneBase & (
   | { type: "story" }
   | { type: "virtue-intro"; virtue: VirtueIntroContent }
   | { type: "virtue-gallery"; gallery: VirtueGalleryContent }
+  | { type: "virtue-swarm"; swarm: VirtueSwarmContent }
   | { type: "lesson-reflection"; reflection: ReflectionContent }
   | { type: "question-workshop"; workshop: WorkshopContent }
   | { type: "guided-practice"; practice: PracticeContent }
@@ -69,8 +71,11 @@ export const INTRO_LESSONS = {
         title: "У добродетели много лиц", paragraphs: [],
         image: { src: "/images/lessons/virtue/socrates-meno.webp" },
         imageAlt: "Сократ и Менон беседуют в древнегреческом дворе",
-        buttonLabel: "Вернуться в каталог", gallery: VIRTUE_GALLERY }],
-    sources: [{ title: "Платон, «Менон», 70a–71b", url: "https://classics.mit.edu/Plato/meno.html" }],
+        buttonLabel: "Вернуться в каталог", gallery: VIRTUE_GALLERY },
+      { id: "virtue-swarm", lessonId: "plato-virtue-definition", type: "virtue-swarm",
+        title: "Рой добродетелей", paragraphs: [], image: { src: "/images/lessons/virtue/socrates-meno.webp" },
+        imageAlt: "Сад Сократа", buttonLabel: "Вернуться в каталог", swarm: VIRTUE_SWARM }],
+    sources: [{ title: "Платон, «Менон», 70a–72d", url: "https://classics.mit.edu/Plato/meno.html" }],
   },
   "plato-socratic-question": {
     id: "plato-socratic-question", title: "Как Сократ разрушал уверенность?", duration: "10–12 минут",

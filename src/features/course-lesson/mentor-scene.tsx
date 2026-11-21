@@ -1,17 +1,22 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useSceneState } from "./use-scene-state";
+import { boundedIndex } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import styles from "./mentor-scene.module.css";
 
 export function MentorScene({ scene, onBack, onContinue }: { scene: Extract<LessonSceneData, { type: "mentor-dialogue" }>; onBack: () => void; onContinue?: () => void }) {
-  const [turn, setTurn] = useState(0);
+  const [turn, setTurn] = useSceneState(scene, "turn", 0, boundedIndex(scene.mentor.lines.length));
   const lastAdvance = useRef(0);
   const { character, lines, stages, conclusion, note } = scene.mentor;
   const final = turn === lines.length - 1;
+  const previousFinal = useRef(final);
   const conclusionRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (previousFinal.current === final) return;
+    previousFinal.current = final;
     if (!final) return;
     const timer = window.setTimeout(() => {
       if (!conclusionRef.current || conclusionRef.current.closest("[hidden]")) return;

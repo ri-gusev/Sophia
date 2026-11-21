@@ -32,7 +32,7 @@ test("the two slides preserve their state, reveal the mosaic and support replay"
   const continueLesson = intro.getByRole("button", { name: "Продолжить урок" });
   await continueLesson.click();
   await expect(page).toHaveURL(new RegExp("scene=virtue-many-faces$"));
-  await expect(scene.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(scene.getByRole("heading", { level: 2 })).not.toBeFocused();
   await expect(page.getByText("Слайд 2 из 5")).toBeVisible();
   await expect(scene.getByText("Смотри, я приведу несколько примеров.")).toBeVisible();
   const shot = (name: string) => scene.screenshot({
@@ -40,7 +40,7 @@ test("the two slides preserve their state, reveal the mosaic and support replay"
   });
   await shot("01-meno.png");
   await scene.getByRole("button", { name: "Посмотреть примеры" }).click();
-  await expect(scene.getByRole("heading", { name: "Примеры Менона" })).toBeFocused();
+  await expect(scene.getByRole("heading", { name: "Примеры Менона" })).not.toBeFocused();
   const socrates = scene.getByRole("button", { name: "Что скажет Сократ?" });
   await expect(socrates).toHaveCount(0);
   await expect(scene.getByRole("status")).toHaveText("Изучено: 0 из 3");
@@ -66,6 +66,11 @@ test("the two slides preserve their state, reveal the mosaic and support replay"
   const initialPosition = await tiles.first().boundingBox();
   await scene.getByRole("button", { name: "Далее" }).click();
   await expect(scene.locator('[data-layout="mosaic"]')).toBeVisible();
+  await expect(scene.getByRole("group", { name: "Анимация примеров Менона" })).toBeFocused();
+  await expect.poll(() => scene.locator('[data-layout="mosaic"]').evaluate(element => {
+    const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
+    return Math.abs(element.getBoundingClientRect().top - headerHeight - 24);
+  })).toBeLessThan(3);
   await expect(scene.getByText("Что общего?", { exact: true })).toBeVisible();
   await expect.poll(async () => (await tiles.first().boundingBox())?.width ?? Infinity).toBeLessThan(initialPosition!.width * 0.85);
   await shot("06-mosaic.png");
@@ -78,7 +83,8 @@ test("the two slides preserve their state, reveal the mosaic and support replay"
   await expect(continueLesson).toBeVisible();
   await continueLesson.click();
   await expect(scene.getByText("Назвать примеры", { exact: false })).toBeVisible();
-  await expect(scene.getByRole("button", { name: /Завершить урок|Продолжить урок/ })).toHaveCount(0);
+  await expect(scene.getByRole("button", { name: "Завершить урок" })).toHaveCount(0);
+  await expect(scene.getByRole("button", { name: "Продолжить урок" })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("sophia.lesson-completions.v1"))).toBeNull();
   await scene.getByRole("button", { name: "Повторить сцену" }).click();
   await scene.getByRole("button", { name: "Посмотреть примеры" }).click();

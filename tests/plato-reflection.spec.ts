@@ -72,6 +72,8 @@ test("reflection explicitly saves completion, persists and returns to catalog",a
  await page.getByTestId('philosopher-catalog').screenshot({path:info.outputPath('catalog.png')});
  expect(JSON.parse((await page.evaluate(k=>localStorage.getItem(k),key))!)).toEqual(['plato-socratic-question']);
  await page.goto('/learn#lesson=plato-socratic-question&scene=first-step'); await page.reload();
+ await expect(scene.getByRole('heading',{name:'Чему ты научился?'})).toBeVisible();
+ await scene.getByRole('button',{name:'Повторить речь'}).click();
  for(let i=1;i<3;i++){await page.waitForTimeout(450);await scene.getByRole('button',{name:'Далее',exact:true}).click();}
  await scene.getByRole('button',{name:'Посмотреть итоги'}).click();
  await scene.getByRole('button',{name:'Завершить урок',exact:true}).click();

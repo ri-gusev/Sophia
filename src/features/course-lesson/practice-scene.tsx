@@ -1,22 +1,27 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useSceneState } from "./use-scene-state";
+import { boundedIndex, isBoolean, oneOf } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import shared from "./mentor-scene.module.css";
 import styles from "./practice-scene.module.css";
 
 export function PracticeScene({ scene, onBack, onContinue }: { scene: Extract<LessonSceneData, { type: "guided-practice" }>; onBack: () => void; onContinue?: () => void }) {
-  const [turn, setTurn] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [turn, setTurn] = useSceneState(scene, "turn", 0, boundedIndex(scene.practice.lines.length));
+  const [selected, setSelected] = useSceneState<string | null>(scene, "selected", null, oneOf([null, ...scene.practice.options.map(option => option.id)]));
+  const [checked, setChecked] = useSceneState(scene, "checked", false, isBoolean);
   const lastAdvance = useRef(0);
   const group = useId();
   const data = scene.practice;
   const ready = turn === data.lines.length - 1;
   const correct = checked && selected === data.correctAnswer;
   const feedbackRef = useRef<HTMLDivElement>(null);
+  const previousChecked = useRef(checked);
   useEffect(() => {
+    if (previousChecked.current === checked) return;
+    previousChecked.current = checked;
     if (!checked) return;
     const frame = requestAnimationFrame(() => {
       const feedback = feedbackRef.current;

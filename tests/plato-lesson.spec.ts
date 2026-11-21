@@ -18,7 +18,7 @@ test("the first Plato lesson opens below the map and reload restores its current
   await expect(artwork).toBeVisible();
   await expect.poll(() => artwork.evaluate(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0)).toBe(true);
   await expect(lesson.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
-  await expect(lesson.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(lesson.getByRole("heading", { level: 2 })).not.toBeFocused();
   await expect(lesson).toContainText("Представь человека, жившего почти две с половиной тысячи лет назад.");
   await expect(lesson).toContainText("Его звали Платон.");
   const lessonBox = await lesson.boundingBox();
@@ -40,7 +40,7 @@ test("the first Plato lesson opens below the map and reload restores its current
   await expect(page).toHaveURL(/\/learn#lesson=plato-introduction&scene=journey$/);
   await page.reload();
   await expect(lesson).toBeVisible();
-  await expect(lesson.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(lesson.getByRole("heading", { level: 2 })).not.toBeFocused();
   await expect(lesson.getByRole("heading", { level: 2 })).toBeInViewport();
   await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
 });

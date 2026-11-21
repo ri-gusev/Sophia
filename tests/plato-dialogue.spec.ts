@@ -49,6 +49,8 @@ test("composition at required widths", async ({ page }, info) => {
     await page.goto("/learn#lesson=plato-socratic-question&scene=cephalus");
     const scene = page.getByTestId("dialogue-scene");
     await expect(scene).toBeVisible();
+    if (width !== 390) await scene.getByRole("button", { name: "Предыдущая реплика", exact: true }).click();
+    await expect(scene.getByTestId("dialogue-counter")).toHaveText("1 / 8");
     await page.waitForTimeout(600);
     await scene.screenshot({ path: info.outputPath(`${width}-cephalus.png`), style: ".site-header,.skip-link {visibility:hidden!important}" });
     await scene.getByRole("button", { name: "Далее", exact: true }).focus();

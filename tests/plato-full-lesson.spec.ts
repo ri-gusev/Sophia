@@ -69,7 +69,8 @@ test("complete eight-scene journey checks answers, retains work and returns to t
   await lesson.screenshot({ path: testInfo.outputPath("03-question.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await expect(next()).toBeDisabled();
   await page.reload();
-  await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(lesson.getByRole("radio").nth(0)).toBeChecked();
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveText("Ответ неверный");
   await expect(next()).toBeDisabled();
   await lesson.getByRole("radio").nth(1).check();
   await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
@@ -113,7 +114,7 @@ test("complete eight-scene journey checks answers, retains work and returns to t
   expect(apiCalls).toEqual([]);
 });
 
-test("reload resets ordering results and the exercise must be solved again", async ({ page }) => {
+test("reload preserves ordering results and still allows correcting mistakes", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/learn#lesson=plato-introduction&scene=academy");
   const lesson = page.getByTestId("lesson-introduction");
@@ -121,8 +122,8 @@ test("reload resets ordering results and the exercise must be solved again", asy
   await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
   await expect(lesson.getByTestId("exercise-feedback")).toHaveText("Ответ неверный");
   await page.reload();
-  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
-  await expect(lesson.getByRole("heading", { level: 2 })).toBeInViewport();
+  await expect(lesson.getByTestId("exercise-feedback")).toHaveText("Ответ неверный");
+  await expect(lesson.getByRole("heading", { level: 2 })).not.toBeFocused();
   const next = lesson.getByRole("button", { name: "Продолжить", exact: true });
   await expect(next).toBeDisabled();
   const down = lesson.getByRole("button", { name: "Аристотель: переместить", exact: true });
@@ -134,13 +135,9 @@ test("reload resets ordering results and the exercise must be solved again", asy
   await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
   await expect(next).toBeEnabled();
   await page.reload();
-  await expect(next).toBeDisabled();
-  await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Аристотель", "Сократ", "Платон"]);
-  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
-  await down.focus();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await lesson.getByRole("button", { name: "Проверить", exact: true }).click();
+  await expect(next).toBeEnabled();
+  await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Сократ", "Платон", "Аристотель"]);
+  await expect(lesson.getByTestId("exercise-feedback")).toBeVisible();
   await lesson.getByRole("button", { name: "Продолжить", exact: true }).click();
   await lesson.getByRole("button", { name: "Назад", exact: true }).click();
   await expect(lesson.getByTestId("ordering-item-name")).toHaveText(["Сократ", "Платон", "Аристотель"]);
@@ -190,7 +187,7 @@ test("blocked tab storage does not prevent navigation or restoring the scene fro
   await expect(lesson.getByRole("heading", { level: 2 })).toHaveText("Афины, V век до н. э.");
 });
 
-test("old saved answers are ignored and a correct choice resets after reload", async ({ page }) => {
+test("legacy tab answers are ignored and new correct choices survive reload", async ({ page }) => {
   await page.addInitScript(() => {
     sessionStorage.setItem("sophia:lesson:plato-introduction:v1", JSON.stringify({
       version: 1, sceneId: "poet", exercises: { poet: { selected: "b", order: ["a", "b", "c"], checked: true } },
@@ -207,7 +204,7 @@ test("old saved answers are ignored and a correct choice resets after reload", a
   await expect(next).toBeEnabled();
   await page.reload();
   await expect(lesson.getByTestId("lesson-scene")).toHaveAttribute("data-scene-id", "poet");
-  await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
-  await expect(lesson.getByTestId("exercise-feedback")).toHaveCount(0);
-  await expect(next).toBeDisabled();
+  await expect(lesson.getByRole("radio").nth(1)).toBeChecked();
+  await expect(lesson.getByTestId("exercise-feedback")).toBeVisible();
+  await expect(next).toBeEnabled();
 });

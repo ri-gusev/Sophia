@@ -3,14 +3,16 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { BookOpen, MessageCircleQuestion, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSceneState } from "./use-scene-state";
+import { boundedIndex, isBoolean } from "./lesson-resume";
 import type { LessonSceneData } from "./lesson-data";
 import { completeLesson } from "./lesson-progress";
 import shared from "./mentor-scene.module.css";
 import styles from "./reflection-scene.module.css";
 const icons = { question: MessageCircleQuestion, search: Search, book: BookOpen };
 export function LessonReflectionScene({ scene, onBack, onComplete }: { scene: Extract<LessonSceneData, {type:"lesson-reflection"}>; onBack:()=>void; onComplete:()=>void }) {
-  const [turn,setTurn] = useState(0);
-  const [summary,setSummary] = useState(false);
+  const [turn,setTurn] = useSceneState(scene, "turn", 0, boundedIndex(scene.reflection.lines.length));
+  const [summary,setSummary] = useSceneState(scene, "summary", false, isBoolean);
   const [error,setError] = useState(false);
   const conclusion = useRef<HTMLDivElement>(null);
   const saving = useRef(false);

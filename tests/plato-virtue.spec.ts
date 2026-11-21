@@ -3,11 +3,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { INTRO_LESSONS } from "../src/features/course-lesson/lesson-data";
 import { readLessonLocation } from "../src/features/course-lesson/lesson-state";
 
-test("virtue lesson registers exactly two unfinished slides", () => {
+test("virtue lesson registers exactly three unfinished slides", () => {
   const location = readLessonLocation("#lesson=plato-virtue-definition&scene=meno-question");
   expect(location).toEqual({ lessonId: "plato-virtue-definition", sceneId: "meno-question" });
   const lesson = Object.values(INTRO_LESSONS).find(item => item.id === location?.lessonId);
-  expect(lesson?.scenes.map(scene => scene.id)).toEqual(["meno-question", "virtue-many-faces"]);
+  expect(lesson?.scenes.map(scene => scene.id)).toEqual(["meno-question", "virtue-many-faces", "virtue-swarm"]);
   expect(readLessonLocation("#lesson=plato-virtue-definition&scene=virtue-many-faces")?.sceneId).toBe("virtue-many-faces");
   expect(lesson?.scenes.some(scene => scene.type === "completion" || scene.type === "lesson-reflection")).toBe(false);
 });
