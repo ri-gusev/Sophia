@@ -42,6 +42,6 @@ export function Timeline({ year, count, onYearChange }: { year: number; count: n
     <nav className={styles.periods} aria-label="Эпохи философии">{HISTORICAL_ERAS.map(era => <button type="button" key={era.id} aria-label={era.name} title={`Перейти: ${formatHistoricalYear(era.jumpYear)}`} aria-pressed={activeEra.id === era.id} onClick={() => navigate(era.jumpYear)}>{era.shortName}</button>)}</nav>
     <label className={styles.srOnly} htmlFor="atlas-era-jump">Перейти к эпохе</label>
     <select id="atlas-era-jump" className={styles.eraSelect} value={activeEra.id} onChange={event => { const next = HISTORICAL_ERAS.find(era => era.id === event.target.value); if (next) navigate(next.jumpYear); }}>{HISTORICAL_ERAS.map(era => <option key={era.id} value={era.id}>{era.name}</option>)}</select>
-    <p className={styles.note}>{count === 0 ? "В каталоге пока нет философов, живших в этом году. " : ""}Выбери год, затем нажми на портрет или группу на Земле.</p>
+    <p className={styles.note}>{count === 0 ? "В каталоге пока нет философов, живших в этом году. " : ""}Выбери год, затем открой портрет или группу на Земле либо выбери философа в списке ниже.</p>
   </section>;
 }

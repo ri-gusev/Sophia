@@ -1,6 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+const catalog = (page: Page) => page.locator("details").filter({ hasText: "Философы выбранного года" });
+const biography = (page: Page) => page.getByRole("complementary", { name: "Карточка философа" });
+const plato = (page: Page) => catalog(page).getByRole("button", { name: /^Платон/ });
+
+async function setYear(page: Page, year: number) {
+  await page.getByLabel("Точный год").fill(String(Math.abs(year)));
+  await page.getByLabel("Эра года").selectOption(year < 0 ? "bce" : "ce");
+  await page.getByRole("button", { name: "Перейти", exact: true }).click();
+}
+
 async function loadedGlobe(page: Page) {
   await page.goto("/atlas");
   await expect(page.getByRole("status")).toHaveText("Глобус готов", { timeout: 30_000 });
@@ -69,12 +79,19 @@ test("texture failure is explained and can be retried", async ({ page }) => {
   await page.route("**/textures/earth/earth-day*.jpg", (route) => route.abort());
   await page.goto("/atlas");
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Не удалось загрузить глобус");
+  await plato(page).click();
+  await expect(biography(page).getByRole("heading", { name: "Платон" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(plato(page)).toBeFocused();
   await page.unroute("**/textures/earth/earth-day*.jpg");
   await page.getByRole("button", { name: "Попробовать снова" }).click();
   await expect(page.getByRole("status")).toHaveText("Глобус готов", { timeout: 30_000 });
+  await expect(page.locator("canvas")).toBeVisible();
+  await catalog(page).locator("summary").click();
+  await expect(plato(page)).toBeVisible();
 });
 
-test("unavailable WebGL has an accessible fallback and return link", async ({ page }) => {
+test("unavailable WebGL still offers biographies and year selection", async ({ page }, info) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof original>) {
@@ -83,8 +100,58 @@ test("unavailable WebGL has an accessible fallback and return link", async ({ pa
     } as typeof original;
   });
   await page.goto("/atlas");
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("WebGL");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Вы всё ещё можете изучать философов через список ниже");
   await expect(page.getByRole("link", { name: "Вернуться на главную", exact: true })).toBeVisible();
+  await plato(page).press("Space");
+  await expect(biography(page)).toContainText("Платонизм");
+  await expect(biography(page).getByRole("button", { name: "Закрыть карточку" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(plato(page)).toBeFocused();
+  await setYear(page, 100);
+  await expect(plato(page)).toHaveCount(0);
+  const person = catalog(page).getByRole("button").first();
+  const name = await person.locator("strong").innerText();
+  await person.press("Enter");
+  await expect(biography(page).getByRole("heading", { name, exact: true })).toBeVisible();
+  await setYear(page, 527);
+  await expect(biography(page)).toHaveCount(0);
+  for (const year of [1200, 1750, 1950, 2026]) {
+    await setYear(page, year);
+    expect(await catalog(page).getByRole("button").count()).toBeGreaterThan(0);
+  }
+  await setYear(page, -400);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(plato(page)).toBeVisible();
+    await expect.poll(() => page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: innerWidth })))
+      .toEqual({ content: width, viewport: width });
+    const result = await new AxeBuilder({ page }).include("details").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    expect(result.violations).toEqual([]);
+    if (width === 390 || width === 1440) await page.screenshot({ path: info.outputPath(`catalog-${width}.png`), fullPage: true });
+  }
+  await setYear(page, -650);
+  await expect(catalog(page)).toContainText("В выбранном году в каталоге пока нет философов.");
+  await expect(catalog(page).getByRole("button")).toHaveCount(0);
+  await setYear(page, -400);
+  await expect(plato(page)).toBeVisible();
+});
+
+test("the HTML catalog shares the biography card with the working globe", async ({ page }) => {
+  const canvas = await loadedGlobe(page);
+  const summary = catalog(page).locator("summary");
+  await summary.press("Enter");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(summary).toBeFocused();
+  await plato(page).press("Enter");
+  const close = biography(page).getByRole("button", { name: "Закрыть карточку" });
+  await expect(close).toBeFocused();
+  await expect(biography(page)).toContainText("Платонизм");
+  await close.press("Enter");
+  await expect(plato(page)).toBeFocused();
+  await expect(canvas).toBeVisible();
+  await expect(page.getByRole("button", { name: "Приблизить", exact: true })).toBeEnabled();
 });
 
 test("atlas fits narrow and landscape screens and has no detected accessibility violations", async ({ page }, testInfo) => {
@@ -119,7 +186,10 @@ test("keyboard rotates the globe and context loss offers recovery", async ({ pag
     const context = (element as HTMLCanvasElement).getContext("webgl2");
     context?.getExtension("WEBGL_lose_context")?.loseContext();
   });
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("WebGL");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Не удалось открыть 3D-глобус");
+  await plato(page).click();
+  await expect(biography(page).getByRole("heading", { name: "Платон" })).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Попробовать снова" }).click();
   await expect(page.getByRole("status")).toHaveText("Глобус готов", { timeout: 30_000 });
 });

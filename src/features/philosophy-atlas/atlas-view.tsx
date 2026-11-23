@@ -10,6 +10,7 @@ import { INITIAL_YEAR, isAliveAt } from "./historical-time";
 import { PHILOSOPHERS } from "./philosophers-data";
 import { Timeline } from "./timeline";
 import { PhilosopherCard } from "./philosopher-card";
+import { AtlasPhilosopherList } from "./atlas-philosopher-list";
 import { PageScrollEdges } from "./page-scroll-edges";
 import styles from "./philosophy-atlas.module.css";
 
@@ -27,13 +28,17 @@ export function AtlasView() {
   const [selection, setSelection] = useState<string[]>([]);
   const origin = useRef<HTMLButtonElement | null>(null);
   const scene = useRef<HTMLElement>(null);
+  const catalogSummary = useRef<HTMLElement>(null);
   const philosophers = useMemo(() => PHILOSOPHERS.filter(person => isAliveAt(person, year)), [year]);
   const selected = philosophers.filter(person => selection.includes(person.id));
   const select = useCallback((ids: string[], button: HTMLButtonElement) => { origin.current = button; setSelection(ids); }, []);
   const closeCard = useCallback(() => {
     setSelection([]);
-    if (origin.current?.isConnected && !origin.current.closest("[hidden], [inert]") && !origin.current.disabled) origin.current.focus({ preventScroll: true });
-    else scene.current?.focus({ preventScroll: true });
+    const button = origin.current;
+    if (button?.isConnected && !button.closest("[hidden], [inert], details:not([open])") && !button.disabled && button.getClientRects().length) {
+      button.focus();
+    } else (button && !scene.current?.contains(button) ? catalogSummary.current : scene.current)?.focus();
+    origin.current = null;
   }, []);
   useEffect(() => {
     if (!selected.length) return;
@@ -85,7 +90,7 @@ export function AtlasView() {
           {hasError && (
             <div className={styles.message}>
               <div className={styles.error}>
-                <p role="alert">{status === "texture" ? "Не удалось загрузить глобус. Проверь соединение и попробуй снова." : "Не удалось открыть 3D-глобус. Нужна поддержка WebGL и аппаратное ускорение в браузере."}</p>
+                <p role="alert">{status === "texture" ? "Не удалось загрузить глобус." : "Не удалось открыть 3D-глобус."} Вы всё ещё можете изучать философов через список ниже.</p>
                 <Button type="button" size="sm" onClick={() => { setLimits({ near: false, far: false }); setAction({ kind: "reset", sequence: 0 }); setAttempt((value) => value + 1); setStatus("loading"); }}>Попробовать снова</Button>
               </div>
             </div>
@@ -100,9 +105,10 @@ export function AtlasView() {
             </div>
           </div>
         </section>
-        {!hasError && selected.length > 0 && <PhilosopherCard philosophers={selected} onChoose={id => setSelection([id])} onClose={closeCard} />}
+        {selected.length > 0 && <PhilosopherCard philosophers={selected} onChoose={id => setSelection([id])} onClose={closeCard} />}
         </div>
         <Timeline year={year} count={philosophers.length} onYearChange={nextYear => { setYear(nextYear); setSelection(current => current.filter(id => PHILOSOPHERS.some(person => person.id === id && isAliveAt(person, nextYear)))); }} />
+        <AtlasPhilosopherList philosophers={philosophers} onSelect={select} unavailable={hasError} summaryRef={catalogSummary} />
         <p className={styles.credit}>Изображение Земли: <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/" target="_blank" rel="noreferrer">NASA Earth Observatory</a> · Портреты: <a href="/images/philosophers/README.md" target="_blank" rel="noreferrer">источники и лицензии</a></p>
       </main>
     </div>
