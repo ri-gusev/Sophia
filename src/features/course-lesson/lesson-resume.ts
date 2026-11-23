@@ -5,6 +5,10 @@ const part = encodeURIComponent;
 const lessonKey = (lessonId: string) => PREFIX + part(lessonId);
 const sceneKey = (lessonId: string, sceneId: string) => `${lessonKey(lessonId)}:scene:${part(sceneId)}`;
 
+// One overlay per scene with a rejected reset, scoped to this document.
+// Never publish an old reset after recovery: another tab may have edited the scene.
+const temporaryScenes = new Map<string, Map<string, unknown>>();
+
 function read(key: string): unknown {
   try { return JSON.parse(window.localStorage.getItem(key) ?? "null"); }
   catch { return null; }
@@ -21,8 +25,10 @@ function legacy(lessonId: string) {
 }
 
 function write(key: string, value: unknown) {
-  try { window.localStorage.setItem(key, JSON.stringify({ value })); }
-  catch { /* Storage failure leaves the in-memory run usable. */ }
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ value }));
+    return true;
+  } catch { return false; }
 }
 
 function readValue(key: string, fallback: () => unknown) {
@@ -55,12 +61,19 @@ function generation(base: string) {
 
 function readSceneValue(lessonId: string, sceneId: string, slot: string, fallback: () => unknown) {
   const base = sceneKey(lessonId, sceneId);
+  const temporary = temporaryScenes.get(base);
+  if (temporary) return temporary.get(slot);
   const revision = generation(base);
   return readValue(`${base}:${revision}:${slot}`, revision ? () => undefined : fallback);
 }
 
 function writeSceneValue(lessonId: string, sceneId: string, slot: string, value: unknown) {
   const base = sceneKey(lessonId, sceneId);
+  const temporary = temporaryScenes.get(base);
+  if (temporary) {
+    temporary.set(slot, value);
+    return;
+  }
   write(`${base}:${generation(base)}:${slot}`, value);
 }
 
@@ -76,7 +89,11 @@ export function resetSceneResume(lessonId: string, sceneId: string) {
   const base = sceneKey(lessonId, sceneId);
   const previous = generation(base);
   const revision = window.crypto.randomUUID();
-  write(`${base}:reset`, revision);
+  if (!write(`${base}:reset`, revision)) {
+    temporaryScenes.set(base, new Map());
+    return;
+  }
+  temporaryScenes.delete(base);
   if (generation(base) !== revision) return;
   // Retire the previous generation only. A concurrent reset or write can use a newer key.
   const prefix = `${base}:${previous}:`;
