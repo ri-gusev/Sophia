@@ -1,4 +1,11 @@
 .lesson { scroll-margin-top:110px; cursor:default; caret-color:transparent; }
+.slideContent { min-width:0; }
+.saveFeedback { color:var(--green); margin:12px; }
+.saveFeedback button { margin-top:8px; }
+@media(min-width:1000px) {
+  .slideLayout { display:grid; grid-template-columns:minmax(0,1fr) 210px; column-gap:20px; }
+  .slideContent { grid-column:1; grid-row:1; }
+}
 .toolbar { display:flex; align-items:center; gap:22px; padding:20px 8px; }
 .lessonName { font-size:14px; font-weight:650; line-height:1.8; }
 .duration { color:var(--muted); font-size:11px; }

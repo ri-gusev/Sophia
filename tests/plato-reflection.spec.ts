@@ -1,6 +1,6 @@
 import {test,expect} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-const key="sophia.lesson-completions.v1";
+const key="sophia.lesson-progress.v2:finished:plato-socratic-question";
 test('five slides form one journey and preserve the question on return', async ({ page }) => {
  await page.goto('/learn#lesson=plato-socratic-question&scene=cephalus');
  const lesson = page.getByTestId('lesson-introduction');
@@ -39,10 +39,15 @@ test('five slides form one journey and preserve the question on return', async (
  for (let i = 1; i < 3; i++) { await page.waitForTimeout(450); await reflection.getByRole('button', { name: 'Далее', exact: true }).click(); }
  await reflection.getByRole('button', { name: 'Посмотреть итоги' }).click();
  await reflection.getByRole('button', { name: 'Завершить урок', exact: true }).click();
- expect(JSON.parse((await page.evaluate(k => localStorage.getItem(k), key))!)).toEqual(['plato-socratic-question']);
+ expect(await page.evaluate(k => localStorage.getItem(k), key)).toBe("1");
 });
 test("reflection explicitly saves completion, persists and returns to catalog",async({page},info)=>{
  await page.goto('/learn#lesson=plato-socratic-question&scene=courage-question');
+ await page.evaluate(() => {
+   for (const slide of ["cephalus", "socratic-questions", "always-true"]) {
+     localStorage.setItem(`sophia.lesson-progress.v2:slide:plato-socratic-question:${slide}`, "1");
+   }
+ });
  const workshop=page.getByTestId('workshop-scene');
  for(let i=1;i<3;i++){await page.waitForTimeout(450);await workshop.getByRole('button',{name:'Далее',exact:true}).click();}
  await workshop.getByRole('button',{name:'Не знаю — покажи пример'}).click();
@@ -68,16 +73,16 @@ test("reflection explicitly saves completion, persists and returns to catalog",a
  await scene.getByRole('button',{name:'Завершить урок',exact:true}).click();
  await expect(scene).toHaveCount(0);
  await page.getByRole('button',{name:'Сократ и рождение философского вопроса',exact:true}).click();
- await expect(page.getByTestId('philosopher-catalog')).not.toContainText('Пройдено (в этом браузере)');
+ await expect(page.getByTestId('philosopher-catalog')).toContainText('Пройдено');
  await page.getByTestId('philosopher-catalog').screenshot({path:info.outputPath('catalog.png')});
- expect(JSON.parse((await page.evaluate(k=>localStorage.getItem(k),key))!)).toEqual(['plato-socratic-question']);
+ expect(await page.evaluate(k=>localStorage.getItem(k),key)).toBe("1");
  await page.goto('/learn#lesson=plato-socratic-question&scene=first-step'); await page.reload();
  await expect(scene.getByRole('heading',{name:'Чему ты научился?'})).toBeVisible();
  await scene.getByRole('button',{name:'Повторить речь'}).click();
  for(let i=1;i<3;i++){await page.waitForTimeout(450);await scene.getByRole('button',{name:'Далее',exact:true}).click();}
  await scene.getByRole('button',{name:'Посмотреть итоги'}).click();
  await scene.getByRole('button',{name:'Завершить урок',exact:true}).click();
- expect(JSON.parse((await page.evaluate(k=>localStorage.getItem(k),key))!)).toEqual(['plato-socratic-question']);
+ expect(await page.evaluate(k=>localStorage.getItem(k),key)).toBe("1");
 });
 test('storage error does not claim completion',async({page})=>{
  await page.addInitScript(()=>{Storage.prototype.setItem=()=>{throw new Error('blocked');};});

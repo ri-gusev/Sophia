@@ -2,10 +2,9 @@
 
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, CircleHelp, Layers, ScanSearch, Shapes } from "lucide-react";
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import type { LessonSceneData } from "./lesson-data";
-import { completeLesson } from "./lesson-progress";
 import { boundedIndex } from "./lesson-resume";
 import { MotionRegion } from "./motion-region";
 import { useSceneState } from "./use-scene-state";
@@ -15,17 +14,17 @@ import styles from "./virtue-finale-scene.module.css";
 const icons = { question: CircleHelp, examples: Shapes, common: Layers, check: ScanSearch };
 const DIALOGUE_START = 0, PATH_START = 3, PATH_END = 4, QUESTION_START = 5, SUMMARY = 7;
 
-export function VirtueFinaleScene({ scene, active, onBack, onClose }: {
+export function VirtueFinaleScene({ scene, active, onBack, onClose, onComplete, feedback }: {
   scene: Extract<LessonSceneData, { type: "virtue-finale" }>;
   active: boolean;
   onBack: () => void;
   onClose: () => void;
+  onComplete: () => void;
+  feedback: ReactNode;
 }) {
   const content = scene.finale;
   // A single checkpoint preserves the order of the dialogue, path and conclusion.
   const [checkpoint, setCheckpoint] = useSceneState(scene, "checkpoint", DIALOGUE_START, boundedIndex(SUMMARY + 1));
-  const [error, setError] = useState(false);
-  const saving = useRef(false);
   const reading = useRef<HTMLDivElement>(null);
   const action = useRef<HTMLButtonElement>(null);
   const previous = useRef(checkpoint);
@@ -45,20 +44,6 @@ export function VirtueFinaleScene({ scene, active, onBack, onClose }: {
     revealLessonTarget(reading.current);
     action.current?.focus({ preventScroll: true });
   }, [active, checkpoint]);
-
-  function finish() {
-    if (saving.current) return;
-    saving.current = true;
-    setError(false);
-    try {
-      completeLesson(scene.lessonId);
-    } catch {
-      setError(true);
-      saving.current = false;
-      return;
-    }
-    onClose();
-  }
 
   return <section className={styles.scene} style={VIRTUE_MOTION_STYLE} data-testid="virtue-finale-scene">
     <header className={styles.header} data-testid="lesson-scene-header">
@@ -104,19 +89,18 @@ export function VirtueFinaleScene({ scene, active, onBack, onClose }: {
         </div>}
       </div></MotionRegion>
       <div className={styles.actions}>
-        {error && <p role="alert">{content.saveError}</p>}
-        <Button ref={action} onClick={outcomes ? finish : () => setCheckpoint(value => Math.min(SUMMARY, value + 1))}>
+        {outcomes && feedback}
+        <Button ref={action} onClick={outcomes ? onComplete : () => setCheckpoint(value => Math.min(SUMMARY, value + 1))}>
           {outcomes ? content.buttons.finish : button}{!outcomes && <ArrowRight size={16} aria-hidden="true" />}
         </Button>
       </div>
     </div>
     <nav className={styles.nav} aria-label="Навигация по заключению">
       <Button variant="ghost" disabled={checkpoint === DIALOGUE_START} onClick={() => {
-        setError(false);
         setCheckpoint(value => Math.max(DIALOGUE_START, value - 1));
       }}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
       <Button variant="ghost" onClick={onBack}>{content.buttons.back}</Button>
-      <Button variant="ghost" onClick={() => { setError(false); setCheckpoint(DIALOGUE_START); }}>{content.buttons.replay}</Button>
+      <Button variant="ghost" onClick={() => setCheckpoint(DIALOGUE_START)}>{content.buttons.replay}</Button>
       <Button variant="ghost" onClick={onClose}>{content.buttons.close}</Button>
     </nav>
   </section>;

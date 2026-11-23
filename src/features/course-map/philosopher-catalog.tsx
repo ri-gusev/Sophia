@@ -3,8 +3,9 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { BookOpen, ChevronDown, X } from "lucide-react";
 import type { CatalogBlock, PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
-import type { IntroLessonId } from "../course-lesson/lesson-data";
-import { LESSON_PROGRESS_EVENT, LESSON_PROGRESS_KEY, readCompletedLessons } from "../course-lesson/lesson-progress";
+import { INTRO_LESSONS, type IntroLessonId } from "../course-lesson/lesson-data";
+import { readCompletedLessons } from "../course-lesson/lesson-progress";
+import { isLessonConfirmed, subscribeLessonProgress } from "../course-lesson/lesson-slide-progress";
 import styles from "./philosopher-catalog.module.css";
 
 const DESKTOP_QUERY = "(min-width: 1000px)";
@@ -15,19 +16,20 @@ function subscribe(onChange: () => void) {
 }
 const desktopSnapshot = () => window.matchMedia(DESKTOP_QUERY).matches;
 const serverSnapshot = () => false;
-function subscribeCompletion(onChange: () => void) {
-  function storage(event: StorageEvent) { if (!event.key || event.key === LESSON_PROGRESS_KEY) onChange(); }
-  window.addEventListener("storage", storage);
-  window.addEventListener(LESSON_PROGRESS_EVENT, onChange);
-  return () => {
-    window.removeEventListener("storage", storage);
-    window.removeEventListener(LESSON_PROGRESS_EVENT, onChange);
-  };
-}
+type CompletionLabel = "Пройдено" | "Завершено ранее";
+type CompletionStatuses = Partial<Record<IntroLessonId, CompletionLabel>>;
 function completionSnapshot() {
-  try { return JSON.stringify(readCompletedLessons()); } catch { return "[]"; }
+  const statuses: CompletionStatuses = {};
+  try {
+    const legacy = new Set(readCompletedLessons());
+    for (const lesson of Object.values(INTRO_LESSONS)) {
+      if (isLessonConfirmed(lesson)) statuses[lesson.id] = "Пройдено";
+      else if (legacy.has(lesson.id)) statuses[lesson.id] = "Завершено ранее";
+    }
+  } catch { return "{}"; }
+  return JSON.stringify(statuses);
 }
-const emptyCompletion = () => "[]";
+const emptyCompletion = () => "{}";
 
 export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLessonId, lessonPanelId }: {
   catalog: CatalogData;
@@ -37,7 +39,7 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
   lessonPanelId: string;
 }) {
   const desktop = useSyncExternalStore(subscribe, desktopSnapshot, serverSnapshot);
-  const completed = new Set<string>(JSON.parse(useSyncExternalStore(subscribeCompletion, completionSnapshot, emptyCompletion)));
+  const completed: CompletionStatuses = JSON.parse(useSyncExternalStore(subscribeLessonProgress, completionSnapshot, emptyCompletion));
   const desktopPanel = useRef<HTMLElement>(null);
   const mobileDialog = useRef<HTMLDialogElement>(null);
   const titleId = useId(), descriptionId = useId();
@@ -102,7 +104,7 @@ function CourseBlock({ block, lessonPanelId, activeLessonId, completed, onSelect
   block: CatalogBlock;
   lessonPanelId: string;
   activeLessonId: IntroLessonId | null;
-  completed: ReadonlySet<string>;
+  completed: CompletionStatuses;
   onSelectLesson: (id: IntroLessonId) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -122,12 +124,12 @@ function CourseBlock({ block, lessonPanelId, activeLessonId, completed, onSelect
         {block.lessons.map(lesson => <li key={lesson.id} data-lesson-id={lesson.id}>
           <button type="button" className={styles.lessonButton} disabled={!lesson.contentId}
             aria-labelledby={`${contentId}-${lesson.id}-title`}
-            aria-describedby={lesson.contentId && completed.has(lesson.contentId) ? `${contentId}-${lesson.id}-status` : undefined}
+            aria-describedby={lesson.contentId && completed[lesson.contentId] ? `${contentId}-${lesson.id}-status` : undefined}
             aria-controls={lesson.contentId ? lessonPanelId : undefined}
             aria-expanded={lesson.contentId ? activeLessonId === lesson.contentId : undefined}
             onClick={() => { if (lesson.contentId) onSelectLesson(lesson.contentId); }}>
             <span id={`${contentId}-${lesson.id}-title`} className={styles.lessonTitle} data-testid="catalog-lesson-title">{lesson.title}</span>
-            {lesson.contentId && completed.has(lesson.contentId) && <small id={`${contentId}-${lesson.id}-status`} className={styles.completed}>Пройдено</small>}
+            {lesson.contentId && completed[lesson.contentId] && <small id={`${contentId}-${lesson.id}-status`} className={styles.completed}>{completed[lesson.contentId]}</small>}
             {lesson.contentId ? <ChevronDown size={17} aria-hidden="true" /> : <small className={styles.planned}>Скоро</small>}
           </button>
         </li>)}

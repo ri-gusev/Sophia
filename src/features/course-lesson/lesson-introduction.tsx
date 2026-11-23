@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { getImageProps } from "next/image";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,14 @@ import { VirtueDefinitionPracticeScene } from "./virtue-definition-practice-scen
 import { VirtueGalleryScene } from "./virtue-gallery-scene";
 import { LessonScene } from "./lesson-scene";
 import { LessonExercise } from "./lesson-exercise";
+import { LessonSlideNavigator } from "./lesson-slide-navigator";
+import { confirmedSlides, confirmSlideTransition, finishLesson, subscribeLessonProgress } from "./lesson-slide-progress";
 import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
 import { useSceneState } from "./use-scene-state";
 import { isBoolean, readResumeRun, readResumeScroll, resetSceneResume, writeResumeRun, writeResumeScroll } from "./lesson-resume";
 import styles from "./lesson-introduction.module.css";
+
+const emptyProgress = () => "[]";
 
 export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   lesson: IntroLesson;
@@ -30,6 +34,12 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   const root = useRef<HTMLDivElement>(null);
   const [run, setRun] = useState(() => restoreRun(lesson, readResumeRun(lesson.id), initialSceneId));
   const [sceneVersions, setSceneVersions] = useState<Record<string, number>>({});
+  const [saveError, setSaveError] = useState(false);
+  const [missingSlide, setMissingSlide] = useState<string | null>(null);
+  const progress = useSyncExternalStore(subscribeLessonProgress, () => {
+    try { return JSON.stringify(confirmedSlides(lesson)); } catch { return emptyProgress(); }
+  }, emptyProgress);
+  const confirmed = new Set<string>(JSON.parse(progress));
   const discardedScroll = useRef<string | null>(null);
   const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
   const scene = lesson.scenes[index];
@@ -42,10 +52,18 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   useEffect(() => {
     function followFragment() {
       const location = readLessonLocation(window.location.hash);
-      if (location?.lessonId === lesson.id) setRun(previous => ({ ...previous, sceneId: location.sceneId }));
+      if (location?.lessonId === lesson.id) {
+        setMissingSlide(null);
+        setSaveError(false);
+        setRun(previous => previous.sceneId === location.sceneId ? previous : { ...previous, sceneId: location.sceneId });
+      }
     }
     window.addEventListener("hashchange", followFragment);
-    return () => window.removeEventListener("hashchange", followFragment);
+    window.addEventListener("popstate", followFragment);
+    return () => {
+      window.removeEventListener("hashchange", followFragment);
+      window.removeEventListener("popstate", followFragment);
+    };
   }, [lesson.id]);
 
   useEffect(() => {
@@ -109,16 +127,54 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   function updateAnswer(value: ExerciseAnswer) {
     setRun(previous => ({ ...previous, exercises: { ...previous.exercises, [scene.id]: value } }));
   }
+
+  function openSlide(id: string, push = false) {
+    if (id === scene.id || !lesson.scenes.some(item => item.id === id)) return;
+    setMissingSlide(null);
+    setSaveError(false);
+    if (push) {
+      const url = new URL(window.location.href);
+      url.hash = lessonHash(lesson.id, id);
+      window.history.pushState(window.history.state, "", url);
+    }
+    setRun(previous => ({ ...previous, sceneId: id }));
+  }
+
+  function finish() {
+    setSaveError(false);
+    try {
+      const result = finishLesson(lesson, scene.id);
+      if (!result) return;
+      if (result.missing) setMissingSlide(result.missing);
+      else onClose();
+    } catch {
+      setMissingSlide(null);
+      setSaveError(true);
+    }
+  }
+
+  const feedback = missingSlide ? <div className={styles.saveFeedback}>
+    <p role="alert">Чтобы завершить урок, пройди оставшиеся слайды.</p>
+    <Button type="button" variant="outline" onClick={() => openSlide(missingSlide, true)}>К первому непройденному слайду</Button>
+  </div> : saveError ? <p role="alert" className={styles.saveFeedback}>Не удалось сохранить прогресс в этом браузере. Разреши локальное хранилище и попробуй снова.</p> : null;
+
   function move(direction: -1 | 1) {
     const destination = lesson.scenes[index + direction];
     if (!destination || (direction === 1 && !canContinue)) return;
-    if (direction === -1 && virtueScene) {
+    if (direction === 1) {
+      try { confirmSlideTransition(lesson, scene.id); } catch {
+        // Keep reading available, while leaving the failed slide unconfirmed.
+        openSlide(destination.id);
+        setSaveError(true);
+        return;
+      }
+    } else if (virtueScene) {
       // The previous slide keeps its state. Restart the departed slide on the next visit.
       discardedScroll.current = scene.id;
       resetSceneResume(lesson.id, scene.id);
       setSceneVersions(previous => ({ ...previous, [scene.id]: (previous[scene.id] ?? 0) + 1 }));
     }
-    setRun(previous => ({ ...previous, sceneId: destination.id }));
+    openSlide(destination.id);
   }
 
   return <div ref={root} className={styles.lesson} data-testid="lesson-introduction">
@@ -127,30 +183,39 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       <span className={styles.step} aria-live="polite">{lesson.plannedSlides ? `Слайд ${index + 1} из ${lesson.plannedSlides}` : `Шаг ${index + 1} из ${lesson.scenes.length}`}</span>
       <button type="button" className={styles.close} aria-label="Закрыть урок" onClick={onClose}><X size={20} aria-hidden="true" /></button>
     </header>
-    {!virtueScene && <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={1} aria-valuemax={lesson.scenes.length} aria-valuenow={index + 1}>
-      <span style={{ width: `${(index + 1) / lesson.scenes.length * 100}%` }} />
+    <div className={styles.slideLayout}>
+    <LessonSlideNavigator lesson={lesson} currentId={scene.id} confirmed={confirmed} onSelect={id => openSlide(id, true)} />
+    <div className={styles.slideContent}>
+    {!virtueScene && <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={0} aria-valuemax={lesson.scenes.length} aria-valuenow={confirmed.size}>
+      <span style={{ width: `${confirmed.size / lesson.scenes.length * 100}%` }} />
     </div>}
+    {saveError && index !== lesson.scenes.length - 1 && feedback}
     {lesson.scenes.map(item => {
       const key = `${item.id}:${sceneVersions[item.id] ?? 0}`;
       if (item.type === "virtue-intro") return <div key={key} hidden={scene.id !== item.id}><VirtueIntroScene scene={item} active={scene.id === item.id} onClose={onClose} onContinue={() => move(1)} /></div>;
       if (item.type === "virtue-gallery") return <div key={key} hidden={scene.id !== item.id}><VirtueGalleryScene scene={item} active={scene.id === item.id} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
       if (item.type === "virtue-swarm") return <div key={key} hidden={scene.id !== item.id}><VirtueSwarmScene scene={item} active={scene.id === item.id} onContinue={() => move(1)} onBack={() => move(-1)} onClose={onClose} /></div>;
       if (item.type === "virtue-definition-practice") return <div key={key} hidden={scene.id !== item.id}><VirtueDefinitionPracticeScene onContinue={() => move(1)} scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
-      if (item.type === "virtue-finale") return <div key={key} hidden={scene.id !== item.id}><VirtueFinaleScene scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} /></div>;
+      if (item.type === "virtue-finale") return <div key={key} hidden={scene.id !== item.id}><VirtueFinaleScene scene={item} active={scene.id === item.id} onBack={() => move(-1)} onClose={onClose} onComplete={finish} feedback={feedback} /></div>;
       return null;
     })}
     {lesson.scenes.filter(item => item.type === "dialogue").map(item => item.type === "dialogue" && <div key={item.id} hidden={scene.id !== item.id}><DialogueScene scene={item} onContinue={() => move(1)} /></div>)}
-    {lesson.scenes.map(item => item.type === "mentor-dialogue" ? <div key={item.id} hidden={scene.id !== item.id}><MentorScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "guided-practice" ? <div key={item.id} hidden={scene.id !== item.id}><PracticeScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "question-workshop" ? <div key={item.id} hidden={scene.id !== item.id}><WorkshopScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "lesson-reflection" ? <div key={item.id} hidden={scene.id !== item.id}><LessonReflectionScene scene={item} onBack={() => move(-1)} onComplete={onClose} /></div> : null)}
+    {lesson.scenes.map(item => item.type === "mentor-dialogue" ? <div key={item.id} hidden={scene.id !== item.id}><MentorScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "guided-practice" ? <div key={item.id} hidden={scene.id !== item.id}><PracticeScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "question-workshop" ? <div key={item.id} hidden={scene.id !== item.id}><WorkshopScene scene={item} onBack={() => move(-1)} onContinue={() => move(1)} /></div> : item.type === "lesson-reflection" ? <div key={item.id} hidden={scene.id !== item.id}><LessonReflectionScene scene={item} onBack={() => move(-1)} onComplete={finish} feedback={feedback} /></div> : null)}
     {virtueScene || scene.type === "dialogue" || scene.type === "mentor-dialogue" || scene.type === "guided-practice" || scene.type === "question-workshop" || scene.type === "lesson-reflection" ? null : <LessonScene scene={scene}
       navigation={<>
         <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
-        <Button type="button" disabled={!canContinue} onClick={scene.type === "completion" ? onClose : () => move(1)}>
-          {scene.buttonLabel}{scene.type !== "completion" && <ArrowRight size={15} aria-hidden="true" />}
+        <Button type="button" disabled={!canContinue} onClick={scene.type === "completion" ? finish : () => move(1)}>
+          {scene.type === "completion" ? "Завершить урок" : scene.buttonLabel}
+          {scene.type !== "completion" && <ArrowRight size={15} aria-hidden="true" />}
         </Button>
-      </>}>
-      {exercise && answer && <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />}
+    </>}>
+      {exercise && answer
+        ? <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />
+        : scene.type === "completion" ? feedback : null}
     </LessonScene>}
     {!virtueScene && scene.type !== "dialogue" && scene.type !== "mentor-dialogue" && scene.type !== "guided-practice" && scene.type !== "question-workshop" && scene.type !== "lesson-reflection" && <LessonSources key={scene.id} scene={scene} lesson={lesson} />}
+    </div>
+    </div>
   </div>;
 }
 

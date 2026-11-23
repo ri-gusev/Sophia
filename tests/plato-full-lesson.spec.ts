@@ -107,7 +107,7 @@ test("complete eight-scene journey checks answers, retains work and returns to t
   const axe = await new AxeBuilder({ page }).include('[data-testid="lesson-introduction"]').withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(axe.violations).toEqual([]);
   await lesson.screenshot({ path: testInfo.outputPath("08-completion.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
-  await lesson.getByRole("button", { name: "Вернуться к курсу", exact: true }).click();
+  await lesson.getByRole("button", { name: "Завершить урок", exact: true }).click();
   await expect(lesson).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "Платон", exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/learn$/);

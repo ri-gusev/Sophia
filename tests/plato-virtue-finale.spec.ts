@@ -1,9 +1,18 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const url = "/learn#lesson=plato-virtue-definition&scene=virtue-lesson-finale";
 const key = "sophia.lesson-completions.v1";
 const lessonId = "plato-virtue-definition";
+const prefix = "sophia.lesson-progress.v2:";
+const finished = `${prefix}finished:${lessonId}`;
+async function seedEarlierSlides(page: Page) {
+  await page.evaluate(({ prefix, lessonId }) => {
+    for (const slide of ["meno-question", "virtue-many-faces", "virtue-swarm", "virtue-definition-practice"]) {
+      localStorage.setItem(`${prefix}slide:${lessonId}:${slide}`, "1");
+    }
+  }, { prefix, lessonId });
+}
 async function press(scene: Locator, name: string) {
   await scene.getByRole("button", { name, exact: true }).click();
 }
@@ -18,6 +27,13 @@ test("virtue finale opens without completing the lesson", async ({ page }) => {
   expect(await page.evaluate(() => localStorage.getItem("sophia.lesson-completions.v1"))).toBeNull();
   const scene = page.getByTestId("virtue-finale-scene");
   await toSummary(scene);
+  await press(scene, "Завершить урок");
+  await expect(scene.getByRole("alert")).toHaveText("Чтобы завершить урок, пройди оставшиеся слайды.");
+  expect(await page.evaluate(key => localStorage.getItem(key), finished)).toBeNull();
+  await press(scene, "К первому непройденному слайду");
+  await expect(page).toHaveURL(/scene=meno-question$/);
+  await page.goBack();
+  await expect(scene.getByRole("button", { name: "Завершить урок", exact: true })).toBeVisible();
   await press(scene, "Назад");
   await expect(scene.getByText("И какую роль играет природа человека?")).toBeVisible();
   await press(scene, "Назад");
@@ -32,6 +48,7 @@ test("finale resumes, preserves other completions, saves idempotently and shows 
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(url);
   await page.evaluate(key => localStorage.setItem(key, JSON.stringify(["plato-socratic-question"])), key);
+  await seedEarlierSlides(page);
   const scene = page.getByTestId("virtue-finale-scene");
   async function shot(name: string) {
     const art = scene.getByRole("img").first();
@@ -72,19 +89,23 @@ test("finale resumes, preserves other completions, saves idempotently and shows 
   const catalog = page.getByTestId("philosopher-catalog");
   await press(catalog, "Добродетель и правильная жизнь");
   await expect(catalog.getByRole("button", { name: "Что значит быть хорошим человеком?", exact: true })).toContainText("Пройдено");
+  await press(catalog, "Сократ и рождение философского вопроса");
+  await expect(catalog.getByRole("button", { name: "Как Сократ разрушал уверенность?", exact: true })).toContainText("Завершено ранее");
   await catalog.screenshot({ path: info.outputPath("10-catalog.png"), animations: "disabled" });
   await page.goto(url); await page.reload();
   await expect(scene.getByRole("heading", { name: "Первое исследование завершено" })).toBeVisible();
   await press(scene, "Повторить заключение");
   await expect(scene.getByRole("status")).toContainText("Менон");
-  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), key)).toEqual(["plato-socratic-question", lessonId]);
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), key)).toEqual(["plato-socratic-question"]);
   await toSummary(scene); await press(scene, "Завершить урок");
-  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), key)).toEqual(["plato-socratic-question", lessonId]);
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), key)).toEqual(["plato-socratic-question"]);
+  expect(await page.evaluate(prefix => Object.keys(localStorage).filter(key => key.startsWith(prefix)).length, prefix)).toBe(6);
   expect(errors).toEqual([]);
 });
 
 test("completion failure keeps the summary open and can be retried", async ({ page }) => {
   await page.goto(url);
+  await seedEarlierSlides(page);
   const scene = page.getByTestId("virtue-finale-scene");
   await toSummary(scene);
   await page.evaluate(key => {
@@ -96,10 +117,10 @@ test("completion failure keeps the summary open and can be retried", async ({ pa
       }
       original.call(this, name, value);
     };
-  }, key);
+  }, finished);
   await press(scene, "Завершить урок");
-  await expect(scene.getByRole("alert")).toContainText("Не удалось сохранить завершение");
-  expect(await page.evaluate(key => localStorage.getItem(key), key)).toBeNull();
+  await expect(scene.getByRole("alert")).toContainText("Не удалось сохранить");
+  expect(await page.evaluate(key => localStorage.getItem(key), finished)).toBeNull();
   await press(scene, "Завершить урок");
   await expect(page.getByTestId("philosopher-catalog")).toBeVisible();
 });

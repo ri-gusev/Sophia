@@ -82,6 +82,10 @@
   .storyLayout { grid-template-columns:minmax(0,1fr) 240px; gap:24px; }
   .mapLayout { grid-template-columns:minmax(0,1fr) 280px; }
 }
+@media(min-width:1000px) {
+  .storyLayout:has(> .portrait) { grid-template-columns:minmax(0,1fr) clamp(280px,30%,320px); gap:32px; }
+  .mapLayout { grid-template-columns:minmax(0,1fr) clamp(260px,36%,400px); gap:32px; }
+}
 @media(max-width:900px) {
   .storyLayout:has(> .sideQuote) { grid-template-columns:minmax(0,1fr); gap:28px; }
   .sideQuote { max-width:600px; padding-block:12px; font-size:23px; }

@@ -70,13 +70,19 @@ export function CourseMap() {
   }
 
   useEffect(() => {
-    const location = readLessonLocation(window.location.hash);
-    if (!location) return;
-    // Restore after hydration without starting a new navigation or opening the catalog.
-    const frame = requestAnimationFrame(() => {
-      flushSync(() => { setInitialSceneId(location.sceneId); setSelectedLessonId(location.lessonId); });
-    });
-    return () => cancelAnimationFrame(frame);
+    function followLocation() {
+      const location = readLessonLocation(window.location.hash);
+      setInitialSceneId(location?.sceneId);
+      setSelectedLessonId(location?.lessonId ?? null);
+    }
+    const frame = requestAnimationFrame(followLocation);
+    window.addEventListener("hashchange", followLocation);
+    window.addEventListener("popstate", followLocation);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", followLocation);
+      window.removeEventListener("popstate", followLocation);
+    };
   }, []);
 
   function returnToCatalog() {

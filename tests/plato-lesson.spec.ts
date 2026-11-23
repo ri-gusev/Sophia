@@ -17,7 +17,8 @@ test("the first Plato lesson opens below the map and reload restores its current
   const artwork = lesson.getByTestId("lesson-artwork");
   await expect(artwork).toBeVisible();
   await expect.poll(() => artwork.evaluate(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0)).toBe(true);
-  await expect(lesson.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+  await expect(lesson.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  await expect(lesson).toContainText("Шаг 1 из 8");
   await expect(lesson.getByRole("heading", { level: 2 })).not.toBeFocused();
   await expect(lesson).toContainText("Представь человека, жившего почти две с половиной тысячи лет назад.");
   await expect(lesson).toContainText("Его звали Платон.");
@@ -36,13 +37,13 @@ test("the first Plato lesson opens below the map and reload restores its current
   const accessibility = await new AxeBuilder({ page }).include('[data-testid="lesson-introduction"]')
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(accessibility.violations).toEqual([]);
-  await lesson.screenshot({ path: testInfo.outputPath("lesson-scene.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
   await expect(page).toHaveURL(/\/learn#lesson=plato-introduction&scene=journey$/);
   await page.reload();
   await expect(lesson).toBeVisible();
   await expect(lesson.getByRole("heading", { level: 2 })).not.toBeFocused();
   await expect(lesson.getByRole("heading", { level: 2 })).toBeInViewport();
   await expect(lesson.getByRole("radio", { checked: true })).toHaveCount(0);
+  await lesson.screenshot({ path: testInfo.outputPath("lesson-scene.png"), style: ".site-header,.skip-link { visibility:hidden !important; }" });
 });
 
 test("unknown lesson fragments safely leave the map available", async ({ page }) => {
