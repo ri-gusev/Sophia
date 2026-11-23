@@ -38,13 +38,10 @@ export function confirmSlideTransition(lesson: IntroLesson, sceneId: string) {
 
 export function finishLesson(lesson: IntroLesson, sceneId: string) {
   if (lesson.scenes.at(-1)?.id !== sceneId) return;
+  const missing = lesson.scenes.slice(0, -1)
+    .find(scene => localStorage.getItem(slideKey(lesson.id, scene.id)) !== "1");
+  if (missing) return { missing: missing.id };
   confirmSlide(lesson.id, sceneId);
-  const confirmed = new Set(confirmedSlides(lesson));
-  const missing = lesson.scenes.find(scene => !confirmed.has(scene.id));
-  if (missing) {
-    announceProgress();
-    return { missing: missing.id };
-  }
   const key = finishKey(lesson.id);
   if (localStorage.getItem(key) !== "1") localStorage.setItem(key, "1");
   announceProgress();

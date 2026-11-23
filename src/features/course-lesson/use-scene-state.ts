@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LessonSceneData } from "./lesson-data";
 import { readSceneField, writeSceneField } from "./lesson-resume";
 
@@ -16,7 +16,10 @@ export function useSceneState<T>(
     const saved = readSceneField(scene.lessonId, scene.id, field);
     return validate(saved) ? saved : initial;
   });
+  const savedValue = useRef(value);
   useEffect(() => {
+    if (Object.is(savedValue.current, value)) return;
+    savedValue.current = value;
     writeSceneField(scene.lessonId, scene.id, field, value);
   }, [scene.lessonId, scene.id, field, value]);
   return [value, setValue] as const;

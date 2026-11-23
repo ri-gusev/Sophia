@@ -85,8 +85,13 @@ test("reflection explicitly saves completion, persists and returns to catalog",a
  expect(await page.evaluate(k=>localStorage.getItem(k),key)).toBe("1");
 });
 test('storage error does not claim completion',async({page})=>{
- await page.addInitScript(()=>{Storage.prototype.setItem=()=>{throw new Error('blocked');};});
- await page.goto('/learn#lesson=plato-socratic-question&scene=first-step'); await page.reload();
+ await page.addInitScript(()=>{
+   for (const slide of ["cephalus", "socratic-questions", "always-true", "courage-question"]) {
+     localStorage.setItem(`sophia.lesson-progress.v2:slide:plato-socratic-question:${slide}`, "1");
+   }
+   Storage.prototype.setItem=()=>{throw new Error('blocked');};
+ });
+ await page.goto('/learn#lesson=plato-socratic-question&scene=first-step');
  const scene=page.getByTestId('reflection-scene');
  for(let i=1;i<3;i++){await page.waitForTimeout(450);await scene.getByRole('button',{name:'Далее',exact:true}).click();}
  await scene.getByRole('button',{name:'Посмотреть итоги'}).click();

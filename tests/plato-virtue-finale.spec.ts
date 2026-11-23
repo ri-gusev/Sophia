@@ -6,6 +6,7 @@ const key = "sophia.lesson-completions.v1";
 const lessonId = "plato-virtue-definition";
 const prefix = "sophia.lesson-progress.v2:";
 const finished = `${prefix}finished:${lessonId}`;
+const finalSlide = `${prefix}slide:${lessonId}:virtue-lesson-finale`;
 async function seedEarlierSlides(page: Page) {
   await page.evaluate(({ prefix, lessonId }) => {
     for (const slide of ["meno-question", "virtue-many-faces", "virtue-swarm", "virtue-definition-practice"]) {
@@ -30,6 +31,7 @@ test("virtue finale opens without completing the lesson", async ({ page }) => {
   await press(scene, "Завершить урок");
   await expect(scene.getByRole("alert")).toHaveText("Чтобы завершить урок, пройди оставшиеся слайды.");
   expect(await page.evaluate(key => localStorage.getItem(key), finished)).toBeNull();
+  expect(await page.evaluate(key => localStorage.getItem(key), finalSlide)).toBeNull();
   await press(scene, "К первому непройденному слайду");
   await expect(page).toHaveURL(/scene=meno-question$/);
   await page.goBack();
@@ -41,6 +43,19 @@ test("virtue finale opens without completing the lesson", async ({ page }) => {
   await press(scene, "Вернуться в каталог");
   await expect(page.getByTestId("philosopher-catalog")).toBeVisible();
   expect(await page.evaluate(key => localStorage.getItem(key), key)).toBeNull();
+});
+
+test("a missing middle slide blocks final credit after reload", async ({ page }) => {
+  await page.goto(url);
+  await seedEarlierSlides(page);
+  await page.evaluate(key => localStorage.removeItem(key), `${prefix}slide:${lessonId}:virtue-swarm`);
+  const scene = page.getByTestId("virtue-finale-scene");
+  await toSummary(scene);
+  await page.reload();
+  await press(scene, "Завершить урок");
+  expect(await page.evaluate(keys => keys.map(key => localStorage.getItem(key)), [finalSlide, finished])).toEqual([null, null]);
+  await press(scene, "К первому непройденному слайду");
+  await expect(page).toHaveURL(/scene=virtue-swarm$/);
 });
 
 test("finale resumes, preserves other completions, saves idempotently and shows catalog status", async ({ page }, info) => {

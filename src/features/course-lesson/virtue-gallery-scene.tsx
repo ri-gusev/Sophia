@@ -33,7 +33,8 @@ export function VirtueGalleryScene({ scene, active, onBack, onClose, onContinue 
   const shouldFocus = useRef(false);
   const detailsId = useId();
   const mosaic = stage === "mosaic";
-  const captureLayout = useFlipLayout(board, "[data-virtue-tile]", mosaic, active, VIRTUE_MOTION.composition);
+  const captureLayout = useFlipLayout(board, "[data-virtue-tile]", mosaic, active,
+    VIRTUE_MOTION.composition, "cubic-bezier(.42,0,.58,1)");
 
   useLayoutEffect(() => {
     if (!shouldFocus.current || !active) return;
@@ -119,7 +120,7 @@ export function VirtueGalleryScene({ scene, active, onBack, onClose, onContinue 
       <div ref={board} className={styles.board} data-layout={mosaic ? "mosaic" : "gallery"}
         tabIndex={mosaic ? -1 : undefined} role={mosaic ? "group" : undefined} aria-label={mosaic ? "Анимация примеров Менона" : undefined}>
         {mosaic && <svg className={styles.connections} viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M150 50V103 M50 150L124 111 M250 150L176 111" vectorEffect="non-scaling-stroke" />
+          <path d="M150 50V115 M50 155L125 140.75 M250 155L175 140.75" vectorEffect="non-scaling-stroke" />
         </svg>}
         {content.cards.map((card, index) => {
           const expanded = stage === "gallery" && selected === card.id;

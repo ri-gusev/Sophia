@@ -59,20 +59,22 @@ button.cardButton:hover { background: #eef3e9; }
 .board[data-layout="mosaic"] .tile:nth-of-type(3) { grid-area: 2 / 3; }
 .board[data-layout="mosaic"] img { aspect-ratio: 1.6; }
 .board[data-layout="mosaic"] .cardLabel { font-size: clamp(11px, 1.7vw, 13px); min-height: 49px; padding: 6px; text-align: center; }
-.connections { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #789782; stroke-width: 1.4; animation: reveal 350ms 410ms ease-out both; }
+.connections { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #789782; stroke-width: 1.4; }
 .center {
+  --question-size: clamp(42px, 7vw, 62px);
   position: absolute;
   z-index: 2;
   left: 50%;
-  top: 53%;
+  top: calc(68% - var(--question-size) * .475);
   transform: translateX(-50%);
   width: 32%;
   text-align: center;
   color: var(--green);
   pointer-events: none;
 }
-.center span { display: block; font: clamp(42px, 7vw, 62px)/.95 Georgia, serif; animation: question 340ms 560ms ease-out both; }
-.center p { margin-top: 4px; font-size: clamp(12px, 2vw, 17px); font-weight: 650; animation: reveal 290ms 640ms ease-out both; }
+.connections, .center { animation: fade var(--virtue-text) 620ms ease-in-out both; }
+.center span { display: block; font: var(--question-size)/.95 Georgia, serif; }
+.center p { margin-top: 4px; font-size: clamp(12px, 2vw, 17px); font-weight: 650; }
 .discovery { max-width: 720px; margin: 20px auto 0; text-align: center; }
 .discovery > button { margin-top: 14px; }
 .reflection { margin-top: 17px; text-align: left; font-size: 15px; line-height: 1.75; animation: reveal var(--virtue-reveal) var(--virtue-out) both; }
@@ -85,7 +87,6 @@ button.cardButton:hover { background: #eef3e9; }
 .navigation > :last-child { margin-left: auto; }
 @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes question { from { opacity: 0; transform: scale(.76); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) {
   .meeting { grid-template-columns: 1fr; }
   .meeting img { max-height: 280px; object-fit: cover; object-position: center 32%; }
@@ -99,6 +100,6 @@ button.cardButton:hover { background: #eef3e9; }
   .navigation { gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .galleryHeader + .board .tile, .details:not([hidden]), .connections, .center span, .center p, .reflection { animation: none; transition: none; }
+  .galleryHeader + .board .tile, .details:not([hidden]), .connections, .center, .reflection { animation: none; transition: none; }
   .tile[data-expanded="true"] { scale: none; }
 }

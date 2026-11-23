@@ -14,7 +14,7 @@ function measure(elements: readonly HTMLElement[]) {
 
 // Read every rectangle before any animation writes. Capture a running transform
 // before cancelling it, so rapid changes continue from the presented position.
-export function useFlipLayout(root: RefObject<HTMLElement | null>, selector: string, revision: unknown, active: boolean, duration: number) {
+export function useFlipLayout(root: RefObject<HTMLElement | null>, selector: string, revision: unknown, active: boolean, duration: number, easing: string = VIRTUE_MOTION.layout) {
   const before = useRef(new Map<HTMLElement, Box>());
   const animations = useRef<Animation[]>([]);
   const cancel = useCallback(() => { animations.current.forEach(animation => animation.cancel()); animations.current = []; }, []);
@@ -35,10 +35,10 @@ export function useFlipLayout(root: RefObject<HTMLElement | null>, selector: str
       animations.current.push(element.animate([
         { transform: `translate(${start.left - end.left}px, ${start.top - end.top}px) scale(${start.width / end.width}, ${start.height / end.height})` },
         { transform: "translate(0px, 0px) scale(1, 1)" },
-      ], { duration, easing: VIRTUE_MOTION.layout }));
+      ], { duration, easing }));
     }
     return cancel;
-  }, [revision, active, duration, root, selector, cancel]);
+  }, [revision, active, duration, easing, root, selector, cancel]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");

@@ -21,7 +21,7 @@ import { LessonSlideNavigator } from "./lesson-slide-navigator";
 import { confirmedSlides, confirmSlideTransition, finishLesson, subscribeLessonProgress } from "./lesson-slide-progress";
 import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
 import { useSceneState } from "./use-scene-state";
-import { isBoolean, readResumeRun, readResumeScroll, resetSceneResume, writeResumeRun, writeResumeScroll } from "./lesson-resume";
+import { isBoolean, readResumeRun, readResumeScroll, resetSceneResume, writeResumeAnswer, writeResumeScene, writeResumeScroll } from "./lesson-resume";
 import styles from "./lesson-introduction.module.css";
 
 const emptyProgress = () => "[]";
@@ -32,7 +32,11 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   onClose: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [run, setRun] = useState(() => restoreRun(lesson, readResumeRun(lesson.id), initialSceneId));
+  const [run, setRun] = useState(() => {
+    const exercises = lesson.scenes.filter(scene => scene.type === "single-choice" || scene.type === "ordering");
+    return restoreRun(lesson, readResumeRun(lesson.id, exercises.map(scene => scene.id)), initialSceneId);
+  });
+  const mountedSceneId = useRef(run.sceneId);
   const [sceneVersions, setSceneVersions] = useState<Record<string, number>>({});
   const [saveError, setSaveError] = useState(false);
   const [missingSlide, setMissingSlide] = useState<string | null>(null);
@@ -67,11 +71,14 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   }, [lesson.id]);
 
   useEffect(() => {
-    writeResumeRun(lesson.id, { version: 1, ...run });
+    writeResumeScene(lesson.id, run.sceneId);
+  }, [lesson.id, run.sceneId]);
+
+  useEffect(() => {
     const url = new URL(window.location.href);
-    url.hash = lessonHash(lesson.id, run.sceneId);
-    window.history.replaceState(window.history.state, "", url);
-  }, [lesson.id, run]);
+    url.hash = lessonHash(lesson.id, mountedSceneId.current);
+    if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url);
+  }, [lesson.id]);
 
   useEffect(() => {
     const savedOffset = readResumeScroll(lesson.id, scene.id);
@@ -125,6 +132,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   }, [nextImage]);
 
   function updateAnswer(value: ExerciseAnswer) {
+    writeResumeAnswer(lesson.id, scene.id, value);
     setRun(previous => ({ ...previous, exercises: { ...previous.exercises, [scene.id]: value } }));
   }
 
@@ -132,11 +140,10 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     if (id === scene.id || !lesson.scenes.some(item => item.id === id)) return;
     setMissingSlide(null);
     setSaveError(false);
-    if (push) {
-      const url = new URL(window.location.href);
-      url.hash = lessonHash(lesson.id, id);
-      window.history.pushState(window.history.state, "", url);
-    }
+    const url = new URL(window.location.href);
+    url.hash = lessonHash(lesson.id, id);
+    if (push) window.history.pushState(window.history.state, "", url);
+    else window.history.replaceState(window.history.state, "", url);
     setRun(previous => ({ ...previous, sceneId: id }));
   }
 
