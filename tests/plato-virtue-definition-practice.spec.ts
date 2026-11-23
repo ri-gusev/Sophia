@@ -39,6 +39,8 @@ test("fourth slide opens as an unfinished philosophical workshop", async ({ page
 });
 
 test("third slide leads into the workshop, retries explain reasons and reload preserves the whole practice", async ({ page }, info) => {
+  // This checks the learning flow; animation is exercised separately by plato-motion.spec.ts.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/learn#lesson=plato-virtue-definition&scene=virtue-swarm");

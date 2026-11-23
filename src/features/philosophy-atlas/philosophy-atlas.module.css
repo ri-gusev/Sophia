@@ -14,6 +14,7 @@
 .message { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; padding: 24px; color: var(--ink); text-align: center; pointer-events: none; }
 .message p { font-size: 13px; line-height: 1.8; }
 .error { max-width: 370px; display: grid; justify-items: center; gap: 18px; pointer-events: auto; }
+.errorActions { display:flex; justify-content:center; flex-wrap:wrap; gap:8px; }
 .sceneFooter { position: absolute; z-index:20; bottom: 0; left: 50%; transform: translateX(-50%); width: min(1180px, calc(100% - 96px)); min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; pointer-events: none; }
 .help { color: var(--muted); font-size: 11px; line-height: 1.7; padding: 8px 12px; border-radius: 16px; background: rgba(248,250,247,.9); }
 .touchHelp { display: none; }

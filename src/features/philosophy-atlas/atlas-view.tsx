@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Globe2, Minus, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AtlasAction, ZoomLimits } from "./globe-config";
+import { GlobeContextError, GlobeModuleError } from "./globe-errors";
 import { INITIAL_YEAR, isAliveAt } from "./historical-time";
 import { PHILOSOPHERS } from "./philosophers-data";
 import { Timeline } from "./timeline";
@@ -14,12 +15,24 @@ import { AtlasPhilosopherList } from "./atlas-philosopher-list";
 import { PageScrollEdges } from "./page-scroll-edges";
 import styles from "./philosophy-atlas.module.css";
 
-const EarthGlobe = dynamic(() => import("./earth-globe"), { ssr: false });
+const EarthGlobe = dynamic(() => import("./earth-globe").catch((cause: unknown) => {
+  throw new GlobeModuleError("Globe import failed", { cause });
+}), { ssr: false });
 
-class SceneBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
+type GlobeFailure = "texture" | "webgl" | "module" | "renderer";
+const FAILURE_MESSAGE: Record<GlobeFailure, string> = {
+  webgl: "Не удалось открыть 3D-глобус. Возможно, браузер не поддерживает WebGL или отключено аппаратное ускорение.",
+  texture: "Не удалось загрузить изображение Земли. Проверь соединение и попробуй снова.",
+  module: "Не удалось загрузить 3D-глобус. Попробуй обновить страницу.",
+  renderer: "Произошла ошибка при запуске 3D-глобуса.",
+};
+
+class SceneBoundary extends Component<{ children: ReactNode; onError: (kind: GlobeFailure) => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch() { this.props.onError(); }
+  componentDidCatch(error: Error) {
+    this.props.onError(error instanceof GlobeModuleError ? "module" : error instanceof GlobeContextError ? "webgl" : "renderer");
+  }
   render() { return this.state.failed ? null : this.props.children; }
 }
 
@@ -46,15 +59,34 @@ export function AtlasView() {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [selected.length, closeCard]);
-  const [status, setStatus] = useState<"loading" | "ready" | "texture" | "webgl">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | GlobeFailure>("loading");
   const [attempt, setAttempt] = useState(0);
   const [action, setAction] = useState<AtlasAction>({ kind: "reset", sequence: 0 });
   const [limits, setLimits] = useState<ZoomLimits>({ near: false, far: false });
   const ready = useCallback(() => setStatus("ready"), []);
-  const fail = useCallback((kind: "texture" | "webgl") => setStatus(kind), []);
-  const rendererFailed = useCallback(() => setStatus("webgl"), []);
+  const fail = useCallback((kind: GlobeFailure) => setStatus(kind), []);
   const changeView = (kind: AtlasAction["kind"]) => setAction((previous) => ({ kind, sequence: previous.sequence + 1 }));
-  const hasError = status === "texture" || status === "webgl";
+  const hasError = status !== "loading" && status !== "ready";
+
+  function retryGlobe() {
+    if (status === "module") {
+      // A fresh document discards the rejected lazy import and loads today's asset URLs.
+      window.location.reload();
+      return;
+    }
+    setLimits({ near: false, far: false });
+    setAction({ kind: "reset", sequence: 0 });
+    setAttempt(value => value + 1);
+    setStatus("loading");
+  }
+
+  function focusCatalog() {
+    const summary = catalogSummary.current;
+    const details = summary?.parentElement;
+    if (details instanceof HTMLDetailsElement && !details.open) summary?.click();
+    summary?.focus({ preventScroll: true });
+    summary?.scrollIntoView({ block: "center" });
+  }
 
   return (
     <div className={styles.page}>
@@ -80,7 +112,7 @@ export function AtlasView() {
           <span id="atlas-keyboard-help" className={styles.srOnly}>Клавиши стрелок — вращение, плюс и минус — масштаб, Home — исходный вид.</span>
           <div className={styles.canvas}>
             {!hasError && (
-              <SceneBoundary key={attempt} onError={rendererFailed}>
+              <SceneBoundary key={attempt} onError={fail}>
                 <EarthGlobe action={action} onReady={ready} onError={fail} onLimitsChange={setLimits} philosophers={philosophers} onSelect={select} />
               </SceneBoundary>
             )}
@@ -90,8 +122,11 @@ export function AtlasView() {
           {hasError && (
             <div className={styles.message}>
               <div className={styles.error}>
-                <p role="alert">{status === "texture" ? "Не удалось загрузить глобус." : "Не удалось открыть 3D-глобус."} Вы всё ещё можете изучать философов через список ниже.</p>
-                <Button type="button" size="sm" onClick={() => { setLimits({ near: false, far: false }); setAction({ kind: "reset", sequence: 0 }); setAttempt((value) => value + 1); setStatus("loading"); }}>Попробовать снова</Button>
+                <p role="alert">{FAILURE_MESSAGE[status]} Вы всё ещё можете изучать философов через список ниже.</p>
+                <div className={styles.errorActions}>
+                  <Button type="button" size="sm" onClick={retryGlobe}>{status === "module" ? "Обновить страницу" : "Попробовать снова"}</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={focusCatalog}>Перейти к списку философов</Button>
+                </div>
               </div>
             </div>
           )}

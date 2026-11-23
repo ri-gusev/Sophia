@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { ACESFilmicToneMapping, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture, type Mesh } from "three";
+import { Canvas, useThree, type GLProps } from "@react-three/fiber";
+import { ACESFilmicToneMapping, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace, TextureLoader, WebGLRenderer, type Texture, type Mesh } from "three";
 import { AtlasControls } from "./atlas-controls";
 import { harmonizeEarthPalette, earthPaletteCacheKey } from "./earth-palette";
 import { CAMERA_FOV, EARTH_TEXTURE, EARTH_TEXTURE_8K, type AtlasAction, type ZoomLimits } from "./globe-config";
 import { PhilosopherMarkers } from "./philosopher-markers";
 import type { AtlasPhilosopher } from "./philosophers-data";
+import { GlobeContextError } from "./globe-errors";
 
 type Props = {
   action: AtlasAction;
   onReady: () => void;
-  onError: (kind: "texture" | "webgl") => void;
+  onError: (kind: "texture" | "webgl" | "renderer") => void;
   onLimitsChange: (limits: ZoomLimits) => void;
   philosophers: readonly AtlasPhilosopher[];
   onSelect: (ids: string[], origin: HTMLButtonElement) => void;
@@ -62,7 +63,7 @@ function EarthSurface({ onReady, onError, onQualityChange, surfaceRef }: Pick<Pr
           result.dispose();
           owned.delete(result);
           if (path === EARTH_TEXTURE_8K) { onQualityChange(false); load(EARTH_TEXTURE); }
-          else onError("webgl");
+          else onError("renderer");
         }
       }, undefined, () => {
         pending.dispose();
@@ -94,6 +95,21 @@ function EarthSurface({ onReady, onError, onQualityChange, surfaceRef }: Pick<Pr
   );
 }
 
+const createGlobeRenderer: GLProps = (defaults) => {
+  const canvas = defaults.canvas;
+  // Atlas mounts a DOM canvas. Classify only context acquisition as unavailable WebGL.
+  if (!(canvas instanceof HTMLCanvasElement)) throw new Error("Expected a globe canvas");
+  const options = { ...defaults, canvas, powerPreference: "default" as const, antialias: true, alpha: true };
+  let context: WebGL2RenderingContext | null;
+  try {
+    context = canvas.getContext("webgl2", { powerPreference: "default", antialias: true, alpha: true });
+  } catch (cause) {
+    throw new GlobeContextError("Globe context creation failed", { cause });
+  }
+  if (!context) throw new GlobeContextError("Globe context unavailable");
+  return new WebGLRenderer({ ...options, context });
+};
+
 export default function EarthGlobe({ action, onReady, onError, onLimitsChange, philosophers, onSelect }: Props) {
   const [highQuality, setHighQuality] = useState(false);
   const surfaceRef = useRef<Mesh>(null);
@@ -102,7 +118,7 @@ export default function EarthGlobe({ action, onReady, onError, onLimitsChange, p
       frameloop="demand"
       dpr={[1, highQuality ? 2 : 1.5]}
       camera={{ position: [0, 0, 5], fov: CAMERA_FOV, near: 0.01, far: 40 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "default" }}
+      gl={createGlobeRenderer}
       onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}
       fallback={<p role="alert">Для глобуса нужен браузер с поддержкой WebGL.</p>}
       role="group"
