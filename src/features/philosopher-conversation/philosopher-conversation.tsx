@@ -16,7 +16,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
   const composer = useRef<HTMLTextAreaElement>(null);
   const history = useRef<HTMLDivElement>(null);
   const wasSending = useRef(false);
-  const titleId = useId(), descriptionId = useId(), composerHintId = useId();
+  const titleId = useId(), descriptionId = useId(), composerHintId = useId(), aiNoticeId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<PhilosopherId>("plato");
   const chat = usePlatoChat();
@@ -136,7 +136,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
           <form className={styles.composer} onSubmit={event => { event.preventDefault(); if (selected.draftAvailable) void chat.send(); }}>
             <label htmlFor={`${titleId}-message`}>Ваш вопрос</label>
             <div className={styles.inputRow}>
-              <textarea ref={composer} id={`${titleId}-message`} aria-label="Сообщение" aria-describedby={composerHintId}
+              <textarea ref={composer} id={`${titleId}-message`} aria-label="Сообщение" aria-describedby={selected.draftAvailable ? `${aiNoticeId} ${composerHintId}` : composerHintId}
                 placeholder={selected.draftAvailable ? "Напишите, что вам интересно…" : "Этот собеседник пока недоступен"}
                 value={selected.draftAvailable ? chat.draft : ""} disabled={!selected.draftAvailable || chat.pending !== null} maxLength={CHAT_LIMITS.messageChars}
                 onChange={event => { if (countMessageWords(event.target.value) <= CHAT_LIMITS.messageWords) chat.setDraft(event.target.value); }} rows={2}
@@ -149,6 +149,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
             {selected.draftAvailable && <p className={styles.composerHint} role="status">{countMessageWords(chat.draft)} / {CHAT_LIMITS.messageWords} слов. Максимум 50 слов в сообщении.</p>}
             {chat.error && selected.draftAvailable && <p className={styles.chatError} role="alert">{chat.error}</p>}
             <p id={composerHintId} className={styles.composerHint}>{selected.draftAvailable ? CHAT_MEMORY_NOTICE : "Этот собеседник пока недоступен. Выберите Платона."}</p>
+            {selected.draftAvailable && <p id={aiNoticeId} className={styles.composerHint}>Ответы создаются искусственным интеллектом. Ваши сообщения передаются AI-провайдеру для формирования ответа. Не отправляйте пароли и другие конфиденциальные данные.</p>}
           </form>
         </section>
       </div>

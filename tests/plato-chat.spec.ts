@@ -22,6 +22,8 @@ test("Plato sends bounded local context, renders replies safely and keeps the co
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
   const composer = dialog.getByRole("textbox", { name: "Сообщение", exact: true });
+  await expect(composer).toHaveAccessibleDescription(/Ваши сообщения передаются AI-провайдеру.*Не отправляйте пароли/);
+  await expect(dialog.getByText(/Ответы создаются искусственным интеллектом/)).toBeVisible();
   await composer.fill("Что такое добродетель?");
   await composer.press("Enter");
   await expect(dialog.getByRole("log")).toContainText(ANSWER);

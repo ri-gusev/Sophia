@@ -12,4 +12,5 @@ artifacts/
 .npm-cache/
 next-env.d.ts
 /storage/knowledge/
+/storage/chat/
 /.upgrade-security/

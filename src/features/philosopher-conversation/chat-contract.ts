@@ -22,7 +22,12 @@ export const CHAT_MEMORY_NOTICE = "Разговор хранится тольк�
 
 export class ChatError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) { super(message); this.status = status; }
+  readonly retryAfter?: number;
+  constructor(status: number, message: string, retryAfter?: number) {
+    super(message);
+    this.status = status;
+    this.retryAfter = retryAfter;
+  }
 }
 
 function record(value: unknown): Record<string, unknown> {

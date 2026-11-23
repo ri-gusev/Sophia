@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseChatRequest, EMPTY_CHAT_MEMORY } from "../../src/features/philosopher-conversation/chat-contract.ts";
+import { ChatError, parseChatRequest, EMPTY_CHAT_MEMORY } from "../../src/features/philosopher-conversation/chat-contract.ts";
 import { answerPlato } from "../../src/features/philosopher-conversation/server/chat-service.ts";
 import { createOpenAITextGenerator } from "../../src/features/philosopher-conversation/server/openai-provider.ts";
-import { createChatHandler, createRequestGate } from "../../src/features/philosopher-conversation/server/chat-http.ts";
+import { createChatHandler } from "../../src/features/philosopher-conversation/server/chat-http.ts";
 
 const input = (message = "Что такое добродетель?") => ({ philosopherId: "plato", message, memory: { summary: "", recent: [] } });
+const accessFor = (admit: (client: string) => () => void = () => () => {}) => () => ({
+  originSet: new Set(["https://sophia.example"]), identify: () => "test-client", admit,
+});
 const excerpts = [{ id: "sample@1:1", documentId: "sample", title: "Синтетический источник", revision: 1, text: "Synthetic reference, not the real corpus." }];
 
 test("request validation rejects role injection, oversized memory and other philosophers", () => {
@@ -85,7 +88,7 @@ test("OpenAI requests use server credentials, bounded output and store:false; pr
 
 test("HTTP boundary enforces origin, body limits, philosopher validation and no-store without logging content", async () => {
   let calls = 0;
-  const handler = createChatHandler({ answer: async request => { calls++; return { message: "Answer", memory: request.memory, sources: [] }; }, gate: createRequestGate() });
+  const handler = createChatHandler({ answer: async request => { calls++; return { message: "Answer", memory: request.memory, sources: [] }; }, access: accessFor() });
   const request = (body: unknown, origin = "https://sophia.example") => new Request("https://sophia.example/api/philosopher-chat", { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify(body) });
   assert.equal((await handler(request(input(), "https://other.example"))).status, 403);
   assert.equal((await handler(request({ ...input(), philosopherId: "aristotle" }))).status, 400);
@@ -98,6 +101,20 @@ test("HTTP boundary enforces origin, body limits, philosopher validation and no-
     method: "POST", headers: { host: "sophia.example", origin: "https://sophia.example", "content-type": "application/json" }, body: JSON.stringify(input()),
   });
   assert.equal((await handler(internalUrl)).status, 200);
+});
+
+test("HTTP admission precedes JSON parsing and rejects a mismatched Content-Length", async () => {
+  const make = (body: string, length?: string) => new Request("https://sophia.example/api/philosopher-chat", {
+    method: "POST",
+    headers: { origin: "https://sophia.example", "content-type": "application/json", ...(length ? { "content-length": length } : {}) },
+    body,
+  });
+  const answer = async (request: ReturnType<typeof parseChatRequest>) => ({ message: "Answer", memory: request.memory, sources: [] });
+  const blocked = createChatHandler({ answer, access: accessFor(() => { throw new ChatError(429, "Busy", 7); }) });
+  assert.equal((await blocked(make("bad json"))).status, 429);
+  assert.equal((await blocked(make("bad json"))).headers.get("Retry-After"), "7");
+  const open = createChatHandler({ answer, access: accessFor() });
+  assert.equal((await open(make(JSON.stringify(input()), "1"))).status, 400);
 });
 
 test("large turns are summarized before eviction and always return a valid bounded memory", async () => {
@@ -116,18 +133,6 @@ test("large turns are summarized before eviction and always return a valid bound
   assert.ok(parseChatRequest({ ...input(), memory: result.memory }));
 });
 
-
-test("request gate bounds concurrency and request count, then resets its minute window", () => {
-  let now = 0;
-  const gate = createRequestGate(() => now);
-  const one = gate(), two = gate();
-  assert.throws(() => gate(), /слишком много/);
-  one(); one(); two();
-  for (let i = 2; i < 20; i++) gate()();
-  assert.throws(() => gate(), /слишком много/);
-  now = 60001;
-  gate()();
-});
 
 test("provider abort and malformed output produce safe failures instead of fake answers", async () => {
   const controller = new AbortController(); controller.abort();

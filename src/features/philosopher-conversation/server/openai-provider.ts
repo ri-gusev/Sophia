@@ -8,7 +8,7 @@ function object(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 }
 
-export function createOpenAITextGenerator(options: { apiKey: string | undefined; model: string; fetcher?: typeof fetch; onUsage?: (usage: { input: number; output: number }) => void }): TextGenerator {
+export function createOpenAITextGenerator(options: { apiKey: string | undefined; model: string; fetcher?: typeof fetch; onUsage?: (usage: { input: number; output: number; cached?: number }) => void }): TextGenerator {
   return async request => {
     if (!options.apiKey?.trim() || !/^[a-zA-Z0-9_.-]{1,100}$/.test(options.model)) throw new ChatError(503, "Разговор пока недоступен. Попробуйте позже.");
     const signal = request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(25000)]) : AbortSignal.timeout(25000);
@@ -19,7 +19,7 @@ export function createOpenAITextGenerator(options: { apiKey: string | undefined;
         headers: { Authorization: `Bearer ${options.apiKey.trim()}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: options.model, instructions: request.instructions, input: request.input,
-          max_output_tokens: request.maxOutputTokens, store: false,
+          max_output_tokens: request.maxOutputTokens, store: false, service_tier: "default",
           ...(request.format ? { text: { format: { type: "json_schema", strict: true, ...request.format } } } : {}),
           ...(/^gpt-(?:5\.[4-9]|6)/.test(options.model) ? { reasoning: { effort: request.reasoningEffort ?? "none" } } : {}),
         }),
@@ -36,9 +36,12 @@ export function createOpenAITextGenerator(options: { apiKey: string | undefined;
     }
     let data: Record<string, unknown> | undefined;
     try { data = object(await response.json()); } catch { throw new ChatError(502, "Не удалось прочитать ответ. Попробуйте ещё раз."); }
+    const usage = object(data?.usage);
+    const cached = object(usage?.input_tokens_details)?.cached_tokens;
+    if (typeof usage?.input_tokens === "number" && typeof usage.output_tokens === "number") {
+      options.onUsage?.({ input: usage.input_tokens, output: usage.output_tokens, cached: typeof cached === "number" ? cached : undefined });
+    }
     if (data?.status !== "completed" || !Array.isArray(data.output)) throw new ChatError(502, "Ответ не был завершён. Попробуйте ещё раз.");
-    const usage = object(data.usage);
-    if (typeof usage?.input_tokens === "number" && typeof usage.output_tokens === "number") options.onUsage?.({ input: usage.input_tokens, output: usage.output_tokens });
     const parts: string[] = [];
     for (const output of data.output) {
       const item = object(output);

@@ -1,62 +1,94 @@
 import { CHAT_LIMITS, ChatError, parseChatRequest } from "../chat-contract.ts";
 import type { ChatRequest, ChatReply } from "../chat-contract.ts";
 import { validatedStream } from "../chat-stream.ts";
+import { forbidden } from "./chat-access.ts";
 
-export function createRequestGate(now: () => number = Date.now) {
-  let windowStart = now(), requests = 0, active = 0;
-  return () => {
-    if (now() - windowStart >= 60000) { windowStart = now(); requests = 0; }
-    if (requests >= 20 || active >= 2) throw new ChatError(429, "Сейчас слишком много запросов. Попробуйте немного позже.");
-    requests++; active++;
-    let released = false;
-    return () => { if (!released) { active--; released = true; } };
-  };
+function contentLength(request: Request) {
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json" ||
+      !["identity", null].includes(request.headers.get("content-encoding"))) throw new ChatError(415, "Ожидается JSON-запрос.");
+  const length = request.headers.get("content-length");
+  if (length === null) return;
+  if (!/^\d+$/.test(length)) throw new ChatError(400, "Некорректный запрос.");
+  const bytes = Number(length);
+  if (bytes > CHAT_LIMITS.bodyBytes) throw new ChatError(413, "Запрос слишком большой.");
+  return bytes;
 }
-
-async function readBody(request: Request): Promise<unknown> {
-  if (Number(request.headers.get("content-length")) > CHAT_LIMITS.bodyBytes) throw new ChatError(413, "Запрос слишком большой.");
+async function readBody(request: Request, length: number | undefined, timeoutMs: number): Promise<unknown> {
+  if (request.signal.aborted) throw new ChatError(499, "Отправка остановлена.");
   const reader = request.body?.getReader();
   if (!reader) throw new ChatError(400, "Пустой запрос.");
-  const chunks: Uint8Array[] = [];
+
+  const signal = AbortSignal.any([request.signal, AbortSignal.timeout(timeoutMs)]);
+  const deadline = performance.now() + timeoutMs;
+  // Cancellation resolves a pending read even when the underlying stream's cancel never settles.
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener("abort", cancel, { once: true });
+  const decoder = new TextDecoder("utf-8", { fatal: true });
   let size = 0;
+  let text = "";
   try {
-    for (;;) {
-      const result = await reader.read();
-      if (result.done) break;
-      size += result.value.byteLength;
-      if (size > CHAT_LIMITS.bodyBytes) { await reader.cancel(); throw new ChatError(413, "Запрос слишком большой."); }
-      chunks.push(result.value);
+    function checkAbort() {
+      if (request.signal.aborted) throw new ChatError(499, "Отправка остановлена.");
+      if (signal.aborted || performance.now() >= deadline) throw new ChatError(400, "Время получения запроса истекло.");
     }
-  } finally { reader.releaseLock(); }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  try { return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); }
-  catch { throw new ChatError(400, "Некорректный запрос."); }
+    for (;;) {
+      checkAbort();
+      const chunk = await reader.read();
+      checkAbort();
+      if (chunk.done) break;
+      size += chunk.value.byteLength;
+      if (size > CHAT_LIMITS.bodyBytes) throw new ChatError(413, "Запрос слишком большой.");
+      text += decoder.decode(chunk.value, { stream: true });
+    }
+    if (length !== undefined && length !== size) throw new ChatError(400, "Некорректный запрос.");
+    return JSON.parse(text + decoder.decode());
+  } catch (error) {
+    cancel();
+    if (error instanceof ChatError) throw error;
+    if (request.signal.aborted) throw new ChatError(499, "Отправка остановлена.");
+    throw new ChatError(400, "Некорректный запрос.");
+  } finally {
+    signal.removeEventListener("abort", cancel);
+    reader.releaseLock();
+  }
 }
 
-export function createChatHandler(dependencies: { answer: (request: ChatRequest, signal: AbortSignal) => Promise<ChatReply>; gate: ReturnType<typeof createRequestGate> }) {
+type ChatAccess = { originSet: ReadonlySet<string>; identify: (request: Request) => string; admit: (client: string) => () => void };
+
+export function createChatHandler(dependencies: {
+  access: () => ChatAccess;
+  answer: (request: ChatRequest, signal: AbortSignal, client: string) => Promise<ChatReply>;
+  bodyTimeoutMs?: number;
+}) {
   return async (request: Request): Promise<Response> => {
     const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
     let release: (() => void) | undefined;
     try {
-      const expected = new URL(request.url);
-      // Next.js can construct an internal URL from its listener hostname.
-      // Host is the actual browser destination; do not trust forwarded-host.
-      const host = request.headers.get("host");
-      if (host) expected.host = host;
-      if (request.headers.get("origin") !== expected.origin) throw new ChatError(403, "Этот запрос недоступен.");
-      if (request.headers.get("content-type")?.split(";", 1)[0].trim() !== "application/json") throw new ChatError(415, "Ожидается JSON-запрос.");
-      const input = parseChatRequest(await readBody(request));
-      release = dependencies.gate();
-      const result = await dependencies.answer(input, AbortSignal.any([request.signal, AbortSignal.timeout(110000)]));
+      const origin = request.headers.get("origin");
+      if (!origin) throw forbidden();
+      const length = contentLength(request);
+      const access = dependencies.access();
+      if (!access.originSet.has(origin)) throw forbidden();
+      const client = access.identify(request);
+      release = access.admit(client);
+      const input = parseChatRequest(await readBody(request, length, dependencies.bodyTimeoutMs ?? 5000));
+      if (request.signal.aborted) throw new ChatError(499, "Отправка остановлена.");
+      const turn = AbortSignal.any([request.signal, AbortSignal.timeout(110000)]);
+      const result = await dependencies.answer(input, turn, client);
+      if (request.signal.aborted) throw new ChatError(499, "Отправка остановлена.");
+      if (turn.aborted) throw new ChatError(504, "Не удалось дождаться ответа. Попробуйте ещё раз.");
       if (request.headers.get("accept")?.includes("text/event-stream")) return new Response(validatedStream(result), {
         headers: { ...headers, "Content-Type": "text/event-stream; charset=utf-8", "X-Accel-Buffering": "no" },
       });
       return Response.json(result, { headers });
     } catch (error) {
+      if (!request.body?.locked) void request.body?.cancel().catch(() => {});
       const safe = error instanceof ChatError ? error : new ChatError(500, "Не удалось отправить сообщение. Попробуйте ещё раз.");
-      return Response.json({ error: safe.message }, { status: safe.status, headers: { ...headers, ...(safe.status === 429 ? { "Retry-After": "60" } : {}) } });
-    } finally { release?.(); }
+      return Response.json({ error: safe.message }, { status: safe.status, headers: {
+        ...headers, ...(safe.retryAfter === undefined ? {} : { "Retry-After": String(safe.retryAfter) }),
+      } });
+    } finally {
+      try { release?.(); } catch { /* The persisted HTTP lease expires even if release fails. */ }
+    }
   };
 }

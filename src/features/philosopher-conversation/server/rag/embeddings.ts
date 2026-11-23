@@ -5,7 +5,7 @@ export type Embedder = (texts: string[], signal?: AbortSignal) => Promise<number
 export function validVector(value: unknown, dimensions: number): value is number[] {
   return Array.isArray(value) && value.length === dimensions && value.every(v => typeof v === "number" && Number.isFinite(v)) && value.some(v => v !== 0);
 }
-export function createEmbedder(config: Pick<RagConfig, "dimensions" | "embeddingModel">, key = process.env.OPENAI_API_KEY, fetcher: typeof fetch = fetch): Embedder {
+export function createEmbedder(config: Pick<RagConfig, "dimensions" | "embeddingModel">, key = process.env.OPENAI_API_KEY, fetcher: typeof fetch = fetch, onUsage?: (usage: { input: number; output: number }) => void): Embedder {
   return async (texts, signal) => {
     if (!key?.trim()) throw new ChatError(503, "Семантический поиск пока недоступен.");
     try {
@@ -15,6 +15,12 @@ export function createEmbedder(config: Pick<RagConfig, "dimensions" | "embedding
         body: JSON.stringify({ model: config.embeddingModel, dimensions: config.dimensions, input: texts, encoding_format: "float" }) });
       if (!response.ok) { await response.body?.cancel(); throw new Error("Embedding provider unavailable"); }
       const body: unknown = await response.json();
+      if (body && typeof body === "object" && "usage" in body) {
+        const usage = body.usage;
+        if (usage && typeof usage === "object" && "prompt_tokens" in usage && typeof usage.prompt_tokens === "number") {
+          onUsage?.({ input: usage.prompt_tokens, output: 0 });
+        }
+      }
       if (!body || typeof body !== "object" || !("data" in body) || !Array.isArray(body.data) || body.data.length !== texts.length) throw new Error("Invalid embeddings");
       const vectors: number[][] = [];
       for (const item of body.data) {
