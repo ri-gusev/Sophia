@@ -12,3 +12,4 @@ artifacts/
 .npm-cache/
 next-env.d.ts
 /storage/knowledge/
+/.upgrade-security/

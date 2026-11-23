@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 const eras = ["Античность", "Средневековье", "Новое время", "Немецкая философия", "Современная философия"];
+const previewTitle = "Досократики";
+const previewLabel = `Античность: шаг 2 — ${previewTitle}`;
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -24,15 +26,12 @@ test("course map exposes five eras with five main nodes in each era", async ({ p
 
 test("steps open an honest preview dialog by keyboard and return focus on close", async ({ page }) => {
   await page.goto("/learn");
-  const step = page.getByTestId("course-step").first();
-  const label = await step.getAttribute("aria-label");
-  expect(label).toMatch(/^Античность: шаг 1 — .+/);
-  const title = label!.split(" — ")[1];
+  const step = page.getByRole("button", { name: previewLabel, exact: true });
   await step.focus();
   await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog", { name: title, exact: true });
+  const dialog = page.getByRole("dialog", { name: previewTitle, exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: previewTitle, exact: true })).toBeVisible();
   await expect(dialog).toContainText(/урок[^.!?]*(?:в разработке|недоступ)/i);
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
@@ -47,16 +46,21 @@ test("steps open an honest preview dialog by keyboard and return focus on close"
 test("viewing a demo leaves steps uncompleted and reload closes the dialog", async ({ page }) => {
   await page.goto("/learn");
   const steps = page.getByTestId("course-step");
+  const preview = page.getByRole("button", { name: previewLabel, exact: true });
+  const progress = () => page.evaluate(() => localStorage.getItem("sophia.lesson-completions.v1"));
+  const beforeProgress = await progress();
   const originalLabels = await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
-  await steps.first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await preview.click();
+  await expect(page.getByRole("dialog", { name: previewTitle, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Вернуться к карте", exact: true }).click();
   await expect(steps).toHaveCount(26);
   expect(await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")))).toEqual(originalLabels);
   await expect(page.getByRole("main")).not.toContainText(/пройдено\s*[:：]?\s*[1-9]|завершено\s*[:：]?\s*[1-9]/i);
-  await steps.first().click();
+  expect(await progress()).toBe(beforeProgress);
+  await preview.click();
   await page.reload();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await progress()).toBe(beforeProgress);
   expect(await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")))).toEqual(originalLabels);
   await expect(page.getByRole("button", { name: eras[0], exact: true })).toHaveAttribute("aria-pressed", "true");
 });

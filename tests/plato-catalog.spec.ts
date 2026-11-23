@@ -6,11 +6,11 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/learn");
 });
 
-test("antiquity has four ordered main nodes and one optional Plato branch", async ({ page }) => {
+test("antiquity has five ordered main nodes and one optional Plato branch", async ({ page }) => {
   const main = page.locator('[data-era-id="antiquity"][data-node-type="main"]');
-  await expect(main).toHaveCount(4);
+  await expect(main).toHaveCount(5);
   expect(await main.evaluateAll(nodes => nodes.map(node => node.getAttribute("data-node-id"))))
-    .toEqual(["presocratics", "plato", "aristotle", "stoicism"]);
+    .toEqual(["plato", "presocratics", "aristotle", "stoicism", "glossary"]);
   const positions = await main.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x));
   expect(positions).toEqual([...positions].sort((a, b) => a - b));
   const branch = page.locator('[data-node-id="plato-followers"]');
@@ -28,9 +28,12 @@ test("Plato opens a responsive adjacent catalog and closing restores map positio
   await viewport.scrollIntoViewIfNeeded();
   await viewport.evaluate(node => { node.scrollLeft = 120; });
   const plato = page.locator('[data-node-id="plato"]');
+  await plato.scrollIntoViewIfNeeded();
+  await plato.focus();
   const before = await viewport.boundingBox();
   const scrollLeft = await viewport.evaluate(node => node.scrollLeft);
-  await plato.click();
+  const pageScroll = await page.evaluate(() => scrollY);
+  await page.keyboard.press("Enter");
   const catalog = page.getByRole("dialog", { name: "Платон", exact: true });
   await expect(catalog).toBeVisible();
   for (const title of ["Программа обучения", "Диалоги и произведения", "Дополнительные материалы"]) {
@@ -55,12 +58,14 @@ test("Plato opens a responsive adjacent catalog and closing restores map positio
   await expect(catalog).toHaveCount(0);
   await expect(plato).toBeFocused();
   expect(await viewport.evaluate(node => node.scrollLeft)).toBe(scrollLeft);
+  expect(await page.evaluate(() => scrollY)).toBe(pageScroll);
   await page.keyboard.press("Enter");
   await expect(catalog).toBeVisible();
   await catalog.getByRole("button", { name: "Закрыть каталог", exact: true }).click();
   await expect(catalog).toHaveCount(0);
   await expect(plato).toBeFocused();
   expect(await viewport.evaluate(node => node.scrollLeft)).toBe(scrollLeft);
+  expect(await page.evaluate(() => scrollY)).toBe(pageScroll);
   await expect(page).toHaveURL(/\/learn$/);
 });
 
