@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, beforeEach, test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
+import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
 import { hashPassword } from "../../src/features/account/server/credentials.ts";
@@ -210,6 +211,83 @@ test("registration fails safely when configured test delivery fails", async () =
   } finally {
     process.env.ACCOUNT_TEST_OUTBOX = outbox;
   }
+});
+
+const smtpSettings = {
+  ACCOUNT_MODE: "proxy", ACCOUNT_ORIGIN: "https://sophia.example.net", ACCOUNT_MAIL_TRANSPORT: "smtp",
+  SMTP_HOST: "postbox.cloud.yandex.net", SMTP_PORT: "587", SMTP_USER: "fixture-user",
+  SMTP_PASSWORD: "fixture-password", SMTP_FROM: "Sophia <accounts@example.net>",
+};
+
+async function withSmtpSettings(run: () => Promise<void>) {
+  const previous = new Map(Object.keys(smtpSettings).map(key => [key, process.env[key]]));
+  Object.assign(process.env, smtpSettings);
+  try {
+    await run();
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+test("sends both account templates through authenticated SMTP with mandatory STARTTLS", async ({ mock }) => {
+  await withSmtpSettings(async () => {
+    const smtp = mock.method(SMTPTransport.prototype, "send", function (
+      this: SMTPTransport, ...[mail, callback]: Parameters<SMTPTransport["send"]>
+    ) {
+      assert.equal(this.options.host, smtpSettings.SMTP_HOST);
+      assert.equal(this.options.port, 587);
+      assert.equal(this.options.secure, false);
+      assert.equal(this.options.requireTLS, true);
+      assert.equal(this.options.tls?.rejectUnauthorized, true);
+      assert.equal(this.options.tls?.minVersion, "TLSv1.2");
+      assert.equal(this.options.logger, false);
+      assert.equal(this.options.debug, false);
+      assert.deepEqual(this.options.auth, { user: smtpSettings.SMTP_USER, pass: smtpSettings.SMTP_PASSWORD });
+      const envelope = mail.message.getEnvelope();
+      callback(null, {
+        envelope, accepted: envelope.to, rejected: [], pending: [], response: "250 OK", messageId: "fixture",
+        envelopeTime: 0, messageTime: 0, messageSize: 0,
+      });
+    });
+    const send = accountMailTransport();
+    const to = "recipient@example.net";
+    for (const [kind, path] of [["verify", "/verify-email"], ["reset", "/reset-password"]] as const) {
+      await send({ to, kind, url: `${smtpSettings.ACCOUNT_ORIGIN}${path}#token=fixture` });
+    }
+    assert.equal(smtp.mock.callCount(), 2);
+    const [verify, reset] = smtp.mock.calls.map(call => call.arguments[0].data);
+    assert.equal(verify.from, smtpSettings.SMTP_FROM);
+    assert.deepEqual(smtp.mock.calls[0].arguments[0].message.getEnvelope().to, [to]);
+    assert.equal(verify.subject, "Подтверди почту в Sophia");
+    assert.equal(verify.text, "Перейди по ссылке, чтобы подтвердить почту и установить пароль. Ссылка действует 24 часа.\nhttps://sophia.example.net/verify-email#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
+    assert.equal(reset.subject, "Восстановление доступа к Sophia");
+    assert.equal(reset.text, "Перейди по ссылке, чтобы установить новый пароль. Ссылка действует 30 минут.\nhttps://sophia.example.net/reset-password#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
+  });
+});
+
+test("fails closed when SMTP credentials are missing or the port is not 587", async () => {
+  await withSmtpSettings(async () => {
+    delete process.env.SMTP_PASSWORD;
+    assert.throws(accountMailTransport, { status: 503 });
+    process.env.SMTP_PASSWORD = smtpSettings.SMTP_PASSWORD;
+    process.env.SMTP_PORT = "465";
+    assert.throws(accountMailTransport, { status: 503 });
+  });
+});
+
+test("hides the SMTP server response when delivery fails", async ({ mock }) => {
+  await withSmtpSettings(async () => {
+    mock.method(SMTPTransport.prototype, "send", function (...[, callback]: Parameters<SMTPTransport["send"]>) {
+      callback(new Error(`SMTP rejection: ${smtpSettings.SMTP_PASSWORD}`));
+    });
+    await assert.rejects(
+      accountMailTransport()({ to: "recipient@example.net", kind: "verify", url: "https://sophia.example.net/verify-email" }),
+      { message: "SMTP delivery failed" },
+    );
+  });
 });
 
 test("fails closed without verified proxy headers and uses a host-only secure cookie over HTTPS", async () => {

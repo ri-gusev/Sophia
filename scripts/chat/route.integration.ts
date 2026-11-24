@@ -84,7 +84,7 @@ test("the production chat route gates paid work and keeps proxy quotas, SSE, bil
   const origin = `http://127.0.0.1:${port}`;
   const accountEnvironment = {
     ACCOUNT_MODE: "local", ACCOUNT_ORIGIN: origin, ACCOUNT_DB_PATH: accountDb,
-    ACCOUNT_MAIL_TRANSPORT: "test", ACCOUNT_TEST_OUTBOX: outbox, RESEND_API_KEY: "",
+    ACCOUNT_MAIL_TRANSPORT: "test", ACCOUNT_TEST_OUTBOX: outbox, SMTP_USER: "", SMTP_PASSWORD: "",
     NODE_ENV: "production", NODE_OPTIONS: "", CHAT_LEDGER_PATH: ledger,
   } satisfies NodeJS.ProcessEnv;
   const launch = spawn(process.execPath, [
