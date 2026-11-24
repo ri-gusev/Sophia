@@ -6,5 +6,9 @@ export function accountTestSettings() {
   const run = process.env.SOPHIA_PLAYWRIGHT_RUN;
   if (!run || !/^[a-z0-9-]+$/i.test(run)) throw new Error("Missing Playwright run identifier");
   const directory = join(process.cwd(), "artifacts", "playwright-accounts", run);
-  return { port, origin: `http://127.0.0.1:${port}`, database: join(directory, "accounts.sqlite"), outbox: join(directory, "outbox.jsonl") };
+  const disabledChatPort = port === 65535 ? port - 1 : port + 1;
+  return {
+    port, origin: `http://127.0.0.1:${port}`, database: join(directory, "accounts.sqlite"), outbox: join(directory, "outbox.jsonl"),
+    disabledChatPort, disabledChatOrigin: `http://127.0.0.1:${disabledChatPort}`,
+  };
 }

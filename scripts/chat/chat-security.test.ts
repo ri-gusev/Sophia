@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { spawn } from "node:child_process";
 import { CHAT_LIMITS, ChatError, EMPTY_CHAT_MEMORY } from "../../src/features/philosopher-conversation/chat-contract.ts";
-import { chatSettings, proxyClient } from "../../src/features/philosopher-conversation/server/chat-access.ts";
+import { chatSettings, isAiChatEnabled, proxyClient } from "../../src/features/philosopher-conversation/server/chat-access.ts";
 import { createChatLedger, type ChatLimits } from "../../src/features/philosopher-conversation/server/chat-ledger.ts";
 import { createChatHandler } from "../../src/features/philosopher-conversation/server/chat-http.ts";
 import { chatModel, withChatBudget } from "../../src/features/philosopher-conversation/server/chat-billing.ts";
@@ -46,6 +46,17 @@ function fixture(t: TestContext, overrides: Partial<ChatLimits> = {}) {
 function expectStatus(status: number, retryAfter?: number) {
   return (error: unknown) => error instanceof ChatError && error.status === status && error.retryAfter === retryAfter;
 }
+
+test("only exact true enables the chat in local mode", () => {
+  const local = { CHAT_ACCESS_MODE: "local", ACCOUNT_MODE: "local" };
+  for (const AI_CHAT_ENABLED of [undefined, "", "false", "1", "TRUE", " true "]) {
+    assert.equal(isAiChatEnabled({ ...local, AI_CHAT_ENABLED }), false);
+  }
+  assert.equal(isAiChatEnabled({ AI_CHAT_ENABLED: "true" }), false);
+  assert.equal(isAiChatEnabled({ ...local, AI_CHAT_ENABLED: "true", CHAT_ACCESS_MODE: "proxy" }), false);
+  assert.equal(isAiChatEnabled({ ...local, AI_CHAT_ENABLED: "true", ACCOUNT_MODE: "proxy" }), false);
+  assert.equal(isAiChatEnabled({ ...local, AI_CHAT_ENABLED: "true" }), true);
+});
 
 test("proxy identity requires a trusted token and groups tabs, IPv6 networks and IPv4-mapped addresses", () => {
   const headers = (ip: string, forwarded = "198.51.100.127") => new Headers({
@@ -94,7 +105,7 @@ test("missing storage fails closed before paid work and does not create a replac
   const { path, limits } = fixture(t);
   const ledger = createChatLedger(path + ".missing", limits);
   let paid = 0;
-  const handler = createChatHandler({ access: () => ({
+  const handler = createChatHandler({ enabled: () => true, access: () => ({
     originSet: new Set([origin]), identify: () => "client", admit: ledger.admit,
   }), authorize: async () => {}, answer: async () => { paid++; throw new Error("must not run"); } });
   assert.equal((await handler(request())).status, 503);
@@ -113,6 +124,7 @@ function request(body: BodyInit = payload, headers: Record<string, string> = {},
 test("chat authorization rejects before admitting or reading the request and before invoking paid work", async () => {
   let admissions = 0, authorizations = 0, answers = 0;
   const handler = createChatHandler({
+    enabled: () => true,
     access: () => ({ originSet: new Set([origin]), identify: () => "test", admit: () => { admissions++; return () => {}; } }),
     authorize: async () => { authorizations++; throw new ChatError(403, "AI-диалоги недоступны."); },
     answer: async ({ memory }) => { answers++; return { message: "Answer", memory, sources: [] }; },
@@ -131,6 +143,7 @@ test("chat authorization rejects before admitting or reading the request and bef
 test("HTTP handles cheap rejects, mismatched lengths, invalid JSON, slow body and disconnect", async () => {
   let admissions = 0, releases = 0, answers = 0, cancels = 0;
   const handler = createChatHandler({
+    enabled: () => true,
     access: () => ({ originSet: new Set([origin]), identify: () => "test", admit: () => { admissions++; return () => { releases++; }; } }),
     authorize: async () => {},
     answer: async ({ memory }) => { answers++; return { message: "Answer", memory, sources: [] }; }, bodyTimeoutMs: 20,

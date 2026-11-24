@@ -31,6 +31,10 @@ export function proxyClient(headers: Headers, secret: string): string {
 
 type Environment = Record<string, string | undefined>;
 
+export function isAiChatEnabled(env: Environment = process.env): boolean {
+  return env.AI_CHAT_ENABLED === "true" && env.CHAT_ACCESS_MODE === "local" && env.ACCOUNT_MODE !== "proxy";
+}
+
 function integer(env: Environment, key: string, fallback: number, max = 10000) {
   const value = env[key] ?? String(fallback);
   if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > max) throw unavailable();

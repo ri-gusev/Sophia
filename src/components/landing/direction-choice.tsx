@@ -3,6 +3,8 @@ import { ArrowUpRight, Compass, MessageCircle } from "lucide-react";
 import { MAIN_COURSE } from "@/content/landing";
 import { Button } from "@/components/ui/button";
 import { PhilosopherConversation } from "@/features/philosopher-conversation/philosopher-conversation";
+import { CHAT_UNAVAILABLE_NOTICE, CHAT_UNAVAILABLE_STATUS } from "@/features/philosopher-conversation/chat-contract";
+import { isAiChatEnabled } from "@/features/philosopher-conversation/server/chat-access";
 import { Reveal } from "./reveal";
 
 export function DirectionChoice() {
@@ -28,7 +30,9 @@ export function DirectionChoice() {
           <article className="step-card step-2 direction-card">
             <div className="step-top"><span className="step-icon"><MessageCircle size={24} strokeWidth={1.5} aria-hidden="true" /></span><span className="step-number">02</span></div>
             <h3>Разговор с философом</h3>
-            <p>Посмотри на свои вопросы глазами философа. Обсуди их с Платоном в учебном диалоге с ИИ.</p>
+            {isAiChatEnabled()
+              ? <p>Посмотри на свои вопросы глазами философа. Обсуди их с Платоном в учебном диалоге с ИИ.</p>
+              : <p><strong>{CHAT_UNAVAILABLE_STATUS}</strong><br />{CHAT_UNAVAILABLE_NOTICE}</p>}
             <PhilosopherConversation variant="default" />
           </article>
         </Reveal>

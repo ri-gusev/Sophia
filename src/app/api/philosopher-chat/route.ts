@@ -4,7 +4,7 @@ import { ragConfig } from "@/features/philosopher-conversation/server/rag/config
 import { indexStatus, searchIndex } from "@/features/philosopher-conversation/server/rag/index-store";
 import { createEmbedder } from "@/features/philosopher-conversation/server/rag/embeddings";
 import { createOpenAITextGenerator } from "@/features/philosopher-conversation/server/openai-provider";
-import { chatSettings, unavailable } from "@/features/philosopher-conversation/server/chat-access";
+import { chatSettings, isAiChatEnabled, unavailable } from "@/features/philosopher-conversation/server/chat-access";
 import { createChatLedger } from "@/features/philosopher-conversation/server/chat-ledger";
 import { chatModel, withChatBudget } from "@/features/philosopher-conversation/server/chat-billing";
 import { CHAT_ACCESS_NOTICE, ChatError } from "@/features/philosopher-conversation/chat-contract";
@@ -24,6 +24,7 @@ let security: ReturnType<typeof initialize> | undefined;
 const access = () => security ??= initialize();
 
 export const POST = createChatHandler({
+  enabled: isAiChatEnabled,
   access,
   authorize: async request => {
     const user = await readSession();

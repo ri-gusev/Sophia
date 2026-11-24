@@ -1,7 +1,7 @@
 import { CHAT_LIMITS, ChatError, parseChatRequest } from "../chat-contract.ts";
 import type { ChatRequest, ChatReply } from "../chat-contract.ts";
 import { validatedStream } from "../chat-stream.ts";
-import { forbidden } from "./chat-access.ts";
+import { forbidden, unavailable } from "./chat-access.ts";
 
 function contentLength(request: Request) {
   if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json" ||
@@ -56,6 +56,7 @@ async function readBody(request: Request, length: number | undefined, timeoutMs:
 type ChatAccess = { originSet: ReadonlySet<string>; identify: (request: Request) => string; admit: (client: string) => () => void };
 
 export function createChatHandler(dependencies: {
+  enabled: () => boolean;
   access: () => ChatAccess;
   authorize: (request: Request) => Promise<void>;
   answer: (request: ChatRequest, signal: AbortSignal, client: string) => Promise<ChatReply>;
@@ -65,6 +66,7 @@ export function createChatHandler(dependencies: {
     const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
     let release: (() => void) | undefined;
     try {
+      if (!dependencies.enabled()) throw unavailable();
       const origin = request.headers.get("origin");
       if (!origin) throw forbidden();
       const length = contentLength(request);

@@ -1,10 +1,11 @@
 .trigger { flex-shrink:0; }
-.dialog { width:min(1000px,calc(100% - 64px)); height:min(760px,calc(100dvh - 64px)); max-width:none; max-height:none; margin:auto; padding:0; overflow:hidden; color:var(--ink); border:1px solid #dce5df; border-radius:24px; background:#fafcf9; box-shadow:0 28px 100px #142d2940; }
+.dialog,.standalone { width:min(1000px,calc(100% - 64px)); height:min(760px,calc(100dvh - 64px)); max-width:none; max-height:none; margin:auto; padding:0; overflow:hidden; color:var(--ink); border:1px solid #dce5df; border-radius:24px; background:#fafcf9; box-shadow:0 28px 100px #142d2940; }
+.standalone { display:flex; flex-direction:column; margin-block:24px; }
 .dialog[open] { display:flex; flex-direction:column; animation:appear .18s ease-out; }
 .dialog::backdrop { background:#1b302d70; }
 .header { display:flex; justify-content:space-between; align-items:flex-start; flex-shrink:0; gap:16px; padding:25px 28px 23px; border-bottom:1px solid var(--line); background:#fffffff0; }
 .eyebrow { display:block; font-size:10px; line-height:1.6; letter-spacing:.07em; text-transform:uppercase; font-weight:650; color:#5d6d66; }
-.header h2 { margin-top:6px; font-size:23px; line-height:1.4; letter-spacing:-.035em; }
+.header :is(h1,h2) { margin-top:6px; font-size:23px; line-height:1.4; letter-spacing:-.035em; }
 .header p { margin-top:5px; font-size:12px; line-height:1.6; color:var(--muted); }
 .close { display:grid; place-items:center; width:44px; height:44px; padding:0; flex-shrink:0; color:var(--ink); border:1px solid #dfe6e0; border-radius:50%; background:#fff; transition:background .18s; }
 .close:hover { background:#edf3ed; }
@@ -29,7 +30,7 @@
 .chat { display:flex; flex-direction:column; min-width:0; min-height:0; }
 .chatHeader { display:flex; align-items:center; gap:12px; padding:18px 24px; flex-shrink:0; border-bottom:1px solid var(--line); background:#ffffff90; }
 .headerAvatar { width:44px; height:44px; }
-.chatHeader h3 { font-size:16px; line-height:1.5; letter-spacing:-.02em; }
+.chatHeader :is(h2,h3) { font-size:16px; line-height:1.5; letter-spacing:-.02em; }
 .chatHeader p { margin-top:3px; font-size:10px; line-height:1.5; color:var(--muted); }
 .status { margin-left:auto; padding:6px 10px; border:1px solid #d9dfec; border-radius:40px; background:#eeedf8; color:#555b75; font-size:9px; white-space:nowrap; }
 .conversation { display:flex; flex:1; min-height:0; min-width:0; overflow-y:auto; overscroll-behavior:contain; padding:20px 30px; background:radial-gradient(ellipse at 50% 30%,#eff3e780,transparent 70%); }
@@ -37,8 +38,9 @@
 .empty { width:100%; max-width:450px; margin:auto; text-align:center; }
 .portrait { position:relative; width:96px; height:96px; padding:0; overflow:hidden; margin:0 auto 16px; border:1px solid #e2e2d5; border-radius:50%; background:linear-gradient(130deg,#eeeadd,#e8efe4); box-shadow:0 8px 30px #53614b10; }
 .portrait img { width:100%; height:100%; object-fit:cover; object-position:center 26%; }
-.empty h4 { max-width:340px; margin:9px auto 12px; font-size:22px; line-height:1.45; font-weight:600; letter-spacing:-.035em; text-wrap:balance; }
+.empty :is(h3,h4) { max-width:340px; margin:9px auto 12px; font-size:22px; line-height:1.45; font-weight:600; letter-spacing:-.035em; text-wrap:balance; }
 .empty>p { max-width:370px; margin-inline:auto; font-size:12px; line-height:1.9; color:var(--muted); }
+.empty>p+p { margin-top:12px; }
 .accessNotice a { color:#3e6351; font-weight:650; text-decoration:underline; text-underline-offset:3px; }
 .prompts { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:16px; }
 .prompts button { display:flex; align-items:center; gap:7px; max-width:100%; min-height:36px; padding:8px 11px; text-align:left; color:#435d50; background:#fff; border:1px solid #d7e1d6; border-radius:12px; font-size:10px; line-height:1.6; transition:background .18s,border-color .18s; }
@@ -71,8 +73,9 @@
 @keyframes appear { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:700px) {
   .dialog { width:100%; height:100dvh; margin:0; border:0; border-radius:0; }
+  .standalone { width:100%; height:auto; min-height:calc(100dvh - var(--header-height, 64px)); margin:0; border:0; border-radius:0; }
   .header { padding:18px 18px 14px; }
-  .header h2 { font-size:19px; }
+  .header :is(h1,h2) { font-size:19px; }
   .header p { max-width:230px; font-size:11px; }
   .workspace { display:flex; flex-direction:column; }
   .sidebar { flex-shrink:0; gap:7px; padding:11px 14px 8px; overflow:visible; border-right:0; border-bottom:1px solid var(--line); }
@@ -88,12 +91,12 @@
   .credits[open] { max-height:100px; overflow:auto; }
   .chat { flex:1; }
   .chatHeader { padding:12px 18px; gap:9px; }
-  .chatHeader h3 { font-size:14px; }
+  .chatHeader :is(h2,h3) { font-size:14px; }
   .chatHeader p { font-size:9px; }
   .status { padding:5px 7px; font-size:8px; }
   .conversation { padding:20px 20px; }
   .portrait { width:86px; height:86px; margin-bottom:15px; }
-  .empty h4 { font-size:20px; }
+  .empty :is(h3,h4) { font-size:20px; }
   .empty>p { font-size:11px; }
   .prompts { margin-top:16px; }
   .prompts button { min-height:40px; }
@@ -104,7 +107,7 @@
   .message p { font-size:12px; }
 }
 @media(max-height:600px) {
-  .dialog { overflow-y:auto; overscroll-behavior:contain; }
+  .dialog,.standalone { overflow-y:auto; overscroll-behavior:contain; }
   .header { position:sticky; top:0; z-index:1; background:#fff; }
   .workspace { flex:none; min-height:480px; }
   .chat { min-height:420px; }

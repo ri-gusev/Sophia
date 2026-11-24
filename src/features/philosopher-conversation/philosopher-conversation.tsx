@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { CONVERSATION_PHILOSOPHERS, PLATO_CONVERSATION_PROMPTS, type PhilosopherId } from "./philosophers";
 import styles from "./philosopher-conversation.module.css";
 import { usePlatoChat } from "./plato-chat-provider";
-import { CHAT_LIMITS, CHAT_MEMORY_NOTICE, countMessageWords } from "./chat-contract";
+import { CHAT_LIMITS, CHAT_MEMORY_NOTICE, CHAT_UNAVAILABLE_NOTICE, CHAT_UNAVAILABLE_STATUS, countMessageWords } from "./chat-contract";
 
-export function PhilosopherConversation({ variant = "outline" }: { variant?: "default" | "outline" }) {
+export function PhilosopherConversation({ variant = "outline", standalone = false }: {
+  variant?: "default" | "outline"; standalone?: boolean;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
@@ -22,6 +24,11 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
   const [selectedId, setSelectedId] = useState<PhilosopherId>("plato");
   const chat = usePlatoChat();
   const selected = CONVERSATION_PHILOSOPHERS.find(profile => profile.id === selectedId)!;
+  const visible = standalone || isOpen;
+  const Heading = standalone ? "h1" : "h2";
+  const ProfileHeading = standalone ? "h2" : "h3";
+  const PromptHeading = standalone ? "h3" : "h4";
+  const statusFor = (profile: typeof selected) => !chat.enabled && profile.draftAvailable ? CHAT_UNAVAILABLE_STATUS : profile.status;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -32,56 +39,29 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && selectedId === "plato" && history.current) history.current.scrollTop = history.current.scrollHeight;
-  }, [isOpen, selectedId, chat.messages, chat.pending, chat.streamed]);
+    if (visible && selectedId === "plato" && history.current) history.current.scrollTop = history.current.scrollHeight;
+  }, [visible, selectedId, chat.messages, chat.pending, chat.streamed]);
 
   useEffect(() => {
-    if (wasSending.current && chat.pending === null && isOpen && selectedId === "plato" &&
+    if (wasSending.current && chat.pending === null && visible && selectedId === "plato" &&
       (document.activeElement === document.body || document.activeElement === dialog.current)) {
       (chat.allowed ? composer.current : history.current)?.focus({ preventScroll: true });
     }
     wasSending.current = chat.pending !== null;
-  }, [chat.allowed, chat.pending, isOpen, selectedId]);
-
-  function openConversation() {
-    setIsOpen(true);
-  }
+  }, [chat.allowed, chat.pending, visible, selectedId]);
 
   function closeConversation() { dialog.current?.close(); }
 
-  return <>
-    <Button ref={trigger} type="button" variant={variant} size="sm" className={styles.trigger}
-      aria-haspopup="dialog" aria-expanded={isOpen} onClick={openConversation}>
-      <MessageCircle size={17} aria-hidden="true" />Разговор с философом
-      {variant === "default" && <ArrowUpRight size={15} aria-hidden="true" />}
-    </Button>
-    {isOpen && createPortal(<dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} aria-describedby={descriptionId}
-      data-testid="philosopher-conversation"
-      onClose={() => { setIsOpen(false); trigger.current?.focus({ preventScroll: true }); }}
-      onCancel={event => { event.preventDefault(); closeConversation(); }}
-      onKeyDown={event => {
-        if (event.key !== "Tab") return;
-        const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), a[href], textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])',
-        )).filter(element => element.getClientRects().length > 0);
-        const first = focusable[0], last = focusable.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }}
-      onClick={event => {
-        if (event.target !== event.currentTarget) return;
-        const bounds = event.currentTarget.getBoundingClientRect();
-        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeConversation();
-      }}>
+  const content = visible && <>
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>Sophia · Пространство диалога</span>
-          <h2 id={titleId}>Разговор с философом</h2>
+          <Heading id={titleId}>Разговор с философом</Heading>
           <p id={descriptionId}>Большие вопросы начинаются с простого разговора.</p>
         </div>
-        <button type="button" className={styles.close} aria-label="Закрыть разговор" onClick={closeConversation}>
+        {!standalone && <button type="button" className={styles.close} aria-label="Закрыть разговор" onClick={closeConversation}>
           <X size={21} aria-hidden="true" />
-        </button>
+        </button>}
       </header>
       <div className={styles.workspace}>
         <aside className={styles.sidebar} aria-label="Собеседники">
@@ -91,7 +71,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
               className={styles.profile} aria-pressed={selectedId === profile.id}
               onClick={() => setSelectedId(profile.id)}>
               <span className={styles.avatar}><Image src={profile.image} alt="" width={48} height={48} unoptimized /></span>
-              <span><span className={styles.profileName}>{profile.name}</span><small>{profile.status}</small></span>
+              <span><span className={styles.profileName}>{profile.name}</span><small>{statusFor(profile)}</small></span>
             </button>)}
           </div>
           <p className={styles.sidebarNote}>Не заучивать ответы.<br />Учиться задавать вопросы.</p>
@@ -107,8 +87,8 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
         <section className={styles.chat} aria-label={`Разговор: ${selected.name}`}>
           <header className={styles.chatHeader}>
             <span className={`${styles.avatar} ${styles.headerAvatar}`}><Image src={selected.image} alt="" width={44} height={44} unoptimized /></span>
-            <div><h3>{selected.name}</h3><p>{selected.school}</p></div>
-            <span className={styles.status}>{selected.status}</span>
+            <div><ProfileHeading>{selected.name}</ProfileHeading><p>{selected.school}</p></div>
+            <span className={styles.status}>{statusFor(selected)}</span>
           </header>
           {chat.allowed && selected.draftAvailable && <div className={styles.chatToolbar}>
             <span>ИИ-собеседник · может ошибаться</span>
@@ -117,7 +97,8 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
           <div ref={history} className={styles.conversation} role="region" aria-label="Область разговора" tabIndex={0}>
             {!chat.allowed ? <div className={styles.empty}>
               <div className={styles.portrait}><Image src={selected.image} alt={`Скульптурный портрет: ${selected.name}`} width={126} height={126} unoptimized /></div>
-              <p className={styles.accessNotice}>AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать{" "}
+              {!chat.enabled && <p>{CHAT_UNAVAILABLE_NOTICE}</p>}
+              <p className={styles.accessNotice}>{chat.enabled ? "AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать " : "Можно изучать "}
                 <Link href="/learn" prefetch={false} onClick={closeConversation}>бесплатные уроки</Link> и{" "}
                 <Link href="/atlas" prefetch={false} onClick={closeConversation}>философский атлас</Link>.
               </p>
@@ -131,7 +112,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
             </div> : <div className={styles.empty} key={selected.id}>
               <div className={styles.portrait}><Image src={selected.image} alt={`Скульптурный портрет: ${selected.name}`} width={126} height={126} unoptimized /></div>
               <span className={styles.eyebrow}>Место для ваших вопросов</span>
-              <h4>{selected.draftAvailable ? "О чём вы хотели бы спросить Платона?" : "Этот разговор ещё впереди"}</h4>
+              <PromptHeading>{selected.draftAvailable ? "О чём вы хотели бы спросить Платона?" : "Этот разговор ещё впереди"}</PromptHeading>
               <p>{selected.draftAvailable
                 ? "О добродетели, знании или справедливости — иногда один вопрос открывает целый мир."
                 : `Разговор с философом «${selected.name}» появится позже. Пока можно поговорить с Платоном.`}</p>
@@ -162,6 +143,33 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
           </form>}
         </section>
       </div>
-    </dialog>, document.body)}
+  </>;
+
+  if (standalone) return <main id="main" className={styles.standalone}>{content}</main>;
+
+  return <>
+    <Button ref={trigger} type="button" variant={variant} size="sm" className={styles.trigger}
+      aria-haspopup="dialog" aria-expanded={isOpen} onClick={() => setIsOpen(true)}>
+      <MessageCircle size={17} aria-hidden="true" />Разговор с философом
+      {variant === "default" && <ArrowUpRight size={15} aria-hidden="true" />}
+    </Button>
+    {isOpen && createPortal(<dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} aria-describedby={descriptionId}
+      data-testid="philosopher-conversation"
+      onClose={() => { setIsOpen(false); trigger.current?.focus({ preventScroll: true }); }}
+      onCancel={event => { event.preventDefault(); closeConversation(); }}
+      onKeyDown={event => {
+        if (event.key !== "Tab") return;
+        const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])',
+        )).filter(element => element.getClientRects().length > 0);
+        const first = focusable[0], last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }}
+      onClick={event => {
+        if (event.target !== event.currentTarget) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeConversation();
+      }}>{content}</dialog>, document.body)}
   </>;
 }

@@ -24,6 +24,7 @@ const record = event => appendFileSync(callLog, `${event}\n`, "utf8");
 globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
   if (url.hostname !== "api.openai.com") return originalFetch(input, init);
+  record("request");
   const request = new Request(input, init);
   assert.equal(request.headers.get("authorization"), "Bearer synthetic-sophia-route-test");
   assert.equal(request.method, "POST");

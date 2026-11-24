@@ -88,7 +88,7 @@ test("OpenAI requests use server credentials, bounded output and store:false; pr
 
 test("HTTP boundary enforces origin, body limits, philosopher validation and no-store without logging content", async () => {
   let calls = 0;
-  const handler = createChatHandler({ answer: async request => { calls++; return { message: "Answer", memory: request.memory, sources: [] }; }, access: accessFor(), authorize: async () => {} });
+  const handler = createChatHandler({ enabled: () => true, answer: async request => { calls++; return { message: "Answer", memory: request.memory, sources: [] }; }, access: accessFor(), authorize: async () => {} });
   const request = (body: unknown, origin = "https://sophia.example") => new Request("https://sophia.example/api/philosopher-chat", { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify(body) });
   assert.equal((await handler(request(input(), "https://other.example"))).status, 403);
   assert.equal((await handler(request({ ...input(), philosopherId: "aristotle" }))).status, 400);
@@ -110,10 +110,10 @@ test("HTTP admission precedes JSON parsing and rejects a mismatched Content-Leng
     body,
   });
   const answer = async (request: ReturnType<typeof parseChatRequest>) => ({ message: "Answer", memory: request.memory, sources: [] });
-  const blocked = createChatHandler({ answer, access: accessFor(() => { throw new ChatError(429, "Busy", 7); }), authorize: async () => {} });
+  const blocked = createChatHandler({ enabled: () => true, answer, access: accessFor(() => { throw new ChatError(429, "Busy", 7); }), authorize: async () => {} });
   assert.equal((await blocked(make("bad json"))).status, 429);
   assert.equal((await blocked(make("bad json"))).headers.get("Retry-After"), "7");
-  const open = createChatHandler({ answer, access: accessFor(), authorize: async () => {} });
+  const open = createChatHandler({ enabled: () => true, answer, access: accessFor(), authorize: async () => {} });
   assert.equal((await open(make(JSON.stringify(input()), "1"))).status, 400);
 });
 

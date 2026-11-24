@@ -7,6 +7,7 @@ import type { ChatMemory, ChatMessage, CitedSource, ChatReply } from "./chat-con
 
 export type VisibleChatMessage = ChatMessage & { id: string; sources?: CitedSource[]; outcome?: ChatReply["outcome"] };
 type ChatSession = {
+  enabled: boolean;
   allowed: boolean;
   draft: string; setDraft: (value: string) => void;
   messages: VisibleChatMessage[]; pending: string | null; error: string | null; trimmed: boolean;
@@ -17,9 +18,11 @@ const ChatContext = createContext<ChatSession | null>(null);
 class PublicChatError extends Error {}
 
 /** Memory belongs to this browser document only, including client-side navigation. */
-export function PlatoChatProvider({ allowed, accountScope, children }: { allowed: boolean; accountScope?: string; children: ReactNode }) {
+export function PlatoChatProvider({ enabled, allowed, accountScope, children }: {
+  enabled: boolean; allowed: boolean; accountScope?: string; children: ReactNode;
+}) {
   const [accessDenied, setAccessDenied] = useState(false);
-  const canChat = allowed && Boolean(accountScope) && !accessDenied;
+  const canChat = enabled && allowed && Boolean(accountScope) && !accessDenied;
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<VisibleChatMessage[]>([]);
   const [memory, setMemory] = useState<ChatMemory>(EMPTY_CHAT_MEMORY);
@@ -90,7 +93,7 @@ export function PlatoChatProvider({ allowed, accountScope, children }: { allowed
     setError("Отправка остановлена. Вопрос можно отправить снова.");
   }
 
-  return <ChatContext.Provider value={{ allowed: canChat, draft, setDraft, messages, pending, error, trimmed, streamed, send, stop, reset }}>{children}</ChatContext.Provider>;
+  return <ChatContext.Provider value={{ enabled, allowed: canChat, draft, setDraft, messages, pending, error, trimmed, streamed, send, stop, reset }}>{children}</ChatContext.Provider>;
 }
 
 export function usePlatoChat() {

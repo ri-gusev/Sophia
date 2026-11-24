@@ -43,14 +43,14 @@ async function waitFor(check: () => boolean | Promise<boolean>, description: str
   }
 }
 
-test("the production chat route gates paid work and keeps proxy quotas, SSE, billing and cancellation", { timeout: 45000 }, async t => {
+test("the production chat route gates paid work and keeps quotas, SSE, billing and cancellation", { timeout: 45000 }, async t => {
   assert.ok(existsSync(".next/BUILD_ID"), "Run the production build before the chat route integration test.");
   const root = resolve(".");
   const directory = mkdtempSync(join(tmpdir(), "sophia-chat-route-"));
   const links: string[] = [];
-  const cleanup: { stop?: () => Promise<void> } = {};
+  const stops: (() => Promise<void>)[] = [];
   t.after(async () => {
-    try { await cleanup.stop?.(); } finally {
+    try { await Promise.all(stops.map(stop => stop())); } finally {
       for (const link of links) unlinkSync(link);
       rmSync(directory, { recursive: true, force: true });
     }
@@ -67,7 +67,7 @@ test("the production chat route gates paid work and keeps proxy quotas, SSE, bil
   const providerLog = join(directory, "provider.log");
   writeFileSync(ledger, "");
   writeFileSync(providerLog, "");
-  const calls = () => readFileSync(providerLog, "utf8").trim().split("\n").filter(Boolean);
+  const calls = () => readFileSync(providerLog, "utf8").trim().split("\n").filter(event => event && event !== "request");
 
   const source = join(directory, "test-corpus.md");
   writeFileSync(source, "# Справедливость\n\nСинтетический материал для проверки поиска по вектору.");
@@ -80,48 +80,46 @@ test("the production chat route gates paid work and keeps proxy quotas, SSE, bil
     await indexKnowledge(corpus.databasePath, ragConfig(ragEnvironment), async texts => texts.map(() => [1, ...Array(255).fill(0)]));
   } finally { corpus.close(); }
 
-  const port = await freePort();
-  const origin = `http://127.0.0.1:${port}`;
   const accountEnvironment = {
-    ACCOUNT_MODE: "local", ACCOUNT_ORIGIN: origin, ACCOUNT_DB_PATH: accountDb,
+    ACCOUNT_MODE: "local", ACCOUNT_DB_PATH: accountDb,
     ACCOUNT_MAIL_TRANSPORT: "test", ACCOUNT_TEST_OUTBOX: outbox, SMTP_USER: "", SMTP_PASSWORD: "",
     NODE_ENV: "production", NODE_OPTIONS: "", CHAT_LEDGER_PATH: ledger,
   } satisfies NodeJS.ProcessEnv;
-  const launch = spawn(process.execPath, [
-    "--import", pathToFileURL(join(root, "scripts/chat/fake-openai.mjs")).href, join(root, "node_modules/next/dist/bin/next"),
-    "start", "--hostname", "127.0.0.1", "--port", String(port),
-  ], {
-    cwd: directory,
-    env: {
-      ...process.env, ...ragEnvironment, ...accountEnvironment,
-      CHAT_ACCESS_MODE: "proxy", CHAT_ALLOWED_ORIGINS: proxyOrigin, CHAT_PROXY_SECRET: proxyToken,
+  async function startChatServer(overrides: Partial<NodeJS.ProcessEnv>) {
+    const port = await freePort();
+    const origin = `http://127.0.0.1:${port}`;
+    const env: NodeJS.ProcessEnv = {
+      ...process.env, ...ragEnvironment, ...accountEnvironment, ACCOUNT_ORIGIN: origin,
+      CHAT_ACCESS_MODE: "local", CHAT_ALLOWED_ORIGINS: origin, CHAT_PROXY_SECRET: proxyToken,
       CHAT_GLOBAL_PER_MINUTE: "20", CHAT_GLOBAL_CONCURRENT: "2", CHAT_PAID_CONCURRENT: "2",
-      CHAT_CLIENT_PER_MINUTE: "5", CHAT_CLIENT_PER_DAY: "40", CHAT_CLIENT_CONCURRENT: "1", CHAT_CLIENT_BURST: "1",
+      CHAT_CLIENT_PER_MINUTE: "5", CHAT_CLIENT_PER_DAY: "40", CHAT_CLIENT_CONCURRENT: "1", CHAT_CLIENT_BURST: "4",
       CHAT_MAX_TURN_USD: "1.85", CHAT_DAY_BUDGET_USD: "2.18", CHAT_MONTH_BUDGET_USD: "2.18",
       OPENAI_API_KEY: "synthetic-sophia-route-test", OPENAI_MODEL: "gpt-5.4-mini",
-      SOPHIA_FAKE_OPENAI_CALL_LOG: providerLog,
-    },
-    stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
-  });
-  let serverLog = "";
-  const log = (data: Buffer) => { serverLog = (serverLog + data).slice(-8000); };
-  launch.stdout.on("data", log);
-  launch.stderr.on("data", log);
-  const exited = once(launch, "exit");
-  // Attach a handler immediately in case startup fails before teardown.
-  void exited.catch(() => {});
-  cleanup.stop = async () => {
-    launch.kill();
-    await exited;
-  };
-  try {
-    await waitFor(async () => {
-      if (launch.exitCode !== null) throw new Error("Production test server exited");
-      const response = await fetch(origin, { signal: AbortSignal.timeout(500) }).catch(() => null);
-      await response?.body?.cancel();
-      return response?.ok ?? false;
-    }, "the production server");
-  } catch (error) { throw new Error(serverLog, { cause: error }); }
+      SOPHIA_FAKE_OPENAI_CALL_LOG: providerLog, ...overrides,
+    };
+    if (overrides.AI_CHAT_ENABLED === undefined) delete env.AI_CHAT_ENABLED;
+    const launch = spawn(process.execPath, [
+      "--import", pathToFileURL(join(root, "scripts/chat/fake-openai.mjs")).href, join(root, "node_modules/next/dist/bin/next"),
+      "start", "--hostname", "127.0.0.1", "--port", String(port),
+    ], { cwd: directory, env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    let serverLog = "";
+    const log = (data: Buffer) => { serverLog = (serverLog + data).slice(-8000); };
+    launch.stdout.on("data", log);
+    launch.stderr.on("data", log);
+    const exited = once(launch, "exit");
+    void exited.catch(() => {});
+    stops.push(async () => { launch.kill(); await exited; });
+    try {
+      await waitFor(async () => {
+        if (launch.exitCode !== null) throw new Error("Production test server exited");
+        const response = await fetch(origin, { signal: AbortSignal.timeout(500) }).catch(() => null);
+        await response?.body?.cancel();
+        return response?.ok ?? false;
+      }, "the production server");
+    } catch (error) { throw new Error(serverLog, { cause: error }); }
+    return { origin, serverLog: () => serverLog };
+  }
+  const { origin, serverLog } = await startChatServer({ AI_CHAT_ENABLED: "true" });
 
   function account(action: string, data: object, cookie?: string) {
     return fetch(`${origin}/api/account/${action}`, {
@@ -130,26 +128,24 @@ test("the production chat route gates paid work and keeps proxy quotas, SSE, bil
       }, body: JSON.stringify(data),
     });
   }
-  function chat(ip: string, options: {
-    cookie?: string; scope?: string; body?: object; proxy?: string; signal?: AbortSignal;
+  function chat(options: {
+    cookie?: string; scope?: string; body?: object; signal?: AbortSignal;
   } = {}) {
     return fetch(`${origin}/api/philosopher-chat`, {
       method: "POST", signal: options.signal ?? AbortSignal.timeout(5000), headers: {
-        origin: proxyOrigin, "content-type": "application/json", accept: "text/event-stream",
-        "x-sophia-client-ip": ip, "x-sophia-proxy-token": options.proxy ?? proxyToken,
+        origin, "content-type": "application/json", accept: "text/event-stream",
         ...(options.cookie ? { cookie: options.cookie } : {}),
         ...(options.scope ? { "x-sophia-chat-scope": options.scope } : {}),
       }, body: JSON.stringify({ philosopherId: "plato", message: "Что такое справедливость?", memory: EMPTY_CHAT_MEMORY, ...options.body }),
     });
   }
   const accountData = { email: "chat-route@example.test", displayName: "Читатель", password, confirmPassword: password };
-  const firstNetwork = "192.0.2.1";
-  const denied = await chat(firstNetwork, { body: { isPremium: true, role: "admin", userId: "somebody" } });
+  const denied = await chat({ body: { isPremium: true, role: "admin", userId: "somebody" } });
   assert.equal(denied.status, 401);
   assert.equal(denied.headers.get("cache-control"), "no-store");
   assert.equal((await account("register", accountData)).status, 200);
   assert.equal((await account("login", { email: accountData.email, password })).status, 401);
-  assert.equal((await chat(firstNetwork)).status, 401);
+  assert.equal((await chat()).status, 401);
 
   await waitFor(() => existsSync(outbox), "the verification message");
   const letter = JSON.parse(readFileSync(outbox, "utf8").trim());
@@ -167,28 +163,64 @@ test("the production chat route gates paid work and keeps proxy quotas, SSE, bil
     const row = db.prepare("SELECT id FROM account_users WHERE email = ?").get(accountData.email);
     assert.equal(typeof row?.id, "string");
     accountId = String(row?.id);
-    const forged = await chat(firstNetwork, { cookie, scope: accountId, body: { isPremium: true, role: "admin", userId: accountId } });
+    const forged = await chat({ cookie, scope: accountId, body: { isPremium: true, role: "admin", userId: accountId } });
     assert.equal(forged.status, 403);
     assert.equal((await account("profile", { displayName: "Читатель", userId: accountId, ai_chat: true }, cookie)).status, 400);
-    assert.equal((await chat(firstNetwork, { cookie })).status, 403);
+    assert.equal((await chat({ cookie })).status, 403);
     assert.deepEqual(calls(), []);
     assert.equal(db.prepare("SELECT count(*) AS count FROM account_entitlements").get()?.count, 0);
   } finally { db.close(); }
   function setEntitlement(operation: "grant-ai-chat" | "revoke-ai-chat") {
     const result = spawnSync(process.execPath, ["scripts/accounts/cli.ts", operation, accountData.email], {
-      cwd: root, env: { ...process.env, ...accountEnvironment }, encoding: "utf8", timeout: 5000, windowsHide: true,
+      cwd: root, env: { ...process.env, ...accountEnvironment, ACCOUNT_ORIGIN: origin }, encoding: "utf8", timeout: 5000, windowsHide: true,
     });
     assert.equal(result.status, 0, result.stderr);
   }
   setEntitlement("grant-ai-chat");
 
-  assert.equal((await chat(firstNetwork, { cookie, scope: "stale-tab" })).status, 403);
-  assert.equal((await chat(firstNetwork, { cookie, proxy: "untrusted" })).status, 503);
-  assert.equal((await chat("192.0.2.9", { cookie, body: { philosopherId: "aristotle" } })).status, 400);
+  const disabledConfigurations = [
+    { label: "explicit false", value: "false", mode: "local" },
+    { label: "missing flag", value: undefined, mode: "local" },
+    { label: "invalid flag", value: "TRUE", mode: "local" },
+    { label: "proxy mode even with true", value: "true", mode: "proxy" },
+  ];
+  for (const { label, value, mode } of disabledConfigurations) {
+    await t.test(`no OpenAI requests or ledger use with ${label}`, async () => {
+      const ledgerPath = join(directory, `disabled-${mode}-${value ?? "missing"}.sqlite`);
+      if (mode === "proxy") writeFileSync(ledgerPath, "");
+      const { origin: disabledOrigin } = await startChatServer({
+        AI_CHAT_ENABLED: value, CHAT_ACCESS_MODE: mode, CHAT_LEDGER_PATH: ledgerPath,
+        ...(mode === "proxy" ? { CHAT_ALLOWED_ORIGINS: proxyOrigin } : {}),
+      });
+      const disabledUrl = `${disabledOrigin}/api/philosopher-chat?AI_CHAT_ENABLED=true`;
+      const assertedResponse = { error: "Разговор временно недоступен. Попробуйте позже." };
+      const requestHeaders: Record<string, string>[] = [
+        { origin: mode === "proxy" ? proxyOrigin : disabledOrigin, cookie, "x-sophia-chat-scope": accountId,
+          "x-sophia-proxy-token": proxyToken, "x-sophia-client-ip": "192.0.2.1", "x-ai-chat-enabled": "true" },
+        {},
+      ];
+      for (const headers of requestHeaders) {
+        const response = await fetch(disabledUrl, {
+          method: "POST", signal: AbortSignal.timeout(5000),
+          headers: { ...headers, "content-type": "application/json" },
+          body: JSON.stringify({ philosopherId: "plato", message: "Что такое справедливость?", memory: EMPTY_CHAT_MEMORY, aiChatEnabled: true }),
+        });
+        assert.equal(response.status, 503);
+        assert.equal(response.headers.get("cache-control"), "no-store");
+        assert.deepEqual(await response.json(), assertedResponse);
+      }
+      assert.equal(readFileSync(providerLog, "utf8"), "");
+      if (mode === "proxy") assert.equal(readFileSync(ledgerPath).length, 0);
+      else assert.equal(existsSync(ledgerPath), false);
+    });
+  }
+
+  assert.equal((await chat({ cookie, scope: "stale-tab" })).status, 403);
+  assert.equal((await chat({ cookie, body: { philosopherId: "aristotle" } })).status, 400);
   assert.deepEqual(calls(), []);
 
-  const answer = await chat(firstNetwork, { cookie, scope: accountId });
-  assert.equal(answer.status, 200, `Production chat failed: ${await (answer.ok ? Promise.resolve("") : answer.text())}\n${serverLog}`);
+  const answer = await chat({ cookie, scope: accountId });
+  assert.equal(answer.status, 200, `Production chat failed: ${await (answer.ok ? Promise.resolve("") : answer.text())}\n${serverLog()}`);
   assert.match(answer.headers.get("content-type") ?? "", /^text\/event-stream/);
   const reply = await readChatResponse(answer, () => {});
   assert.equal(reply.message, "Рассмотрим, почему равное обращение не всегда означает справедливость.");
@@ -201,24 +233,30 @@ test("the production chat route gates paid work and keeps proxy quotas, SSE, bil
     } finally { reader.close(); }
   }
   assert.deepEqual(charges(), [{ spent: 36_002_000, attempts: 4, active_until: 0 }]);
-  const rateLimited = await chat(firstNetwork, { cookie, scope: accountId });
-  assert.equal(rateLimited.status, 429);
-  assert.ok(Number(rateLimited.headers.get("retry-after")) > 0);
-
   const controller = new AbortController();
-  const cancelled = chat("192.0.2.2", { cookie, body: { message: "Отмена тестового ответа" }, signal: controller.signal });
+  const cancelled = chat({ cookie, body: { message: "Отмена тестового ответа" }, signal: controller.signal });
   const rejection = assert.rejects(cancelled, { name: "AbortError" });
   await waitFor(() => calls().length === 5, "the second turn to reach the fake provider");
+  const rateLimited = await chat({ cookie, scope: accountId });
+  assert.equal(rateLimited.status, 429);
+  assert.ok(Number(rateLimited.headers.get("retry-after")) > 0);
   controller.abort();
   await rejection;
   await waitFor(() => calls().at(-1) === "aborted" && charges()[1]?.spent === 309_000_000, "provider abort and cost settlement");
   assert.ok(Number(charges()[1].active_until) > 0);
+  // Local mode shares one client identity. Advance the settled lease past expiry to test the budget independently.
+  const ledgerWriter = new DatabaseSync(ledger, { timeout: 250 });
+  try {
+    await waitFor(() => ledgerWriter.prepare("SELECT count(*) AS count FROM chat_requests WHERE active_until > 0").get()?.count === 0,
+      "the cancelled HTTP slot to be released");
+    ledgerWriter.prepare("UPDATE chat_spend SET active_until = 0 WHERE active_until > 0").run();
+  } finally { ledgerWriter.close(); }
 
-  const budgetLimited = await chat("192.0.2.3", { cookie });
+  const budgetLimited = await chat({ cookie });
   assert.equal(budgetLimited.status, 503);
   assert.match(await budgetLimited.text(), /Лимит расходов/);
   setEntitlement("revoke-ai-chat");
-  assert.equal((await chat("192.0.2.4", { cookie })).status, 403);
+  assert.equal((await chat({ cookie })).status, 403);
   assert.deepEqual(calls(), ["turn_analysis", "embedding", "plato_draft", "grounding_validation", "turn_analysis", "aborted"]);
 
   await t.test("a session database error keeps private pages and learning writes away from the guest scope", async () => {
