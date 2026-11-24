@@ -1,0 +1,13 @@
+{
+  "name": "sophia-plato-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "record": "node record.mjs",
+    "render": "node render.mjs",
+    "verify": "node verify.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.2.0"
+  }
+}
