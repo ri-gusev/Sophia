@@ -2,7 +2,7 @@
 export const LESSON_PROGRESS_KEY = "sophia.lesson-completions.v1";
 export const LESSON_PROGRESS_EVENT = "sophia:lesson-progress";
 
-function parseCompletedLessons(raw: string | null): string[] | null {
+export function parseCompletedLessons(raw: string | null): string[] | null {
   if (raw === null) return [];
   let parsed: unknown;
   try {

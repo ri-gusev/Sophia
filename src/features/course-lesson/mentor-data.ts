@@ -1,4 +1,4 @@
-import { SOCRATES, type DialogueCharacter } from "./dialogue-data";
+import { SOCRATES, type DialogueCharacter } from "./dialogue-data.ts";
 export type MentorContent = {
   character: DialogueCharacter;
   lines: readonly string[];

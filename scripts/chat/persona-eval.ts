@@ -2,8 +2,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseChatReply, EMPTY_CHAT_MEMORY, type ChatReply } from "../../src/features/philosopher-conversation/chat-contract.ts";
-const origin = process.env.SOPHIA_CHECK_ORIGIN || "http://127.0.0.1:3102";
-if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)) throw new Error("Use a loopback evaluation server");
+import { liveChatSession } from "./live-session.ts";
+const { origin, headers } = liveChatSession();
 const prompts = ["Привет", "Я подставил друга, но помог другому человеку", "Что такое знание?", "Ты знаком с Алкивиадом?", "Что ты думаешь об искусственном интеллекте?", "Я считаю, что справедливость — это сила", "Я не согласен с тобой", "Объясни теорию идей", "Почему Сократа казнили?", "Ты читал Канта?"];
 type Result = { number: number; prompt: string; status: number; durationMs: number; outcome?: ChatReply["outcome"]; message?: string; error?: string; context: "fresh" | "after-6" };
 const results: Result[] = [];
@@ -16,7 +16,7 @@ for (const [index, prompt] of prompts.entries()) {
   const dependencyFailed = index === 6 && (!sixth || sixth.outcome === "abstained");
   try {
     if (dependencyFailed) throw new Error("Scenario 6 did not establish a valid dialogue context");
-    const response = await fetch(`${origin}/api/philosopher-chat`, { method: "POST", signal: AbortSignal.timeout(120000), headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ philosopherId: "plato", message: prompt, memory: index === 6 && sixth ? sixth.memory : EMPTY_CHAT_MEMORY }) });
+    const response = await fetch(`${origin}/api/philosopher-chat`, { method: "POST", redirect: "error", signal: AbortSignal.timeout(120000), headers, body: JSON.stringify({ philosopherId: "plato", message: prompt, memory: index === 6 && sixth ? sixth.memory : EMPTY_CHAT_MEMORY }) });
     if (!response.ok) { await response.body?.cancel(); results.push({ number: index + 1, prompt, status: response.status, durationMs: Date.now() - start, error: "API request failed", context }); process.exitCode = 1; }
     else {
       const reply = parseChatReply(await response.json());

@@ -1,9 +1,13 @@
-// Resume data is local to the browser and separate from confirmed progress.
+// Exercises and scroll are local, with separate guest and account namespaces.
 const LEGACY_PREFIX = "sophia.lesson-resume.v1:";
 const PREFIX = "sophia.lesson-resume.v2:";
+export const GUEST_LAST_OPENED_KEY = `${PREFIX}last-opened`;
 const part = encodeURIComponent;
-const lessonKey = (lessonId: string) => PREFIX + part(lessonId);
-const sceneKey = (lessonId: string, sceneId: string) => `${lessonKey(lessonId)}:scene:${part(sceneId)}`;
+const lessonKey = (lessonId: string, accountId: string | null) => accountId === null
+  ? PREFIX + part(lessonId)
+  : `sophia.account.${part(accountId)}.lesson-resume.v2:${part(lessonId)}`;
+const sceneKey = (lessonId: string, sceneId: string, accountId: string | null) =>
+  `${lessonKey(lessonId, accountId)}:scene:${part(sceneId)}`;
 
 // One overlay per scene with a rejected reset, scoped to this document.
 // Never publish an old reset after recovery: another tab may have edited the scene.
@@ -19,8 +23,8 @@ function record(value: unknown): Record<string, unknown> {
     ? value as Record<string, unknown> : {};
 }
 
-function legacy(lessonId: string) {
-  const saved = record(read(LEGACY_PREFIX + lessonId));
+function legacy(lessonId: string, accountId: string | null, reader = read) {
+  const saved = accountId === null ? record(reader(LEGACY_PREFIX + lessonId)) : {};
   return saved.version === 1 ? saved : {};
 }
 
@@ -31,27 +35,40 @@ function write(key: string, value: unknown) {
   } catch { return false; }
 }
 
-function readValue(key: string, fallback: () => unknown) {
-  const entry = record(read(key));
+function readValue(key: string, fallback: () => unknown, reader = read) {
+  const entry = record(reader(key));
   return Object.hasOwn(entry, "value") ? entry.value : fallback();
 }
 
-export function readResumeRun(lessonId: string, exerciseIds: readonly string[]): unknown {
-  const oldRun = record(legacy(lessonId).run);
+export function readResumeRun(lessonId: string, exerciseIds: readonly string[], accountId: string | null): unknown {
+  const oldRun = record(legacy(lessonId, accountId).run);
   const oldExercises = record(oldRun.version === 1 ? oldRun.exercises : null);
-  const sceneId = readValue(`${lessonKey(lessonId)}:current`, () => oldRun.version === 1 ? oldRun.sceneId : undefined);
+  const sceneId = accountId === null ? readValue(`${lessonKey(lessonId, null)}:current`, () => oldRun.version === 1 ? oldRun.sceneId : undefined) : undefined;
   const exercises = Object.fromEntries(exerciseIds.map(id => [
-    id, readValue(`${sceneKey(lessonId, id)}:answer`, () => oldExercises[id]),
+    id, readValue(`${sceneKey(lessonId, id, accountId)}:answer`, () => oldExercises[id]),
   ]));
   return { version: 1, sceneId, exercises };
 }
 
 export function writeResumeScene(lessonId: string, sceneId: string) {
-  write(`${lessonKey(lessonId)}:current`, sceneId);
+  if (write(`${lessonKey(lessonId, null)}:current`, sceneId)) {
+    write(GUEST_LAST_OPENED_KEY, { lessonId, sceneId });
+  }
 }
 
-export function writeResumeAnswer(lessonId: string, sceneId: string, answer: unknown) {
-  write(`${sceneKey(lessonId, sceneId)}:answer`, answer);
+export function readGuestResumeScene(lessonId: string, reader: (key: string) => unknown) {
+  return readValue(`${lessonKey(lessonId, null)}:current`, () => {
+    const oldRun = record(legacy(lessonId, null, reader).run);
+    return oldRun.version === 1 ? oldRun.sceneId : undefined;
+  }, reader);
+}
+
+export function readGuestLastOpened(reader: (key: string) => unknown) {
+  return readValue(GUEST_LAST_OPENED_KEY, () => undefined, reader);
+}
+
+export function writeResumeAnswer(lessonId: string, sceneId: string, answer: unknown, accountId: string | null) {
+  write(`${sceneKey(lessonId, sceneId, accountId)}:answer`, answer);
 }
 
 function generation(base: string) {
@@ -59,16 +76,16 @@ function generation(base: string) {
   return typeof value === "string" ? value : "";
 }
 
-function readSceneValue(lessonId: string, sceneId: string, slot: string, fallback: () => unknown) {
-  const base = sceneKey(lessonId, sceneId);
+function readSceneValue(lessonId: string, sceneId: string, slot: string, accountId: string | null, fallback: () => unknown) {
+  const base = sceneKey(lessonId, sceneId, accountId);
   const temporary = temporaryScenes.get(base);
   if (temporary) return temporary.get(slot);
   const revision = generation(base);
   return readValue(`${base}:${revision}:${slot}`, revision ? () => undefined : fallback);
 }
 
-function writeSceneValue(lessonId: string, sceneId: string, slot: string, value: unknown) {
-  const base = sceneKey(lessonId, sceneId);
+function writeSceneValue(lessonId: string, sceneId: string, slot: string, value: unknown, accountId: string | null) {
+  const base = sceneKey(lessonId, sceneId, accountId);
   const temporary = temporaryScenes.get(base);
   if (temporary) {
     temporary.set(slot, value);
@@ -77,16 +94,16 @@ function writeSceneValue(lessonId: string, sceneId: string, slot: string, value:
   write(`${base}:${generation(base)}:${slot}`, value);
 }
 
-export function readSceneField(lessonId: string, sceneId: string, field: string): unknown {
-  return readSceneValue(lessonId, sceneId, `field:${part(field)}`, () => record(record(legacy(lessonId).scenes)[sceneId])[field]);
+export function readSceneField(lessonId: string, sceneId: string, field: string, accountId: string | null): unknown {
+  return readSceneValue(lessonId, sceneId, `field:${part(field)}`, accountId, () => record(record(legacy(lessonId, accountId).scenes)[sceneId])[field]);
 }
 
-export function writeSceneField(lessonId: string, sceneId: string, field: string, value: unknown) {
-  writeSceneValue(lessonId, sceneId, `field:${part(field)}`, value);
+export function writeSceneField(lessonId: string, sceneId: string, field: string, value: unknown, accountId: string | null) {
+  writeSceneValue(lessonId, sceneId, `field:${part(field)}`, value, accountId);
 }
 
-export function resetSceneResume(lessonId: string, sceneId: string) {
-  const base = sceneKey(lessonId, sceneId);
+export function resetSceneResume(lessonId: string, sceneId: string, accountId: string | null) {
+  const base = sceneKey(lessonId, sceneId, accountId);
   const previous = generation(base);
   const revision = window.crypto.randomUUID();
   if (!write(`${base}:reset`, revision)) {
@@ -104,13 +121,13 @@ export function resetSceneResume(lessonId: string, sceneId: string) {
   } catch { /* Obsolete keys are ignored even if cleanup fails. */ }
 }
 
-export function readResumeScroll(lessonId: string, sceneId: string): number | undefined {
-  const offset = readSceneValue(lessonId, sceneId, "scroll", () => record(legacy(lessonId).scrollOffsets)[sceneId]);
+export function readResumeScroll(lessonId: string, sceneId: string, accountId: string | null): number | undefined {
+  const offset = readSceneValue(lessonId, sceneId, "scroll", accountId, () => record(legacy(lessonId, accountId).scrollOffsets)[sceneId]);
   return typeof offset === "number" && Number.isFinite(offset) ? offset : undefined;
 }
 
-export function writeResumeScroll(lessonId: string, sceneId: string, offset: number) {
-  if (Number.isFinite(offset)) writeSceneValue(lessonId, sceneId, "scroll", offset);
+export function writeResumeScroll(lessonId: string, sceneId: string, offset: number, accountId: string | null) {
+  if (Number.isFinite(offset)) writeSceneValue(lessonId, sceneId, "scroll", offset, accountId);
 }
 export const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
 export const isText = (value: unknown): value is string => typeof value === "string";

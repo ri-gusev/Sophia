@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useProgressStore } from "@/features/account/progress/client/lesson-progress-provider";
 import type { LessonSceneData } from "./lesson-data";
 import { readSceneField, writeSceneField } from "./lesson-resume";
 
@@ -12,15 +13,16 @@ export function useSceneState<T>(
   initial: T,
   validate: (value: unknown) => value is T,
 ) {
+  const { accountId } = useProgressStore();
   const [value, setValue] = useState<T>(() => {
-    const saved = readSceneField(scene.lessonId, scene.id, field);
+    const saved = readSceneField(scene.lessonId, scene.id, field, accountId);
     return validate(saved) ? saved : initial;
   });
   const savedValue = useRef(value);
   useEffect(() => {
     if (Object.is(savedValue.current, value)) return;
     savedValue.current = value;
-    writeSceneField(scene.lessonId, scene.id, field, value);
-  }, [scene.lessonId, scene.id, field, value]);
+    writeSceneField(scene.lessonId, scene.id, field, value, accountId);
+  }, [scene.lessonId, scene.id, field, value, accountId]);
   return [value, setValue] as const;
 }

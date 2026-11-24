@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, MessageCircle, Send, Square, RotateCcw, X } from "lucide-react";
@@ -36,9 +37,11 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
 
   useEffect(() => {
     if (wasSending.current && chat.pending === null && isOpen && selectedId === "plato" &&
-      (document.activeElement === document.body || document.activeElement === dialog.current)) composer.current?.focus({ preventScroll: true });
+      (document.activeElement === document.body || document.activeElement === dialog.current)) {
+      (chat.allowed ? composer.current : history.current)?.focus({ preventScroll: true });
+    }
     wasSending.current = chat.pending !== null;
-  }, [chat.pending, isOpen, selectedId]);
+  }, [chat.allowed, chat.pending, isOpen, selectedId]);
 
   function openConversation() {
     setIsOpen(true);
@@ -107,12 +110,18 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
             <div><h3>{selected.name}</h3><p>{selected.school}</p></div>
             <span className={styles.status}>{selected.status}</span>
           </header>
-          {selected.draftAvailable && <div className={styles.chatToolbar}>
+          {chat.allowed && selected.draftAvailable && <div className={styles.chatToolbar}>
             <span>ИИ-собеседник · может ошибаться</span>
             <button type="button" disabled={chat.pending !== null} onClick={() => { chat.reset(); composer.current?.focus(); }}><RotateCcw size={12} aria-hidden="true" />Новый разговор</button>
           </div>}
           <div ref={history} className={styles.conversation} role="region" aria-label="Область разговора" tabIndex={0}>
-            {selected.draftAvailable && (chat.messages.length > 0 || chat.pending !== null) ? <div className={styles.messages} role="log" aria-label="Переписка с Платоном" aria-live="polite" aria-relevant="additions text">
+            {!chat.allowed ? <div className={styles.empty}>
+              <div className={styles.portrait}><Image src={selected.image} alt={`Скульптурный портрет: ${selected.name}`} width={126} height={126} unoptimized /></div>
+              <p className={styles.accessNotice}>AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать{" "}
+                <Link href="/learn" prefetch={false} onClick={closeConversation}>бесплатные уроки</Link> и{" "}
+                <Link href="/atlas" prefetch={false} onClick={closeConversation}>философский атлас</Link>.
+              </p>
+            </div> : selected.draftAvailable && (chat.messages.length > 0 || chat.pending !== null) ? <div className={styles.messages} role="log" aria-label="Переписка с Платоном" aria-live="polite" aria-relevant="additions text">
               {chat.trimmed && <p className={styles.historyNotice}>Показана последняя часть переписки.</p>}
               {chat.messages.map(message => <div key={message.id} className={`${styles.message} ${message.role === "user" ? styles.userMessage : styles.assistantMessage}`}>
                 <span className={styles.messageAuthor}>{message.role === "user" ? "Вы" : message.outcome === "safety" ? "Sophia" : "Платон · ИИ"}</span>
@@ -133,7 +142,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
               </div>}
             </div>}
           </div>
-          <form className={styles.composer} onSubmit={event => { event.preventDefault(); if (selected.draftAvailable) void chat.send(); }}>
+          {chat.allowed && <form className={styles.composer} onSubmit={event => { event.preventDefault(); if (selected.draftAvailable) void chat.send(); }}>
             <label htmlFor={`${titleId}-message`}>Ваш вопрос</label>
             <div className={styles.inputRow}>
               <textarea ref={composer} id={`${titleId}-message`} aria-label="Сообщение" aria-describedby={selected.draftAvailable ? `${aiNoticeId} ${composerHintId}` : composerHintId}
@@ -150,7 +159,7 @@ export function PhilosopherConversation({ variant = "outline" }: { variant?: "de
             {chat.error && selected.draftAvailable && <p className={styles.chatError} role="alert">{chat.error}</p>}
             <p id={composerHintId} className={styles.composerHint}>{selected.draftAvailable ? CHAT_MEMORY_NOTICE : "Этот собеседник пока недоступен. Выберите Платона."}</p>
             {selected.draftAvailable && <p id={aiNoticeId} className={styles.composerHint}>Ответы создаются искусственным интеллектом. Ваши сообщения передаются AI-провайдеру для формирования ответа. Не отправляйте пароли и другие конфиденциальные данные.</p>}
-          </form>
+          </form>}
         </section>
       </div>
     </dialog>, document.body)}

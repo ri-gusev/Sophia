@@ -19,6 +19,7 @@ export type ChatReply = { message: string; memory: ChatMemory; sources: CitedSou
 export type ChatRequest = { philosopherId: "plato"; message: string; memory: ChatMemory };
 export const EMPTY_CHAT_MEMORY: ChatMemory = { summary: "", recent: [] };
 export const CHAT_MEMORY_NOTICE = "Разговор хранится только в этой вкладке. После перезагрузки он исчезнет.";
+export const CHAT_ACCESS_NOTICE = "AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать бесплатные уроки и философский атлас.";
 
 export class ChatError extends Error {
   readonly status: number;

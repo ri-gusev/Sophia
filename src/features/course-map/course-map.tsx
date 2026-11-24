@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import Image from "next/image";
 import { BookOpen, Lightbulb, MessageCircle, Star, Trophy, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProgressSnapshot, useProgressStore } from "@/features/account/progress/client/lesson-progress-provider";
 import { COURSE_ERAS, ERA_WIDTH, MAP_HEIGHT, MAP_WIDTH, TRANSITION_WIDTH } from "./course-map-data";
 import { MAP_BRANCHES, MAP_NODES, type MapIcon, type MapNode } from "./course-map-config";
 import { PHILOSOPHER_CATALOGS } from "./philosopher-catalog-data";
@@ -17,6 +18,8 @@ import styles from "./course-map.module.css";
 const NODE_ICONS = { book: BookOpen, dialogue: MessageCircle, idea: Lightbulb, star: Star, trophy: Trophy, followers: Users } satisfies Record<MapIcon, typeof BookOpen>;
 
 export function CourseMap() {
+  const progressStore = useProgressStore();
+  const progressSnapshot = useProgressSnapshot();
   const viewport = useRef<HTMLDivElement>(null);
   const scene = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -33,6 +36,7 @@ export function CourseMap() {
   const [catalogNode, setCatalogNode] = useState<MapNode | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<IntroLessonId | null>(null);
   const [initialSceneId, setInitialSceneId] = useState<string | undefined>();
+  const [openWithoutProgress, setOpenWithoutProgress] = useState<IntroLessonId | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const titleId = useId();
   const copyId = useId();
@@ -65,6 +69,7 @@ export function CourseMap() {
     flushSync(() => {
       setSelectedLessonId(id);
       setInitialSceneId(undefined);
+      setOpenWithoutProgress(null);
       if (dismissCatalog) setCatalogNode(null);
     });
   }
@@ -269,7 +274,20 @@ export function CourseMap() {
         activeLessonId={selectedLessonId} lessonPanelId={lessonPanelId} />}
       </div>
       <div ref={lessonPanel} id={lessonPanelId} className={styles.lessonSlot}>
-        {selectedLessonId && <LessonIntroduction key={selectedLessonId} lesson={INTRO_LESSONS[selectedLessonId]} initialSceneId={initialSceneId} onClose={returnToCatalog} />}
+        {selectedLessonId && (progressSnapshot.status === "ready" || (progressSnapshot.status === "failed" && openWithoutProgress === selectedLessonId))
+          && <LessonIntroduction key={selectedLessonId} lesson={INTRO_LESSONS[selectedLessonId]} initialSceneId={initialSceneId} onClose={returnToCatalog} />}
+        {selectedLessonId && progressSnapshot.status === "loading" && <p role="status">Загружаем учебный прогресс…</p>}
+        {selectedLessonId && progressSnapshot.status === "failed" && openWithoutProgress !== selectedLessonId &&
+          <div>
+            <p role="alert">Не удалось загрузить прогресс аккаунта.</p>
+            <Button type="button" variant="outline" onClick={() => progressStore.refresh()}>Повторить загрузку</Button>{" "}
+            <Button type="button" variant="ghost" onClick={() => setOpenWithoutProgress(selectedLessonId)}>Открыть урок</Button>
+          </div>}
+        {selectedLessonId && (progressSnapshot.status === "stale" || progressSnapshot.status === "session-unavailable") &&
+          <div>
+            <p role="alert">{progressSnapshot.status === "stale" ? "Сеанс аккаунта изменился." : "Не удалось проверить сеанс аккаунта."} Обнови страницу, чтобы продолжить.</p>
+            <Button type="button" variant="outline" onClick={() => window.location.reload()}>Обновить страницу</Button>
+          </div>}
       </div>
       <dialog
         ref={dialog}

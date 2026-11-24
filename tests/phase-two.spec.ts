@@ -86,7 +86,12 @@ test("how-it-works anchors work from both routes and mobile menu closes", async 
   await page.goto("/");
   await openNavigation(page);
   await expect(page.getByRole("link", { name: "Атлас", exact: true })).toHaveAttribute("href", "/atlas");
-  await expect(page.getByRole("button", { name: "Войти" })).toBeDisabled();
+  const navigation = page.getByRole("navigation", { name: "Основная навигация" });
+  await expect(navigation.locator('a[href="/register"]')).toHaveCount(0);
+  await navigation.getByRole("link", { name: "Войти", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("main").getByText("Нет аккаунта?")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Зарегистрироваться" })).toHaveAttribute("href", "/register");
 });
 
 test("both routes fit narrow and wide screens with reduced motion", async ({ page }) => {

@@ -1,12 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { CHAT_LIMITS, EMPTY_CHAT_MEMORY, countMessageWords } from "./chat-contract";
+import { CHAT_ACCESS_NOTICE, CHAT_LIMITS, EMPTY_CHAT_MEMORY, countMessageWords } from "./chat-contract";
 import { readChatResponse } from "./chat-stream";
 import type { ChatMemory, ChatMessage, CitedSource, ChatReply } from "./chat-contract";
 
 export type VisibleChatMessage = ChatMessage & { id: string; sources?: CitedSource[]; outcome?: ChatReply["outcome"] };
 type ChatSession = {
+  allowed: boolean;
   draft: string; setDraft: (value: string) => void;
   messages: VisibleChatMessage[]; pending: string | null; error: string | null; trimmed: boolean;
   streamed: string;
@@ -16,7 +17,9 @@ const ChatContext = createContext<ChatSession | null>(null);
 class PublicChatError extends Error {}
 
 /** Memory belongs to this browser document only, including client-side navigation. */
-export function PlatoChatProvider({ children }: { children: ReactNode }) {
+export function PlatoChatProvider({ allowed, accountScope, children }: { allowed: boolean; accountScope?: string; children: ReactNode }) {
+  const [accessDenied, setAccessDenied] = useState(false);
+  const canChat = allowed && Boolean(accountScope) && !accessDenied;
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<VisibleChatMessage[]>([]);
   const [memory, setMemory] = useState<ChatMemory>(EMPTY_CHAT_MEMORY);
@@ -30,18 +33,24 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
 
   async function send() {
     const message = draft.trim();
-    if (!message || message.length > CHAT_LIMITS.messageChars || countMessageWords(message) > CHAT_LIMITS.messageWords || controller.current) return;
+    if (!canChat || !accountScope || !message || message.length > CHAT_LIMITS.messageChars || countMessageWords(message) > CHAT_LIMITS.messageWords || controller.current) return;
     const active = new AbortController();
     controller.current = active;
     setPending(message); setDraft(""); setError(null); setStreamed("");
     try {
       const response = await fetch("/api/philosopher-chat", {
         method: "POST", signal: AbortSignal.any([active.signal, AbortSignal.timeout(120000)]), cache: "no-store",
-        headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" }, body: JSON.stringify({ philosopherId: "plato", message, memory }),
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json", "X-Sophia-Chat-Scope": accountScope },
+        body: JSON.stringify({ philosopherId: "plato", message, memory }),
       });
       if (!response.ok) {
         const data: unknown = await response.json();
         const publicError = data && typeof data === "object" && "error" in data ? (data as { error: unknown }).error : undefined;
+        if ((response.status === 401 || response.status === 403) && publicError === CHAT_ACCESS_NOTICE && controller.current === active) {
+          reset();
+          setAccessDenied(true);
+          return;
+        }
         throw new PublicChatError(typeof publicError === "string" && publicError.length < 300 ? publicError : "Не удалось получить ответ. Попробуйте ещё раз.");
       }
       const reply = await readChatResponse(response, text => { if (!active.signal.aborted && controller.current === active) setStreamed(text); });
@@ -81,7 +90,7 @@ export function PlatoChatProvider({ children }: { children: ReactNode }) {
     setError("Отправка остановлена. Вопрос можно отправить снова.");
   }
 
-  return <ChatContext.Provider value={{ draft, setDraft, messages, pending, error, trimmed, streamed, send, stop, reset }}>{children}</ChatContext.Provider>;
+  return <ChatContext.Provider value={{ allowed: canChat, draft, setDraft, messages, pending, error, trimmed, streamed, send, stop, reset }}>{children}</ChatContext.Provider>;
 }
 
 export function usePlatoChat() {

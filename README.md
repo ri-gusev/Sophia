@@ -8,7 +8,7 @@
 
 Атлас доступен на `/atlas` через существующий пункт верхнего меню. Историческая шкала **650 до н. э. — 2026 н. э.** показывает 80 философов в годы их жизни. Есть семь быстрых переходов по эпохам, точный ввод года с выбором эры и общий ползунок; исторического нуля нет. Близкие портреты раскрываются списком, карточки содержат даты, традицию, биографию и тип географической связи. Датировки и точки городов могут быть приблизительными ([прежние записи](docs/references/ATLAS_HISTORY.md), [новые биографии](docs/references/ATLAS_MODERN_HISTORY.md)). Живущие имеют открытые даты жизни. Поддерживаются мышь, сенсорные жесты и клавиатура (стрелки, `+`/`-`, `Home` после фокуса на глобусе). Светлое оформление Sophia и глобус без рамки сохранены. Текстура NASA и 78 портретов локальны; два отсутствующих портрета и ошибки загрузки заменяются инициалами. [Текстура](public/textures/earth/README.md), [изображения и лицензии](public/images/philosophers/README.md).
 
-Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite; Three.js, React Three Fiber и Drei для атласа. Требуется Node.js >=24.0.0 и npm; проверено на Node.js 24.22.1 и npm 11.19.1. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
+Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite; Three.js, React Three Fiber и Drei для атласа. Требуется Node.js >=24.7.0 и npm; для VPS используйте актуальный Node.js 24 LTS. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
 
 ## Установка и запуск
 
@@ -23,9 +23,13 @@ npm.cmd run dev
 
 Для production-режима: `npm.cmd run build`, затем `npm.cmd run start`. Сервер по умолчанию доступен только на этом компьютере. Для просмотра страниц внешние сервисы не требуются; для ответов Платона нужны серверный ключ OpenAI и локальная база корпуса. Шрифт и изображения поставляются локально.
 
+## Аккаунты и прогресс
+
+Гостям доступны карта, Атлас и бесплатные уроки. Аккаунт открывает профиль и синхронизацию подтверждений слайдов, завершений и мест возобновления. Подтверждение email и восстановление пароля требуют настроенной почты. Для локальной проверки доступен файловый тестовый транспорт. [Миграции, HTTPS, почта и резервные копии](docs/development/ACCOUNT_SERVER.md).
+
 ## Разговор с философом
 
-Кнопка доступна рядом с картой `/learn` и в средней карточке на главной. Платон отвечает через серверный OpenAI API с выдержками из общей базы. Аристотель и Марк Аврелий пока помечены «Скоро». Есть отправка по Enter (Shift+Enter — новая строка), отмена, новый разговор и восстановление вопроса при ошибке. Это учебный ИИ-собеседник, который может ошибаться.
+Кнопка доступна рядом с картой `/learn` и в средней карточке на главной. Для отправки нужен аккаунт с подтверждённой почтой и серверным правом `ai_chat`, которое владелец выдаёт через CLI. Платон отвечает через серверный OpenAI API с выдержками из общей базы. Есть отправка по Enter (Shift+Enter — новая строка), отмена, новый разговор и восстановление вопроса при ошибке. Это учебный ИИ-собеседник, который может ошибаться.
 
 В **`.env.local` в корне проекта** (`D:\Sophia\.env.local`) укажите:
 
@@ -47,7 +51,10 @@ npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run build
 npm.cmd run test:chat
+npm.cmd run test:chat:integration
 npm.cmd run test:knowledge
+npm.cmd run test:accounts
+npm.cmd run test:progress
 npx.cmd playwright install chromium
 npm.cmd test
 ```
@@ -70,6 +77,7 @@ npm.cmd test
 | [INVARIANTS.md](docs/architecture/INVARIANTS.md) | Постоянные ограничения и способы проверки |
 | [DECISIONS.md](docs/architecture/DECISIONS.md) | Журнал принятых архитектурных решений |
 | [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md) | Единая база корпусов, импорт, версии и сохранность |
+| [ACCOUNTS_AND_PROGRESS.md](docs/architecture/ACCOUNTS_AND_PROGRESS.md) | Авторизация, схема аккаунтов и правила синхронизации |
 | [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md) | API чата, память вкладки, лимиты и безопасность |
 | [PLATO_RAG.md](docs/architecture/PLATO_RAG.md) | Историческая роль, семантический индекс, safety, проверка ответов и запуск |
 | [PLATO_DIALOGUE.md](docs/architecture/PLATO_DIALOGUE.md) | Первое лицо, сократическая беседа, generation policy, проверка стиля и реальные сценарии |

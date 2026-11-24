@@ -1,10 +1,10 @@
-import type { IntroLesson } from "./lesson-data";
-import { LESSON_PROGRESS_EVENT, LESSON_PROGRESS_KEY } from "./lesson-progress";
+import type { IntroLesson } from "./lesson-data.ts";
+import { LESSON_PROGRESS_EVENT, LESSON_PROGRESS_KEY } from "./lesson-progress.ts";
 
 export const SLIDE_PROGRESS_PREFIX = "sophia.lesson-progress.v2:";
-const slideKey = (lessonId: string, sceneId: string) =>
+export const slideKey = (lessonId: string, sceneId: string) =>
   `${SLIDE_PROGRESS_PREFIX}slide:${encodeURIComponent(lessonId)}:${encodeURIComponent(sceneId)}`;
-const finishKey = (lessonId: string) => `${SLIDE_PROGRESS_PREFIX}finished:${encodeURIComponent(lessonId)}`;
+export const finishKey = (lessonId: string) => `${SLIDE_PROGRESS_PREFIX}finished:${encodeURIComponent(lessonId)}`;
 
 export function subscribeLessonProgress(onChange: () => void) {
   function onStorage(event: StorageEvent) {

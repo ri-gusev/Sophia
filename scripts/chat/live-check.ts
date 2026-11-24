@@ -1,7 +1,7 @@
 /** Explicit operator smoke test: calls the paid local chat API, never prints conversation/corpus text. */
 import { parseChatReply, EMPTY_CHAT_MEMORY, type ChatMemory } from "../../src/features/philosopher-conversation/chat-contract.ts";
-const origin = process.env.SOPHIA_CHECK_ORIGIN || "http://127.0.0.1:3102";
-if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)) throw new Error("Use a loopback test origin");
+import { liveChatSession } from "./live-session.ts";
+const { origin, headers } = liveChatSession();
 let memory: ChatMemory = EMPTY_CHAT_MEMORY;
 function assertions(id: string, checks: Record<string, boolean>) {
   console.log(JSON.stringify({ id, ...checks }));
@@ -9,7 +9,7 @@ function assertions(id: string, checks: Record<string, boolean>) {
 }
 async function turn(id: string, message: string, current: ChatMemory = EMPTY_CHAT_MEMORY) {
   const started = Date.now();
-  const response = await fetch(`${origin}/api/philosopher-chat`, { method: "POST", signal: AbortSignal.timeout(120000), headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ philosopherId: "plato", message, memory: current }) });
+  const response = await fetch(`${origin}/api/philosopher-chat`, { method: "POST", redirect: "error", signal: AbortSignal.timeout(120000), headers, body: JSON.stringify({ philosopherId: "plato", message, memory: current }) });
   if (!response.ok) { await response.body?.cancel(); console.log(JSON.stringify({ id, status: response.status, durationMs: Date.now() - started })); process.exitCode = 1; return; }
   const result = parseChatReply(await response.json());
   const checks = { nonempty: result.message.length > 20, noTechnicalLeak: !/\.sqlite|\.md\b|source_id|chunk_id|\b(?:RAG|embeddings?|retrieval)\b/iu.test(result.message), atMostTwoQuestions: (result.message.match(/\?/g) ?? []).length <= 2 };

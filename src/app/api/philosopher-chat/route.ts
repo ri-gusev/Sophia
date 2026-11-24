@@ -7,7 +7,8 @@ import { createOpenAITextGenerator } from "@/features/philosopher-conversation/s
 import { chatSettings, unavailable } from "@/features/philosopher-conversation/server/chat-access";
 import { createChatLedger } from "@/features/philosopher-conversation/server/chat-ledger";
 import { chatModel, withChatBudget } from "@/features/philosopher-conversation/server/chat-billing";
-import { ChatError } from "@/features/philosopher-conversation/chat-contract";
+import { CHAT_ACCESS_NOTICE, ChatError } from "@/features/philosopher-conversation/chat-contract";
+import { canUseAiChat, readSession } from "@/features/account/server/session";
 import { join } from "node:path";
 
 export const runtime = "nodejs";
@@ -24,6 +25,13 @@ const access = () => security ??= initialize();
 
 export const POST = createChatHandler({
   access,
+  authorize: async request => {
+    const user = await readSession();
+    if (!user?.emailVerifiedAt) throw new ChatError(401, CHAT_ACCESS_NOTICE);
+    // A stale tab must never send its conversation under a different account's session.
+    const scope = request.headers.get("x-sophia-chat-scope");
+    if ((scope !== null && scope !== user.id) || !canUseAiChat(user.id)) throw new ChatError(403, CHAT_ACCESS_NOTICE);
+  },
   answer: async (request, signal, client) => {
     const key = process.env.OPENAI_API_KEY;
     if (!key?.trim()) throw unavailable();

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { getImageProps } from "next/image";
 import { Button } from "@/components/ui/button";
-import type { IntroLesson, LessonSceneData } from "./lesson-data";
+import { useProgressSnapshot, useProgressStore } from "@/features/account/progress/client/lesson-progress-provider";
+import type { IntroLesson, IntroLessonId, LessonSceneData } from "./lesson-data";
 import { LessonReflectionScene } from "./reflection-scene";
 import { WorkshopScene } from "./workshop-scene";
 import { PracticeScene } from "./practice-scene";
@@ -27,23 +28,33 @@ import styles from "./lesson-introduction.module.css";
 const emptyProgress = () => "[]";
 
 export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
-  lesson: IntroLesson;
+  lesson: IntroLesson & { id: IntroLessonId };
   initialSceneId?: string;
   onClose: () => void;
 }) {
+  const store = useProgressStore();
+  const { accountId } = store;
+  const snapshot = useProgressSnapshot();
+  const accountLesson = snapshot.progress?.lessons.find(entry => entry.lessonId === lesson.id);
   const root = useRef<HTMLDivElement>(null);
   const [run, setRun] = useState(() => {
     const exercises = lesson.scenes.filter(scene => scene.type === "single-choice" || scene.type === "ordering");
-    return restoreRun(lesson, readResumeRun(lesson.id, exercises.map(scene => scene.id)), initialSceneId);
+    return restoreRun(lesson, readResumeRun(lesson.id, exercises.map(scene => scene.id), accountId),
+      initialSceneId ?? accountLesson?.resumeSceneId ?? undefined);
   });
   const mountedSceneId = useRef(run.sceneId);
   const [sceneVersions, setSceneVersions] = useState<Record<string, number>>({});
   const [saveError, setSaveError] = useState(false);
   const [missingSlide, setMissingSlide] = useState<string | null>(null);
-  const progress = useSyncExternalStore(subscribeLessonProgress, () => {
+  const [resumeFailure, setResumeFailure] = useState<string | null>(null);
+  const [resumeAttempts, setResumeAttempts] = useState(0);
+  const [savingProgress, setSavingProgress] = useState(false);
+  const progressAction = useRef<symbol | null>(null);
+  const guestProgress = useSyncExternalStore(subscribeLessonProgress, () => {
+    if (accountId !== null) return emptyProgress();
     try { return JSON.stringify(confirmedSlides(lesson)); } catch { return emptyProgress(); }
   }, emptyProgress);
-  const confirmed = new Set<string>(JSON.parse(progress));
+  const confirmed = new Set<string>(accountId === null ? JSON.parse(guestProgress) : accountLesson?.confirmedSceneIds);
   const discardedScroll = useRef<string | null>(null);
   const index = Math.max(0, lesson.scenes.findIndex(item => item.id === run.sceneId));
   const scene = lesson.scenes[index];
@@ -57,6 +68,8 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     function followFragment() {
       const location = readLessonLocation(window.location.hash);
       if (location?.lessonId === lesson.id) {
+        progressAction.current = null;
+        setSavingProgress(false);
         setMissingSlide(null);
         setSaveError(false);
         setRun(previous => previous.sceneId === location.sceneId ? previous : { ...previous, sceneId: location.sceneId });
@@ -71,8 +84,19 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   }, [lesson.id]);
 
   useEffect(() => {
-    writeResumeScene(lesson.id, run.sceneId);
-  }, [lesson.id, run.sceneId]);
+    if (accountId === null) {
+      writeResumeScene(lesson.id, run.sceneId);
+      return;
+    }
+    let active = true;
+    void store.request({ action: "resume", lessonId: lesson.id, sceneId: run.sceneId }).then(
+      () => { if (active) setResumeFailure(null); },
+      () => { if (active) setResumeFailure(run.sceneId); },
+    );
+    return () => { active = false; };
+  }, [accountId, lesson.id, run.sceneId, resumeAttempts, store]);
+
+  useEffect(() => () => { progressAction.current = null; }, []);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -81,7 +105,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   }, [lesson.id]);
 
   useEffect(() => {
-    const savedOffset = readResumeScroll(lesson.id, scene.id);
+    const savedOffset = readResumeScroll(lesson.id, scene.id, accountId);
     const previousRestoration = window.history.scrollRestoration;
     window.history.scrollRestoration = "manual";
     let attached = false;
@@ -89,7 +113,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     let banner: HTMLElement | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     function save() {
-      if (discardedScroll.current !== scene.id) writeResumeScroll(lesson.id, scene.id, lastOffset);
+      if (discardedScroll.current !== scene.id) writeResumeScroll(lesson.id, scene.id, lastOffset, accountId);
     }
     function saveOnExit() { if (banner) lastOffset = -banner.getBoundingClientRect().top; save(); }
     function remember() {
@@ -119,7 +143,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
       window.removeEventListener("pagehide", saveOnExit);
       window.history.scrollRestoration = previousRestoration;
     };
-  }, [lesson.id, scene.id]);
+  }, [accountId, lesson.id, scene.id]);
 
   useEffect(() => {
     if (!nextImage) return;
@@ -132,12 +156,14 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   }, [nextImage]);
 
   function updateAnswer(value: ExerciseAnswer) {
-    writeResumeAnswer(lesson.id, scene.id, value);
+    writeResumeAnswer(lesson.id, scene.id, value, accountId);
     setRun(previous => ({ ...previous, exercises: { ...previous.exercises, [scene.id]: value } }));
   }
 
   function openSlide(id: string, push = false) {
     if (id === scene.id || !lesson.scenes.some(item => item.id === id)) return;
+    progressAction.current = null;
+    setSavingProgress(false);
     setMissingSlide(null);
     setSaveError(false);
     const url = new URL(window.location.href);
@@ -147,7 +173,34 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     setRun(previous => ({ ...previous, sceneId: id }));
   }
 
+  function saveAccountProgress(action: "confirm" | "finish", onSaved: (missingSceneId?: string) => void) {
+    if (progressAction.current) return;
+    const token = Symbol();
+    progressAction.current = token;
+    setSavingProgress(true);
+    setSaveError(false);
+    setMissingSlide(null);
+    void store.request({ action, lessonId: lesson.id, sceneId: scene.id }).then(
+      result => {
+        if (progressAction.current !== token) return;
+        progressAction.current = null;
+        setSavingProgress(false);
+        onSaved(result.missingSceneId);
+      },
+      () => {
+        if (progressAction.current !== token) return;
+        progressAction.current = null;
+        setSavingProgress(false);
+        setSaveError(true);
+      },
+    );
+  }
+
   function finish() {
+    if (accountId !== null) {
+      saveAccountProgress("finish", missing => missing ? setMissingSlide(missing) : onClose());
+      return;
+    }
     setSaveError(false);
     try {
       const result = finishLesson(lesson, scene.id);
@@ -163,12 +216,18 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
   const feedback = missingSlide ? <div className={styles.saveFeedback}>
     <p role="alert">Чтобы завершить урок, пройди оставшиеся слайды.</p>
     <Button type="button" variant="outline" onClick={() => openSlide(missingSlide, true)}>К первому непройденному слайду</Button>
-  </div> : saveError ? <p role="alert" className={styles.saveFeedback}>Не удалось сохранить прогресс в этом браузере. Разреши локальное хранилище и попробуй снова.</p> : null;
+  </div> : saveError ? <p role="alert" className={styles.saveFeedback}>{accountId === null
+    ? "Не удалось сохранить прогресс в этом браузере. Разреши локальное хранилище и попробуй снова."
+    : "Не удалось сохранить прогресс в аккаунте. Попробуй ещё раз."}</p> : null;
 
   function move(direction: -1 | 1) {
     const destination = lesson.scenes[index + direction];
     if (!destination || (direction === 1 && !canContinue)) return;
     if (direction === 1) {
+      if (accountId !== null) {
+        saveAccountProgress("confirm", () => openSlide(destination.id));
+        return;
+      }
       try { confirmSlideTransition(lesson, scene.id); } catch {
         // Keep reading available, while leaving the failed slide unconfirmed.
         openSlide(destination.id);
@@ -178,7 +237,7 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     } else if (virtueScene) {
       // The previous slide keeps its state. Restart the departed slide on the next visit.
       discardedScroll.current = scene.id;
-      resetSceneResume(lesson.id, scene.id);
+      resetSceneResume(lesson.id, scene.id, accountId);
       setSceneVersions(previous => ({ ...previous, [scene.id]: (previous[scene.id] ?? 0) + 1 }));
     }
     openSlide(destination.id);
@@ -195,6 +254,11 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
     <div className={styles.slideContent}>
     {!virtueScene && <div className={styles.progress} role="progressbar" aria-label="Прогресс урока" aria-valuemin={0} aria-valuemax={lesson.scenes.length} aria-valuenow={confirmed.size}>
       <span style={{ width: `${confirmed.size / lesson.scenes.length * 100}%` }} />
+    </div>}
+    {savingProgress && <p role="status" className={styles.saveFeedback}>Сохраняем прогресс…</p>}
+    {resumeFailure === scene.id && <div className={styles.saveFeedback}>
+      <p role="alert">Не удалось сохранить место в уроке.</p>
+      <Button type="button" variant="outline" onClick={() => setResumeAttempts(value => value + 1)}>Повторить сохранение</Button>
     </div>}
     {saveError && index !== lesson.scenes.length - 1 && feedback}
     {lesson.scenes.map(item => {

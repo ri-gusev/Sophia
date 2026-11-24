@@ -96,7 +96,7 @@ test("missing storage fails closed before paid work and does not create a replac
   let paid = 0;
   const handler = createChatHandler({ access: () => ({
     originSet: new Set([origin]), identify: () => "client", admit: ledger.admit,
-  }), answer: async () => { paid++; throw new Error("must not run"); } });
+  }), authorize: async () => {}, answer: async () => { paid++; throw new Error("must not run"); } });
   assert.equal((await handler(request())).status, 503);
   assert.equal(paid, 0);
   assert.throws(() => ledger.reserve("client", fullTurn), expectStatus(503));
@@ -110,10 +110,29 @@ function request(body: BodyInit = payload, headers: Record<string, string> = {},
   return new Request("http://127.0.0.1/api/philosopher-chat", options);
 }
 
+test("chat authorization rejects before admitting or reading the request and before invoking paid work", async () => {
+  let admissions = 0, authorizations = 0, answers = 0;
+  const handler = createChatHandler({
+    access: () => ({ originSet: new Set([origin]), identify: () => "test", admit: () => { admissions++; return () => {}; } }),
+    authorize: async () => { authorizations++; throw new ChatError(403, "AI-диалоги недоступны."); },
+    answer: async ({ memory }) => { answers++; return { message: "Answer", memory, sources: [] }; },
+  });
+  assert.equal((await handler(request(payload, { origin: "https://other.example" }))).status, 403);
+  assert.equal(authorizations, 0);
+  // Authorization takes precedence even over the invalid body.
+  const response = await handler(request("{"));
+  assert.equal(response.status, 403);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(authorizations, 1);
+  assert.equal(admissions, 0);
+  assert.equal(answers, 0);
+});
+
 test("HTTP handles cheap rejects, mismatched lengths, invalid JSON, slow body and disconnect", async () => {
   let admissions = 0, releases = 0, answers = 0, cancels = 0;
   const handler = createChatHandler({
     access: () => ({ originSet: new Set([origin]), identify: () => "test", admit: () => { admissions++; return () => { releases++; }; } }),
+    authorize: async () => {},
     answer: async ({ memory }) => { answers++; return { message: "Answer", memory, sources: [] }; }, bodyTimeoutMs: 20,
   });
   const missingOrigin = request();

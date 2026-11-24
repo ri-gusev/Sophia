@@ -1,13 +1,13 @@
-import { VIRTUE_FINALE, type VirtueFinaleContent } from "./virtue-finale-data";
-import { VIRTUE_SWARM, type VirtueSwarmContent } from "./virtue-swarm-data";
-import { VIRTUE_DEFINITION_PRACTICE, type DefinitionPracticeContent } from "./virtue-definition-practice-data";
-import { SOCRATIC_REFLECTION, type ReflectionContent } from "./reflection-data";
-import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data";
-import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data";
-import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data";
-import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data";
-import { MENO_QUESTION, type VirtueIntroContent } from "./virtue-intro-data";
-import { VIRTUE_GALLERY, type VirtueGalleryContent } from "./virtue-gallery-data";
+import { VIRTUE_FINALE, type VirtueFinaleContent } from "./virtue-finale-data.ts";
+import { VIRTUE_SWARM, type VirtueSwarmContent } from "./virtue-swarm-data.ts";
+import { VIRTUE_DEFINITION_PRACTICE, type DefinitionPracticeContent } from "./virtue-definition-practice-data.ts";
+import { SOCRATIC_REFLECTION, type ReflectionContent } from "./reflection-data.ts";
+import { COURAGE_WORKSHOP, type WorkshopContent } from "./workshop-data.ts";
+import { SOCRATIC_PRACTICE, type PracticeContent } from "./practice-data.ts";
+import { CEPHALUS_DIALOGUE, type DialogueContent } from "./dialogue-data.ts";
+import { SOCRATIC_MENTOR, type MentorContent } from "./mentor-data.ts";
+import { MENO_QUESTION, type VirtueIntroContent } from "./virtue-intro-data.ts";
+import { VIRTUE_GALLERY, type VirtueGalleryContent } from "./virtue-gallery-data.ts";
 export type LessonSceneImage = { src: string; position?: string };
 export type LessonSource = { title: string; url: string };
 type SceneBase = {

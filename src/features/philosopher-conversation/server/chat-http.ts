@@ -57,6 +57,7 @@ type ChatAccess = { originSet: ReadonlySet<string>; identify: (request: Request)
 
 export function createChatHandler(dependencies: {
   access: () => ChatAccess;
+  authorize: (request: Request) => Promise<void>;
   answer: (request: ChatRequest, signal: AbortSignal, client: string) => Promise<ChatReply>;
   bodyTimeoutMs?: number;
 }) {
@@ -70,6 +71,7 @@ export function createChatHandler(dependencies: {
       const access = dependencies.access();
       if (!access.originSet.has(origin)) throw forbidden();
       const client = access.identify(request);
+      await dependencies.authorize(request);
       release = access.admit(client);
       const input = parseChatRequest(await readBody(request, length, dependencies.bodyTimeoutMs ?? 5000));
       if (request.signal.aborted) throw new ChatError(499, "Отправка остановлена.");

@@ -64,9 +64,11 @@ section { scroll-margin-top: 110px; }
 .main-nav { display: flex; align-items: center; gap: 31px; }
 .main-nav > a:not(.button) { font-size: 12px; font-weight: 600; transition: color .2s; }
 .main-nav > a:not(.button):hover { color: #527860; }
-.login-wrap { display: flex; align-items: center; gap: 5px; }
-.login-wrap button { border: 0; background: none; color: #61706b; font-size: 12px; padding: 8px 0; }
-.login-wrap > span { font-size: 9px; border: 1px solid #d7dfd6; border-radius: 5px; padding: 2px 4px; color: #586658; }
+.account-nav { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; font-size: 12px; font-weight: 650; }
+.account-nav > a, .account-nav > button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 0; color: var(--green); background: none; border: 0; }
+.account-nav > a:hover, .account-nav > button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.account-initials { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: #e5f1e9; font-size: 10px; }
+.account-nav-error { position: absolute; z-index: 1; top: 100%; right: 0; width: min(230px, 70vw); padding: 10px; color: #872f2a; background: white; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; }
 .menu-toggle { display: none; border: 1px solid var(--line); border-radius: 12px; width: 44px; height: 44px; align-items: center; justify-content: center; background: #fff; }
 
 /* Hero / a small window into a future learning space */
@@ -126,8 +128,8 @@ h2 span { color: #708873; }
 .direction-upcoming:hover { transform: none; box-shadow: none; }
 .upcoming-status { border: 1px solid #a5ada3; color: #53604f; font-size: 11px; padding: 5px 12px; border-radius: 40px; }
 .how-section { border-top: 1px solid var(--line); padding-top: 66px; }
-.learning-nav { font-size: 12px; font-weight: 600; }
-.learning-nav a { display: inline-block; padding-block: 12px; }
+.learning-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 16px; font-size: 12px; font-weight: 600; }
+.learning-nav > a { display: inline-block; padding-block: 12px; }
 
 /* A path, not another grid of cards */
 .learning-section { padding-block: 66px 95px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; border-top: 1px solid var(--line); }
@@ -168,8 +170,8 @@ h2 span { color: #708873; }
   .main-nav { display: none; position: absolute; left: 20px; right: 20px; top: 69px; padding: 22px; background: #fcfdf9; border: 1px solid #dce5d7; box-shadow: var(--shadow); border-radius: 20px; align-items: stretch; gap: 3px; }
   .main-nav.is-open { display: flex; flex-direction: column; }
   .main-nav > a:not(.button) { padding: 14px 8px; font-size: 14px; }
-  .main-nav .login-wrap { padding: 10px 8px; margin-bottom: 9px; }
-  .main-nav .login-wrap button { font-size: 14px; }
+  .main-nav .account-nav { padding: 0 8px; margin-bottom: 9px; font-size: 14px; }
+  .main-nav .account-nav > a, .main-nav .account-nav > button { min-height: 44px; }
   .main-nav .button { width: 100%; }
   .hero { grid-template-columns: 1fr; gap: 30px; padding-block: 50px 43px; }
   .hero-copy { max-width: 560px; }

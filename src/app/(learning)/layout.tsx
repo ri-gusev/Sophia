@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { AccountNavigation } from "@/features/account/account-navigation";
 
 export default function LearningLayout({ children }: { children: ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function LearningLayout({ children }: { children: ReactNode }) {
           <Link className="wordmark" href="/" aria-label="Sophia — на главную">sophia<span>.</span></Link>
           <nav className="learning-nav" aria-label="Навигация курса">
             <Link href="/#how-it-works">Как это работает</Link>
+            <AccountNavigation />
           </nav>
         </div>
       </header>

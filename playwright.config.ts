@@ -1,29 +1,37 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { accountTestSettings } from "./tests/support/account-test-settings";
 
-const testPort = Number(process.env.SOPHIA_TEST_PORT ?? "3000");
-if (!Number.isInteger(testPort) || testPort < 1 || testPort > 65535) throw new Error("SOPHIA_TEST_PORT must be a valid TCP port");
+process.env.SOPHIA_PLAYWRIGHT_RUN ??= randomUUID();
+const { port: testPort, origin, database, outbox } = accountTestSettings();
 
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
   workers: 2,
   reporter: "list",
-  use: { baseURL: `http://127.0.0.1:${testPort}`, trace: "retain-on-failure" },
+  use: { baseURL: origin, trace: "retain-on-failure" },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },
   ],
   webServer: {
-    command: `npm.cmd run start -- --port ${testPort}`,
-    url: `http://127.0.0.1:${testPort}`,
+    command: `${process.platform === "win32" ? "npm.cmd" : "npm"} run start -- --port ${testPort}`,
+    url: origin,
     env: {
+      ACCOUNT_MODE: "local",
+      ACCOUNT_ORIGIN: origin,
+      ACCOUNT_DB_PATH: database,
+      ACCOUNT_MAIL_TRANSPORT: "test",
+      ACCOUNT_TEST_OUTBOX: outbox,
+      RESEND_API_KEY: "",
       CHAT_ACCESS_MODE: "local",
-      CHAT_ALLOWED_ORIGINS: `http://127.0.0.1:${testPort}`,
+      CHAT_ALLOWED_ORIGINS: origin,
       CHAT_LEDGER_PATH: join(process.cwd(), "artifacts", "playwright-ledgers", `${testPort}-${process.pid}.sqlite`),
       OPENAI_API_KEY: " ",
     },
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

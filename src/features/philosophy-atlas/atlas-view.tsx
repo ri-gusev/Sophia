@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, Globe2, Minus, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AccountNavigation } from "@/features/account/account-navigation";
 import type { AtlasAction, ZoomLimits } from "./globe-config";
 import { GlobeContextError, GlobeModuleError } from "./globe-errors";
 import { INITIAL_YEAR, isAliveAt } from "./historical-time";
@@ -93,7 +94,10 @@ export function AtlasView() {
       <header className="site-header">
         <div className={`header-inner container ${styles.header}`}>
           <Link className="wordmark" href="/" aria-label="Sophia — на главную">sophia<span>.</span></Link>
-          <Button asChild variant="outline" size="sm"><Link href="/"><ArrowLeft size={16} aria-hidden="true" />Вернуться на главную</Link></Button>
+          <nav className={styles.headerActions} aria-label="Навигация Атласа">
+            <AccountNavigation />
+            <Button asChild variant="outline" size="sm"><Link href="/"><ArrowLeft size={16} aria-hidden="true" />Вернуться на главную</Link></Button>
+          </nav>
         </div>
       </header>
       <main id="main" className={styles.main}>

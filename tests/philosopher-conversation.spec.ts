@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { loginEntitledChat } from "./support/chat-account";
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -7,9 +8,11 @@ test.beforeEach(async ({ page }) => {
 
 for (const route of ["/", "/learn"]) {
   test(`conversation opens from ${route}, switches philosophers and keeps an unsent Plato draft`, async ({ page }) => {
+    await loginEntitledChat(page);
     const sentRequests: string[] = [];
     page.on("request", request => {
-      if (request.method() === "POST" || /api\.openai\.com|\/api\//.test(request.url())) sentRequests.push(request.url());
+      const url = new URL(request.url());
+      if (url.hostname === "api.openai.com" || url.pathname === "/api/philosopher-chat") sentRequests.push(request.url());
     });
     await page.goto(route);
     if (route === "/learn") await page.getByTestId("course-map-viewport").evaluate(node => { node.scrollLeft = 120; });
@@ -85,6 +88,7 @@ test("conversation fits narrow screens, contains keyboard focus and passes acces
 
 test("short landscape keeps the composer reachable by wheel and closing available", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 667, height: 375 });
+  await loginEntitledChat(page);
   await page.goto("/learn");
   const trigger = page.getByRole("button", { name: "Разговор с философом", exact: true });
   await trigger.click();

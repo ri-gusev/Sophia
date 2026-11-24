@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AccountNavigation } from "@/features/account/account-navigation";
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +24,7 @@ export function Header() {
           <Link href="/#how-it-works" onClick={closeMenu}>Как это работает</Link>
           <Link href="/learn" onClick={closeMenu}>Обучение</Link>
           <Link href="/atlas" onClick={closeMenu}>Атлас</Link>
-          <span className="login-wrap"><button disabled type="button" aria-describedby="login-note">Войти</button><span id="login-note">Скоро</span></span>
+          <AccountNavigation onNavigate={closeMenu} />
           <Button asChild size="sm"><Link href="/learn" onClick={closeMenu}>Начать бесплатно <ArrowUpRight size={16} aria-hidden="true" /></Link></Button>
         </nav>
       </div>

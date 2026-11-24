@@ -1,4 +1,4 @@
-import { SOCRATES } from "./dialogue-data";
+import { SOCRATES } from "./dialogue-data.ts";
 export const SOCRATIC_PRACTICE = {
   character: SOCRATES,
   lines: [

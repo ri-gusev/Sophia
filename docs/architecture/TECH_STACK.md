@@ -16,11 +16,11 @@
 | Three.js | Сфера Земли, текстура и освещение на `/atlas` | 0.187.0; `@types/three` 0.187.0 только для разработки |
 | React Three Fiber | Клиентский React-рендерер Three.js | 9.8.2; совместим с установленным React 19.3.1 |
 | Drei | OrbitControls для мыши и сенсорных жестов | 10.7.9; импорт только `core/OrbitControls` |
-| SQLite / `node:sqlite` | Единая локальная база исходных корпусов, вне UI | SQLite 3.53.4 в Node.js 24.22.1; без новой зависимости |
+| SQLite / `node:sqlite` | Корпус, журнал чата и аккаунты с прогрессом в отдельных файлах | SQLite 3.53.4 в Node.js 24.22.1 |
 | OpenAI Responses API | Серверный чат Платона и сжатие памяти | Встроенный fetch, `store:false`; по умолчанию `gpt-5.4-mini`, reasoning none |
 | OpenAI Embeddings + SQLite FTS5 | Индекс исторического Платона | `text-embedding-3-small`/1536, JSON vectors + exact cosine, без нового сервиса; реальный индекс создан с согласия пользователя. [Устройство](PLATO_RAG.md) |
 
-Окружение: Node.js >=24.0.0, npm; локально проверяется на Node.js 24.22.1 и npm 11.19.1. Минимум повышен при подключении серверного чата к встроенному `node:sqlite` (ADR-012); SDK OpenAI не добавлен. Зависимости закреплены точными версиями в `package.json` и `package-lock.json`. ESLint 9.39.5 с `eslint-config-next` 16.4.3 проверяется отдельно: build не запускает линтер. npm предупреждает об окончании поддержки ветки ESLint 9; миграция major требует проверки совместимости.
+Окружение требует Node.js >=24.7.0 из-за встроенного Argon2id. Локально проверяется на Node.js 24.22.1 и npm 11.19.1. Зависимости закреплены точными версиями в `package.json` и `package-lock.json`. ESLint 9.39.5 с `eslint-config-next` 16.4.3 проверяется отдельной командой.
 
 Manrope Variable 5.3.0 поставляется через Fontsource с локальными WOFF2, `font-display: swap` и Unicode ranges: браузер загружает нужные подмножества без Google Fonts. Playwright 1.64.1 и axe-core используются только при разработке для браузерных проверок. На 2026-11-08 `npm.cmd audit --omit=dev --json` сообщает 0 уязвимостей production-зависимостей; установка сообщает 8 moderate с учётом dev-зависимостей. Автоматические major-обновления вне задачи не выполнялись.
 

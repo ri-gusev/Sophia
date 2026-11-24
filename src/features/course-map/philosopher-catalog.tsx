@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { BookOpen, ChevronDown, X } from "lucide-react";
+import { useProgressSnapshot, useProgressStore } from "@/features/account/progress/client/lesson-progress-provider";
 import type { CatalogBlock, PhilosopherCatalog as CatalogData } from "./philosopher-catalog-data";
 import { INTRO_LESSONS, type IntroLessonId } from "../course-lesson/lesson-data";
 import { readCompletedLessons } from "../course-lesson/lesson-progress";
@@ -39,7 +40,15 @@ export function PhilosopherCatalog({ catalog, onClose, onSelectLesson, activeLes
   lessonPanelId: string;
 }) {
   const desktop = useSyncExternalStore(subscribe, desktopSnapshot, serverSnapshot);
-  const completed: CompletionStatuses = JSON.parse(useSyncExternalStore(subscribeLessonProgress, completionSnapshot, emptyCompletion));
+  const { accountId, sessionUnavailable } = useProgressStore();
+  const { progress } = useProgressSnapshot();
+  const isGuest = accountId === null && !sessionUnavailable;
+  const guest = useSyncExternalStore(subscribeLessonProgress, isGuest ? completionSnapshot : emptyCompletion, emptyCompletion);
+  const completed: CompletionStatuses = isGuest ? JSON.parse(guest) : {};
+  for (const lesson of progress?.lessons ?? []) {
+    if (lesson.completed) completed[lesson.lessonId] = "Пройдено";
+    else if (lesson.legacyCompleted) completed[lesson.lessonId] = "Завершено ранее";
+  }
   const desktopPanel = useRef<HTMLElement>(null);
   const mobileDialog = useRef<HTMLDialogElement>(null);
   const titleId = useId(), descriptionId = useId();

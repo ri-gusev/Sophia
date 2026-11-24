@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.7.0"
   },
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
@@ -14,6 +14,12 @@
     "test": "playwright test",
     "test:knowledge": "node --test scripts/knowledge/knowledge-store.test.ts",
     "test:chat": "node --test scripts/chat/*.test.ts",
+    "test:chat:integration": "node --test scripts/chat/route.integration.ts",
+    "test:accounts": "node --test scripts/accounts/auth.test.ts",
+    "test:progress": "node --test scripts/accounts/progress.test.ts",
+    "accounts:migrate": "node scripts/accounts/cli.ts migrate",
+    "accounts:grant-chat": "node scripts/accounts/cli.ts grant-ai-chat",
+    "accounts:revoke-chat": "node scripts/accounts/cli.ts revoke-ai-chat",
     "knowledge:import": "node scripts/knowledge/cli.ts import",
     "knowledge:status": "node scripts/knowledge/cli.ts status",
     "knowledge:verify": "node scripts/knowledge/cli.ts verify",

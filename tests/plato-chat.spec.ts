@@ -1,5 +1,6 @@
 import { expect, test, type Route } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { loginEntitledChat } from "./support/chat-account";
 
 type TestMessage = { role: "user" | "assistant"; content: string };
 type TestRequest = { philosopherId: string; message: string; memory: { summary: string; recent: TestMessage[] } };
@@ -9,9 +10,32 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
+test("the guest sees the Premium notice and free destinations without sending a chat request", async ({ page }) => {
+  const chatRequests: string[] = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname === "/api/philosopher-chat") chatRequests.push(request.method());
+  });
+  await page.goto("/");
+  const trigger = page.getByRole("button", { name: "Разговор с философом", exact: true });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
+  await expect(dialog).toContainText("AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать бесплатные уроки и философский атлас.");
+  await expect(dialog.getByRole("textbox")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Отправить сообщение" })).toHaveCount(0);
+  const course = dialog.getByRole("link", { name: "бесплатные уроки" });
+  await course.click();
+  await expect(page).toHaveURL(/\/learn$/);
+  await trigger.click();
+  await dialog.getByRole("link", { name: "философский атлас" }).click();
+  await expect(page).toHaveURL(/\/atlas$/);
+  expect(chatRequests).toEqual([]);
+});
+
 test("Plato sends bounded local context, renders replies safely and keeps the conversation across client navigation", async ({ page }, testInfo) => {
+  const account = await loginEntitledChat(page);
   const calls: TestRequest[] = [];
   await page.route("**/api/philosopher-chat", async route => {
+    expect(route.request().headers()["x-sophia-chat-scope"]).toBe(account);
     const body = route.request().postDataJSON() as TestRequest;
     calls.push(body);
     const message = calls.length === 1 ? `${ANSWER}\n<img src=x onerror="window.chatInjected=true">` : "Ещё один синтетический ответ.";
@@ -65,6 +89,7 @@ test("Plato sends bounded local context, renders replies safely and keeps the co
 });
 
 test("failed requests keep the question and can be retried without a fake assistant reply", async ({ page }) => {
+  await loginEntitledChat(page);
   let attempts = 0;
   await page.route("**/api/philosopher-chat", async route => {
     const body = route.request().postDataJSON() as TestRequest;
@@ -87,7 +112,32 @@ test("failed requests keep the question and can be retried without a fake assist
   expect(attempts).toBe(2);
 });
 
+test("a stale tab discards the conversation when a different account owns the session", async ({ page }) => {
+  await loginEntitledChat(page);
+  await page.route("**/api/philosopher-chat", route => route.fulfill({ json: {
+    message: ANSWER, memory: { summary: "", recent: [] }, sources: [],
+  } }), { times: 1 });
+  await page.goto("/learn");
+  await page.getByRole("button", { name: "Разговор с философом", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
+  const composer = dialog.getByRole("textbox", { name: "Сообщение", exact: true });
+  await composer.fill("Переписка первого аккаунта");
+  await composer.press("Enter");
+  await expect(dialog.getByRole("log")).toContainText(ANSWER);
+
+  // The real session rotates without sending any client navigation notification to this document.
+  await loginEntitledChat(page, true);
+  await composer.fill("Продолжение переписки");
+  const denied = page.waitForResponse(response => new URL(response.url()).pathname === "/api/philosopher-chat");
+  await composer.press("Enter");
+  expect((await denied).status()).toBe(403);
+  await expect(dialog.getByText(/AI-диалоги станут доступны/)).toBeVisible();
+  await expect(dialog.getByRole("log")).toHaveCount(0);
+  await expect(composer).toHaveCount(0);
+});
+
 test("pending replies can be cancelled without recording a completed turn", async ({ page }) => {
+  await loginEntitledChat(page);
   const runtimeErrors: string[] = [];
   page.on("pageerror", error => runtimeErrors.push(error.message));
   let waiting: Route | undefined;
@@ -110,16 +160,17 @@ test("pending replies can be cancelled without recording a completed turn", asyn
   await waiting?.abort().catch(() => {});
 });
 
-test("real API boundary rejects cross-origin and invalid philosopher requests before contacting the provider", async ({ request, baseURL }) => {
-  const body = { philosopherId: "aristotle", message: "Вопрос", memory: { summary: "", recent: [] } };
+test("real API boundary rejects foreign origins and unauthenticated requests", async ({ request, baseURL }) => {
+  const body = { philosopherId: "plato", message: "Вопрос", memory: { summary: "", recent: [] }, isPremium: true };
   const rejectedOrigin = await request.post("/api/philosopher-chat", { headers: { origin: "https://unrelated.example" }, data: body });
   expect(rejectedOrigin.status()).toBe(403);
-  const rejectedPhilosopher = await request.post("/api/philosopher-chat", { headers: { origin: baseURL! }, data: body });
-  expect(rejectedPhilosopher.status()).toBe(400);
-  expect(rejectedPhilosopher.headers()["cache-control"]).toBe("no-store");
+  const rejectedGuest = await request.post("/api/philosopher-chat", { headers: { origin: baseURL! }, data: body });
+  expect(rejectedGuest.status()).toBe(401);
+  expect(rejectedGuest.headers()["cache-control"]).toBe("no-store");
 });
 
 test("validated SSE delivery preserves structured user definitions for the next turn", async ({ page }) => {
+  await loginEntitledChat(page);
   const calls: (TestRequest & { memory: { dialogue?: unknown } })[] = [];
   const dialogue = { current_topic: "общение", user_theses: [], open_questions: [], contradictions: [], introduced_concepts: [{ concept: "смартфон", explanation: "Устройство для общения" }], dialogue_stage: "analogy" };
   await page.route("**/api/philosopher-chat", async route => {
@@ -145,6 +196,7 @@ test("validated SSE delivery preserves structured user definitions for the next 
 });
 
 test("safety handler replies are identified as Sophia rather than the historical persona", async ({ page }) => {
+  await loginEntitledChat(page);
   await page.route("**/api/philosopher-chat", route => route.fulfill({ json: { message: "Я не могу помочь с такими инструкциями. Можем обсудить этическую сторону вопроса.", memory: { summary: "", recent: [] }, sources: [], outcome: "safety" } }));
   await page.goto("/learn");
   await page.getByRole("button", { name: "Разговор с философом", exact: true }).click();
@@ -158,6 +210,7 @@ test("safety handler replies are identified as Sophia rather than the historical
 
 
 test("composer limits typing and paste to 50 words", async ({ page }) => {
+  await loginEntitledChat(page);
   await page.goto("/learn");
   await page.getByRole("button", { name: "Разговор с философом", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
