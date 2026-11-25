@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { accountTestSettings } from "./support/account-test-settings";
-import { createTestAccount, loginTestAccount, testEmail, testMailLink, testPassword as password } from "./support/accounts";
+import { createTestAccount, loginTestAccount, postAccount, testEmail, testMailLink, testPassword as password } from "./support/accounts";
 
 async function enterPassword(page: Page, value = password) {
   await page.getByLabel("Пароль", { exact: true }).fill(value);
@@ -91,6 +91,37 @@ test("keyboard validation links errors to the fields and focuses the first inval
   await expect(name).toHaveAttribute("aria-invalid", "true");
   await expect(name).toHaveAccessibleDescription(/имя/i);
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Проверьте отмеченные поля.");
+});
+
+test("registration explains the email restriction and rejects unsupported domains through the form and API", async ({ page }) => {
+  const message = "На данный момент регистрация доступна только с использованием российских почтовых сервисов: Яндекс, Mail.ru, Рамблер и VK Почта";
+  const displayName = "Мария Петрова";
+  await page.goto("/register");
+  await page.getByRole("main").getByRole("link", { name: "Пользовательское соглашение" }).click();
+  await expect(page).toHaveURL(/\/terms$/);
+  await expect(page.getByRole("heading", { name: "Пользовательское соглашение Sophia" })).toBeVisible();
+  await expect(page.getByRole("main")).toContainText("yandex.ru, ya.ru, mail.ru");
+  await page.goBack();
+
+  const intercepted: string[] = [];
+  await page.route("**/api/account/register", async route => {
+    intercepted.push(route.request().url());
+    await route.abort();
+  });
+  await page.getByLabel("Отображаемое имя").fill(displayName);
+  const field = page.getByLabel("Email");
+  await field.fill("user@gmail.com");
+  await enterPassword(page);
+  await page.getByRole("button", { name: "Создать аккаунт" }).click();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveAccessibleDescription(message);
+  expect(intercepted).toEqual([]);
+
+  const response = await postAccount(page.request, "register", {
+    displayName, email: "user@sub.mail.ru", password, confirmPassword: password,
+  });
+  expect(response.status()).toBe(400);
+  expect(await response.json()).toEqual({ error: message });
 });
 
 test("registration and new password fields cap pasted text at fifty characters", async ({ page, context }) => {

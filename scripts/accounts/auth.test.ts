@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +9,7 @@ import { DatabaseSync } from "node:sqlite";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
-import { hashPassword } from "../../src/features/account/server/credentials.ts";
+import { hashPassword, newToken, tokenHash } from "../../src/features/account/server/credentials.ts";
 import { readJson } from "../../src/features/account/server/http.ts";
 import { accountMailTransport } from "../../src/features/account/server/mail.ts";
 import { canUseAiChat, findSession } from "../../src/features/account/server/store.ts";
@@ -16,10 +17,12 @@ import { createEmailService } from "../../src/lib/server/email-service.ts";
 
 const directory = await mkdtemp(join(tmpdir(), "sophia-accounts-"));
 const outbox = join(directory, "outbox.jsonl");
+const readOutbox = () => existsSync(outbox) ? readFile(outbox, "utf8") : Promise.resolve("");
 const origin = "http://127.0.0.1:3391";
 const password = "Съешь ещё этих мягких булок";
 const newPassword = "A different long passphrase";
 const pair = { password, confirmPassword: password };
+const unsupportedEmail = "На данный момент регистрация доступна только с использованием российских почтовых сервисов: Яндекс, Mail.ru, Рамблер и VK Почта";
 Object.assign(process.env, {
   ACCOUNT_MODE: "local", ACCOUNT_ORIGIN: origin, ACCOUNT_DB_PATH: join(directory, "account.sqlite"),
   ACCOUNT_MAIL_TRANSPORT: "test", ACCOUNT_TEST_OUTBOX: outbox,
@@ -72,7 +75,7 @@ async function activate(email: string) {
 const login = (email: string, candidate = password, token?: string) => post("login", { email, password: candidate }, { token });
 
 test("validates registration before accepting data", async () => {
-  const good = { email: "valid@example.net", displayName: "София", ...pair };
+  const good = { email: "valid@mail.ru", displayName: "София", ...pair };
   for (const change of [{ email: "wrong" }, { displayName: "" }, { password: "short" },
     { password: "x".repeat(129) }, { confirmPassword: "different" }]) {
     assert.equal((await post("register", { ...good, ...change })).status, 400);
@@ -80,14 +83,59 @@ test("validates registration before accepting data", async () => {
   assert.equal((await post("register", {})).status, 400);
 });
 
+test("accepts each approved mail domain with whitespace and uppercase normalized", async () => {
+  for (const domain of ["yandex.ru", "ya.ru", "mail.ru", "inbox.ru", "list.ru", "bk.ru", "internet.ru",
+    "rambler.ru", "ro.ru", "lenta.ru", "autorambler.ru", "myrambler.ru", "vk.com", "vk.ru"]) {
+    accountDb().exec("DELETE FROM account_rate_limits");
+    const response = await post("register", { email: ` Domain-Fixture@${domain.toUpperCase()} `, displayName: "София", ...pair });
+    assert.equal(response.status, 200, domain);
+    assert.ok(await tokenFromMail(`domain-fixture@${domain}`, "verify"));
+  }
+});
+
+test("rejects unsupported domains before any database write or email delivery", async () => {
+  const before = await readOutbox();
+  const db = accountDb();
+  const countChallenges = () => db.prepare("SELECT count(*) AS count FROM account_challenges").get()?.count;
+  const countBefore = countChallenges();
+  for (const email of ["person@gmail.com", "person@outlook.com", "person@xmail.ru", "person@sub.mail.ru",
+    "person@mail.ru.example.org", "person@notmail.ru", "person@maіl.ru", "person@ｍail.ru", "person@mail。ru"]) {
+    const response = await post("register", { email, displayName: "София", ...pair });
+    assert.equal(response.status, 400, email);
+    assert.deepEqual(await response.json(), { error: unsupportedEmail }, email);
+  }
+  for (const email of ["person@other.org@mail.ru", "person@mail.ru.", "person@mail.ru/path", "person@mail.ru:443"]) {
+    assert.equal((await post("register", { email, displayName: "София", ...pair })).status, 400, email);
+  }
+  assert.equal(countChallenges(), countBefore);
+  assert.equal(db.prepare("SELECT 1 FROM account_rate_limits").get(), undefined);
+  assert.equal(await readOutbox(), before);
+});
+
+test("a pending registration on an unsupported domain cannot resend or activate", async () => {
+  const email = "pending-before-policy@example.net";
+  const token = newToken();
+  const db = accountDb();
+  db.prepare("INSERT INTO account_challenges VALUES (?, 'verify', ?, NULL, ?, ?)")
+    .run(tokenHash(token), email, "София", Date.now() + 60_000);
+  const before = await readOutbox();
+  for (const response of [await post("resend-verification", { email }), await post("verify", { token, ...pair })]) {
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: unsupportedEmail });
+  }
+  assert.equal(db.prepare("SELECT 1 FROM account_users WHERE email = ?").get(email), undefined);
+  assert.equal(db.prepare("SELECT count(*) AS count FROM account_challenges WHERE email = ?").get(email)?.count, 1);
+  assert.equal(await readOutbox(), before);
+});
+
 test("accepts eight-character passwords and caps new account fields at fifty characters", async () => {
-  const email = "short-pass@example.net";
+  const email = "short-pass@mail.ru";
   const draft = { email, displayName: "a".repeat(50), password: "12345678", confirmPassword: "12345678" };
   for (const change of [
     { password: "1234567", confirmPassword: "1234567" },
     { password: "a".repeat(51), confirmPassword: "a".repeat(51) },
     { displayName: "a".repeat(51) },
-    { email: "a".repeat(40) + "@example.net" },
+    { email: "a".repeat(44) + "@mail.ru" },
   ]) assert.equal((await post("register", { ...draft, ...change })).status, 400);
   assert.equal((await post("register", draft)).status, 200);
   const token = await tokenFromMail(email, "verify");
@@ -97,7 +145,7 @@ test("accepts eight-character passwords and caps new account fields at fifty cha
   assert.equal((await login(email, draft.password)).status, 200);
 });
 
-test("previously issued long credentials still work for sign-in and recovery", async () => {
+test("existing long credentials and an unsupported email still work for sign-in and recovery", async () => {
   const email = "long-identity".repeat(4) + "@example.net";
   const previousPassword = "Long passphrase used before the field limit ".repeat(2);
   const now = Date.now();
@@ -105,12 +153,14 @@ test("previously issued long credentials still work for sign-in and recovery", a
     .run("long-credentials-fixture", email, "София", await hashPassword(previousPassword), now, now, now);
   assert.equal((await login(email, previousPassword)).status, 200);
   assert.equal((await post("forgot", { email })).status, 200);
-  assert.ok(await tokenFromMail(email, "reset"));
+  const token = await tokenFromMail(email, "reset");
+  assert.equal((await post("reset", { token, password: newPassword, confirmPassword: newPassword })).status, 200);
+  assert.equal((await login(email, newPassword)).status, 200);
 });
 
 test("registration normalizes email and activation requires a fresh credential chosen by the email owner", async () => {
-  const email = "owner@example.net";
-  assert.equal((await post("register", { email: " Owner@EXAMPLE.NET ", displayName: "Первое имя", ...pair })).status, 200);
+  const email = "owner@mail.ru";
+  assert.equal((await post("register", { email: " Owner@MAIL.RU ", displayName: "Первое имя", ...pair })).status, 200);
   assert.equal((await login(email)).status, 401);
   const token = await tokenFromMail(email, "verify");
   const attempts = await Promise.all([1, 2].map(() => post("verify", { token, password: newPassword, confirmPassword: newPassword })));
@@ -124,7 +174,7 @@ test("registration normalizes email and activation requires a fresh credential c
 });
 
 test("sessions rotate at sign-in, expire, and cannot be replayed after logout", async () => {
-  const email = "session@example.net";
+  const email = "session@mail.ru";
   await activate(email);
   const before = cookieFrom(await login(email));
   const token = cookieFrom(await login(email, password, before));
@@ -138,12 +188,12 @@ test("sessions rotate at sign-in, expire, and cannot be replayed after logout", 
 });
 
 test("resends verification for a pending address within the registration quota", async () => {
-  const email = "resend@example.net";
+  const email = "resend@mail.ru";
   const registration = { email, displayName: "Исходное имя", ...pair };
   assert.equal((await post("register", registration)).status, 200);
   const initial = await tokenFromMail(email, "verify");
   assert.equal((await post("resend-verification", { email }, { origin: "https://other.example" })).status, 403);
-  const resent = await post("resend-verification", { email: " RESEND@EXAMPLE.NET " });
+  const resent = await post("resend-verification", { email: " RESEND@MAIL.RU " });
   assert.equal(resent.status, 200);
   const acknowledged = await resent.json();
   const renewed = await tokenFromMail(email, "verify");
@@ -153,7 +203,7 @@ test("resends verification for a pending address within the registration quota",
   assert.equal(accountDb().prepare("SELECT display_name FROM account_users WHERE email = ?").get(email)?.display_name, registration.displayName);
 
   const before = await readFile(outbox, "utf8");
-  for (const address of [email, "unknown-resend@example.net"]) {
+  for (const address of [email, "unknown-resend@mail.ru"]) {
     const response = await post("resend-verification", { email: address });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), acknowledged);
@@ -165,7 +215,7 @@ test("resends verification for a pending address within the registration quota",
 });
 
 test("password reset responds generically, consumes tokens atomically, and revokes all sessions", async () => {
-  const email = "reset@example.net";
+  const email = "reset@mail.ru";
   await activate(email);
   const first = cookieFrom(await login(email));
   const second = cookieFrom(await login(email));
@@ -182,7 +232,7 @@ test("password reset responds generically, consumes tokens atomically, and revok
 });
 
 test("blocks cross-origin and stale-account mutations", async () => {
-  const email = "profile@example.net";
+  const email = "profile@mail.ru";
   await activate(email);
   const token = cookieFrom(await login(email));
   const user = findSession(token);
@@ -190,7 +240,10 @@ test("blocks cross-origin and stale-account mutations", async () => {
   assert.equal((await post("profile", { accountId: user.id, displayName: "Чужое имя" }, { token, origin: "https://attacker.example" })).status, 403);
   assert.equal((await post("profile", { accountId: "other-user", displayName: "Чужое имя" }, { token })).status, 409);
   assert.equal((await post("profile", { accountId: user.id, displayName: "Новое имя", ai_chat: true }, { token })).status, 400);
+  assert.equal((await post("profile", { accountId: user.id, displayName: "Новое имя", email: "other@gmail.com" }, { token })).status, 400);
+  assert.equal((await post("change-email", { accountId: user.id, email: "other@gmail.com" }, { token })).status, 404);
   assert.equal(canUseAiChat(user.id), false);
+  assert.equal(findSession(token)?.email, email);
   assert.equal(findSession(token)?.displayName, "София");
   assert.equal((await post("profile", { accountId: user.id, displayName: "Новое имя" }, { token })).status, 200);
   assert.equal(findSession(token)?.displayName, "Новое имя");
@@ -204,7 +257,7 @@ test("limits repeated password attempts", async () => {
 });
 
 test("registration fails safely when configured test delivery fails", async () => {
-  const email = "no-delivery@example.net";
+  const email = "no-delivery@mail.ru";
   process.env.ACCOUNT_TEST_OUTBOX = directory;
   try {
     assert.equal((await post("register", { email, displayName: "София", ...pair })).status, 503);
@@ -316,7 +369,7 @@ test("verifies SMTP with required authentication and exposes only safe error cod
 });
 
 test("fails closed without verified proxy headers and uses a host-only secure cookie over HTTPS", async () => {
-  const email = "proxy@example.net";
+  const email = "proxy@mail.ru";
   await activate(email);
   const proxyOrigin = "https://sophia.example.net";
   const proxySecret = "d".repeat(64);
@@ -341,7 +394,7 @@ test("fails closed without verified proxy headers and uses a host-only secure co
 });
 
 test("stores only session and challenge token digests and a salted Argon2id password hash", async () => {
-  const email = "hashes@example.net";
+  const email = "hashes@mail.ru";
   const db = accountDb();
   await post("register", { email, displayName: "София", ...pair });
   const token = await tokenFromMail(email, "verify");
@@ -371,7 +424,7 @@ test("rejects a different database and never runs account migrations on it", () 
 });
 
 test("rejects expired verification links and tokens from the wrong operation", async () => {
-  const email = "expired@example.net";
+  const email = "expired@mail.ru";
   await post("register", { email, displayName: "София", ...pair });
   const token = await tokenFromMail(email, "verify");
   assert.equal((await post("reset", { token, ...pair })).status, 400);
@@ -417,7 +470,7 @@ test("cancels stalled or disconnected JSON request bodies", async () => {
 });
 
 test("a local operator can migrate, grant and revoke AI access for a verified account", async () => {
-  const email = "entitled@example.net";
+  const email = "entitled@mail.ru";
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);

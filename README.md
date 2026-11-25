@@ -83,6 +83,7 @@ npm.cmd test
 | [DECISIONS.md](docs/architecture/DECISIONS.md) | Журнал принятых архитектурных решений |
 | [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md) | Единая база корпусов, импорт, версии и сохранность |
 | [ACCOUNTS_AND_PROGRESS.md](docs/architecture/ACCOUNTS_AND_PROGRESS.md) | Авторизация, схема аккаунтов и правила синхронизации |
+| [CROSS_BORDER_DATA_TRANSFERS.md](docs/audits/CROSS_BORDER_DATA_TRANSFERS.md) | Проверка почтовых доменов и аудит потенциальных трансграничных передач |
 | [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md) | API чата, память вкладки, лимиты и безопасность |
 | [PLATO_RAG.md](docs/architecture/PLATO_RAG.md) | Историческая роль, семантический индекс, safety, проверка ответов и запуск |
 | [PLATO_DIALOGUE.md](docs/architecture/PLATO_DIALOGUE.md) | Первое лицо, сократическая беседа, generation policy, проверка стиля и реальные сценарии |

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "@fontsource-variable/manrope";
 import "./globals.css";
 import { PlatoChatProvider } from "@/features/philosopher-conversation/plato-chat-provider";
@@ -37,6 +38,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <div className="site-footer-inner container">
           <p>Поддержка и обращения по персональным данным</p>
           <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+          <Link href="/terms">Пользовательское соглашение</Link>
         </div>
       </footer>
     </body>

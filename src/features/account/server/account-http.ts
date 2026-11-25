@@ -7,7 +7,7 @@ import { accountMailTransport } from "./mail.ts";
 import { limitAccountRequests } from "./rate-limits.ts";
 import {
   ACCOUNT_SESSION_AGE, challengeExpired, checkChallenge, consumeChallenge, credentialsForEmail, deleteChallenge,
-  invalidLogin, issueChallenge, replaceSession, revokeSession, updateDisplayName,
+  invalidLogin, issueChallenge, replaceSession, requireApprovedAccountEmail, revokeSession, updateDisplayName,
 } from "./store.ts";
 
 const fields = {
@@ -81,6 +81,7 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
   switch (action) {
     case "register": {
       const email = emailField(body.email, ACCOUNT_LIMITS.inputMax);
+      requireApprovedAccountEmail(body.email);
       const displayName = nameField(body.displayName);
       passwordField(body);
       const send = accountMailTransport();
@@ -106,8 +107,9 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
     case "forgot":
     case "resend-verification": {
       const email = emailField(body.email);
-      const send = accountMailTransport();
       const recovery = action === "forgot";
+      if (!recovery) requireApprovedAccountEmail(body.email);
+      const send = accountMailTransport();
       const kind = recovery ? "reset" : "verify";
       limitAccountRequests(recovery ? "forgot" : "register", network, email);
       // Schedule the same work boundary for both valid and unknown addresses.

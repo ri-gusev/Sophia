@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { AccountUser } from "../account-contract.ts";
+import { UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, type AccountUser } from "../account-contract.ts";
 import { accountDb, accountTransaction } from "./database.ts";
 import { newToken, tokenHash, validToken } from "./credentials.ts";
 import { AccountError } from "./errors.ts";
@@ -8,6 +8,12 @@ import { AccountError } from "./errors.ts";
 export const ACCOUNT_SESSION_AGE = 30 * 24 * 60 * 60 * 1000;
 export const challengeExpired = () => new AccountError(400, "Ссылка недействительна или её срок истёк. Запроси новую ссылку.");
 export const invalidLogin = () => new AccountError(401, "Проверь email, пароль и подтверждение почты.");
+
+export function requireApprovedAccountEmail(email: unknown): void {
+  if (typeof email !== "string" || !isApprovedAccountEmail(email)) {
+    throw new AccountError(400, UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE);
+  }
+}
 
 const USER_COLUMNS = `u.id, u.email, u.display_name AS displayName,
   u.created_at AS createdAt, u.email_verified_at AS emailVerifiedAt`;
@@ -74,21 +80,23 @@ export function deleteChallenge(token: string): void {
   accountDb().prepare("DELETE FROM account_challenges WHERE token_hash = ?").run(tokenHash(token));
 }
 
-function challengeIn(db: DatabaseSync, kind: ChallengeKind, token: string, now: number): Challenge | undefined {
-  return db.prepare(`SELECT email, user_id AS userId, display_name AS displayName FROM account_challenges
+function requireChallenge(db: DatabaseSync, kind: ChallengeKind, token: string, now: number): Challenge {
+  const challenge = db.prepare(`SELECT email, user_id AS userId, display_name AS displayName FROM account_challenges
     WHERE token_hash = ? AND kind = ? AND expires_at > ?`).get(tokenHash(token), kind, now) as Challenge | undefined;
+  if (!challenge) throw challengeExpired();
+  if (kind === "verify") requireApprovedAccountEmail(challenge.email);
+  return challenge;
 }
 
 export function checkChallenge(kind: ChallengeKind, token: string): void {
-  if (!challengeIn(accountDb(), kind, token, Date.now())) throw challengeExpired();
+  requireChallenge(accountDb(), kind, token, Date.now());
 }
 
 export function consumeChallenge(kind: ChallengeKind, token: string, passwordHash: string): void {
   const db = accountDb();
   accountTransaction(db, () => {
     const now = Date.now();
-    const challenge = challengeIn(db, kind, token, now);
-    if (!challenge) throw challengeExpired();
+    const challenge = requireChallenge(db, kind, token, now);
     if (kind === "verify") {
       if (!challenge.displayName || credentialsIn(db, challenge.email)) throw challengeExpired();
       db.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)")

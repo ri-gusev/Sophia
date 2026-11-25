@@ -4,7 +4,7 @@ import { expect, type APIRequestContext } from "@playwright/test";
 import { accountTestSettings } from "./account-test-settings";
 
 export const testPassword = "Длинная и удобная парольная фраза";
-export const testEmail = () => `${randomUUID()}@example.test`;
+export const testEmail = () => `${randomUUID()}@mail.ru`;
 
 export function postAccount(request: APIRequestContext, action: string, data: object) {
   return request.post(`/api/account/${action}`, { data, headers: { origin: accountTestSettings().origin } });

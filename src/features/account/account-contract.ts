@@ -11,8 +11,27 @@ export const ACCOUNT_LIMITS = {
   passwordMin: 8,
 } as const;
 
+export const APPROVED_ACCOUNT_EMAIL_DOMAINS = [
+  "yandex.ru", "ya.ru",
+  "mail.ru", "inbox.ru", "list.ru", "bk.ru", "internet.ru",
+  "rambler.ru", "ro.ru", "lenta.ru", "autorambler.ru", "myrambler.ru",
+  "vk.com", "vk.ru",
+] as const;
+
+export const UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE =
+  "На данный момент регистрация доступна только с использованием российских почтовых сервисов: Яндекс, Mail.ru, Рамблер и VK Почта";
+
+const approvedAccountEmailDomains = new Set<string>(APPROVED_ACCOUNT_EMAIL_DOMAINS);
 const invalidText = /[\p{Cc}\p{Cs}]/u;
 const existingPasswordMax = 128;
+
+export function isApprovedAccountEmail(email: string): boolean {
+  const address = email.trim();
+  const separator = address.indexOf("@");
+  const domain = address.slice(separator + 1);
+  // Use the submitted ASCII domain before URL normalization can fold lookalike characters.
+  return separator > 0 && /^[A-Za-z0-9.-]+$/.test(domain) && approvedAccountEmailDomains.has(domain.toLowerCase());
+}
 
 export function normalizeDisplayName(value: unknown): string | null {
   if (typeof value !== "string" || value.length > ACCOUNT_LIMITS.inputMax || invalidText.test(value) || /\p{Bidi_Control}/u.test(value)) return null;

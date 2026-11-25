@@ -105,7 +105,7 @@ ACCOUNT_MAIL_TRANSPORT=test
 ACCOUNT_TEST_OUTBOX=D:/Sophia/storage/accounts/dev-outbox.jsonl
 ```
 
-После регистрации скопируйте ссылку из последней записи тестового почтового ящика и откройте её в том же браузере.
+Для новой регистрации используйте адрес из разрешённого списка, например `test-user@mail.ru`. При файловом транспорте письмо пишется только в тестовый исходящий файл. Скопируйте ссылку из его последней записи и откройте её в том же браузере.
 
 ```powershell
 (Get-Content -LiteralPath storage/accounts/dev-outbox.jsonl -Tail 1 | ConvertFrom-Json).url

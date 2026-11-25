@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { accountRequest, navigateAfterAccountChange } from "./account-client";
-import { ACCOUNT_LIMITS, isLoginPassword, normalizeDisplayName, normalizeEmail, passwordError, passwordPairError } from "./account-contract";
+import {
+  ACCOUNT_LIMITS, UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, isLoginPassword,
+  normalizeDisplayName, normalizeEmail, passwordError, passwordPairError,
+} from "./account-contract";
 import styles from "./account.module.css";
 
 type Mode = "register" | "login" | "forgot" | "verify" | "reset";
@@ -48,8 +51,12 @@ function validate(mode: Mode, form: Partial<Record<Field, string>>) {
   if (mode === "register" && !normalizeDisplayName(form.displayName)) {
     errors.displayName = `Введите имя длиной до ${ACCOUNT_LIMITS.inputMax} символов.`;
   }
-  if (mode === "register" && !normalizeEmail(form.email, ACCOUNT_LIMITS.inputMax)) {
-    errors.email = `Введите корректный email длиной до ${ACCOUNT_LIMITS.inputMax} символов.`;
+  if (mode === "register") {
+    if (!form.email || !normalizeEmail(form.email, ACCOUNT_LIMITS.inputMax)) {
+      errors.email = `Введите корректный email длиной до ${ACCOUNT_LIMITS.inputMax} символов.`;
+    } else if (!isApprovedAccountEmail(form.email)) {
+      errors.email = UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE;
+    }
   }
   if ((mode === "login" || mode === "forgot") && !normalizeEmail(form.email)) {
     errors.email = "Введите корректный email.";
@@ -175,6 +182,7 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
           <Link href="/forgot-password">Забыли пароль?</Link>
           <p className={styles.registrationPrompt}>Нет аккаунта? <Link href="/register">Зарегистрироваться</Link></p>
         </> : <Link href="/login">Войти</Link>}
+        {mode === "register" && <Link href="/terms">Пользовательское соглашение</Link>}
         {mode === "verify" && !done && <Link href="/register">Запросить новую ссылку</Link>}
         {mode === "reset" && !done && <Link href="/forgot-password">Запросить новую ссылку</Link>}
       </div>

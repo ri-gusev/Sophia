@@ -139,7 +139,7 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
       }, body: JSON.stringify({ philosopherId: "plato", message: "Что такое справедливость?", memory: EMPTY_CHAT_MEMORY, ...options.body }),
     });
   }
-  const accountData = { email: "chat-route@example.test", displayName: "Читатель", password, confirmPassword: password };
+  const accountData = { email: "chat-route@mail.ru", displayName: "Читатель", password, confirmPassword: password };
   const denied = await chat({ body: { isPremium: true, role: "admin", userId: "somebody" } });
   assert.equal(denied.status, 401);
   assert.equal(denied.headers.get("cache-control"), "no-store");
