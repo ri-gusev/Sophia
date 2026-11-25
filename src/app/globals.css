@@ -71,6 +71,10 @@ section { scroll-margin-top: 110px; }
 .account-nav-error { position: absolute; z-index: 1; top: 100%; right: 0; width: min(230px, 70vw); padding: 10px; color: #872f2a; background: white; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; }
 .menu-toggle { display: none; border: 1px solid var(--line); border-radius: 12px; width: 44px; height: 44px; align-items: center; justify-content: center; background: #fff; }
 
+.site-footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.5; }
+.site-footer-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; padding-block: 12px; }
+.site-footer a { display: inline-flex; align-items: center; min-height: 44px; color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
+
 /* Hero / a small window into a future learning space */
 .hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 36px; padding-block: 77px 72px; min-height: 690px; }
 .hero::before { content: ""; position: absolute; z-index: -1; width: 85%; height: 95%; top: 0; right: -4%; background: radial-gradient(ellipse at 55% 45%, #ddf2d5 0%, #e1eee0 25%, transparent 67%); filter: blur(30px); pointer-events: none; }

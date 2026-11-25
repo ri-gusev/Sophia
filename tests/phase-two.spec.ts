@@ -25,7 +25,8 @@ test("landing contains exactly three agreed sections and three direction cards",
     await expect(card.getByRole("link")).toHaveCount(0);
     await expect(card.getByRole("button")).toHaveCount(0);
   }
-  await expect(page.locator("footer")).toHaveCount(0);
+  const contact = page.getByRole("contentinfo").getByRole("link", { name: "support.sophia@ro.ru", exact: true });
+  await expect(contact).toHaveAttribute("href", "mailto:support.sophia@ro.ru");
 });
 
 test("every philosophical answer receives a neutral explanation and can be retried", async ({ page }) => {

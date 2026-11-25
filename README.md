@@ -62,6 +62,10 @@ npm.cmd test
 
 Браузерные тесты запускают два локальных production-сервера с включённым и выключенным чатом. Перед ними нужна сборка. Playwright проверяет Chromium в настольном и мобильном профилях. Проверки и параметры запуска описаны в [TESTING.md](docs/development/TESTING.md).
 
+## Контакты
+
+Официальная почта поддержки Sophia и обращений по персональным данным — [support.sophia@ro.ru](mailto:support.sophia@ro.ru).
+
 ## Документация
 
 Для базы корпусов: `npm.cmd run knowledge:status`, `npm.cmd run knowledge:verify -- --document plato-corpus`, `npm.cmd run test:knowledge`. Импорт, связи философов/тем и бэкап — в [KNOWLEDGE_STORAGE.md](docs/architecture/KNOWLEDGE_STORAGE.md). База и исходники в `storage/knowledge/` исключены из Git; чат читает их только на сервере. Клонирование репозитория не переносит корпус.

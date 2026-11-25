@@ -8,6 +8,8 @@ import { LessonProgressProvider } from "@/features/account/progress/client/lesso
 import { canUseAiChat } from "@/features/account/server/session";
 import { currentAccount } from "@/features/account/server/viewer";
 
+const SUPPORT_EMAIL = "support.sophia@ro.ru";
+
 export const metadata: Metadata = {
   title: "Sophia — Большие вопросы. Маленькие уроки.",
   description: "Философия начинается с любопытства. Попробуй интерактивный вопрос и познакомься с идеей Sophia — платформы для самостоятельного мышления.",
@@ -31,6 +33,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </PlatoChatProvider>
         </LessonProgressProvider>
       </AccountViewer>
+      <footer className="site-footer">
+        <div className="site-footer-inner container">
+          <p>Поддержка и обращения по персональным данным</p>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+        </div>
+      </footer>
     </body>
   </html>;
 }
