@@ -12,6 +12,7 @@ import { hashPassword } from "../../src/features/account/server/credentials.ts";
 import { readJson } from "../../src/features/account/server/http.ts";
 import { accountMailTransport } from "../../src/features/account/server/mail.ts";
 import { canUseAiChat, findSession } from "../../src/features/account/server/store.ts";
+import { createEmailService } from "../../src/lib/server/email-service.ts";
 
 const directory = await mkdtemp(join(tmpdir(), "sophia-accounts-"));
 const outbox = join(directory, "outbox.jsonl");
@@ -287,6 +288,30 @@ test("hides the SMTP server response when delivery fails", async ({ mock }) => {
       accountMailTransport()({ to: "recipient@example.net", kind: "verify", url: "https://sophia.example.net/verify-email" }),
       { message: "SMTP delivery failed" },
     );
+  });
+});
+
+test("verifies SMTP with required authentication and exposes only safe error codes", async ({ mock }) => {
+  await withSmtpSettings(async () => {
+    const verify = mock.method(SMTPTransport.prototype, "verify", function (this: SMTPTransport) {
+      assert.equal(this.options.forceAuth, true);
+      assert.equal(this.options.requireTLS, true);
+      assert.equal(this.options.tls?.rejectUnauthorized, true);
+      if (verify.mock.callCount() === 0) return Promise.resolve(true as const);
+      return Promise.reject(Object.assign(new Error(smtpSettings.SMTP_PASSWORD), {
+        code: "EAUTH", response: `535 5.7.8 ${smtpSettings.SMTP_PASSWORD}`, responseCode: 535,
+      }));
+    });
+    const email = createEmailService();
+    assert.ok(email);
+    await email.verify();
+    await assert.rejects(email.verify(), error => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, "SMTP verification failed");
+      assert.deepEqual({ ...error }, { code: "EAUTH", status: "535 5.7.8" });
+      assert.equal(error.cause, undefined);
+      return true;
+    });
   });
 });
 
