@@ -73,7 +73,10 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await page.setViewportSize(viewport);
   await page.reload();
   await expect(mailings.getByRole("status")).toHaveText("Рассылки отключены.");
-  await expect(mailings.getByRole("button")).toHaveCount(0);
+  await mailings.getByRole("button", { name: "Дать согласие на рассылки" }).click();
+  await expect(mailings.getByRole("status")).toHaveText("Согласие на рассылки предоставлено.");
+  await page.reload();
+  await expect(mailings.getByRole("button", { name: "Отозвать согласие на рассылки" })).toBeVisible();
   await expect(page.getByRole("main").getByText(address)).toBeVisible();
   await page.getByRole("button", { name: "Изменить имя" }).click();
   await page.getByLabel("Отображаемое имя").fill("Мария Соколова");

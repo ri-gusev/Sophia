@@ -59,3 +59,17 @@ export const ACCOUNT_MAILING_CONSENT_SCHEMA = `
     withdrawn_at INTEGER CHECK (withdrawn_at >= confirmed_at)
   ) STRICT, WITHOUT ROWID;
 `;
+
+export const ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA = `
+  CREATE TABLE account_profile_mailing_consents (
+    id INTEGER PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES account_users(id) ON DELETE CASCADE,
+    version TEXT NOT NULL,
+    document TEXT NOT NULL,
+    confirmed_at INTEGER NOT NULL,
+    withdrawn_at INTEGER CHECK (withdrawn_at >= confirmed_at)
+  ) STRICT;
+  CREATE INDEX account_profile_mailing_consents_user ON account_profile_mailing_consents(user_id);
+  CREATE UNIQUE INDEX account_profile_mailing_consents_active
+    ON account_profile_mailing_consents(user_id) WHERE withdrawn_at IS NULL;
+`;

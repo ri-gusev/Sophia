@@ -157,14 +157,20 @@ function checkAccount(user: AccountUser | null, expected: unknown): void {
   if (user && user.id !== expected) throw new AccountError(409, "Аккаунт в этой вкладке изменился. Обнови страницу.");
 }
 
-export function hasMailingConsent(userId: string): boolean {
-  return Boolean(accountDb().prepare(`SELECT 1 FROM account_mailing_consents AS m
+function mailingConsentIn(db: DatabaseSync, userId: string): boolean {
+  return Boolean(db.prepare(`SELECT 1 FROM account_mailing_consents AS m
     JOIN account_registrations AS r ON r.id = m.registration_id
-    WHERE r.user_id = ? AND m.withdrawn_at IS NULL`).get(userId));
+    WHERE r.user_id = ? AND m.withdrawn_at IS NULL
+    UNION ALL
+    SELECT 1 FROM account_profile_mailing_consents WHERE user_id = ? AND withdrawn_at IS NULL`).get(userId, userId));
 }
 
-export function withdrawMailingConsent(token: unknown, expected: unknown): void {
-  const unauthenticated = () => new AccountError(401, "Войди в аккаунт, чтобы отозвать согласие на рассылки.");
+export function hasMailingConsent(userId: string): boolean {
+  return mailingConsentIn(accountDb(), userId);
+}
+
+export function setProfileMailingConsent(token: unknown, expected: unknown, revision: LegalRevision | null): void {
+  const unauthenticated = () => new AccountError(401, "Войди в аккаунт, чтобы изменить согласие на рассылки.");
   if (!validToken(token)) throw unauthenticated();
   const db = accountDb();
   accountTransaction(db, () => {
@@ -172,9 +178,18 @@ export function withdrawMailingConsent(token: unknown, expected: unknown): void 
     const user = sessionIn(db, token, now);
     if (!user) throw unauthenticated();
     checkAccount(user, expected);
+    if (revision) {
+      if (!mailingConsentIn(db, user.id)) {
+        db.prepare(`INSERT INTO account_profile_mailing_consents (user_id, version, document, confirmed_at)
+          VALUES (?, ?, ?, ?)`).run(user.id, revision.version, JSON.stringify(revision), now);
+      }
+      return;
+    }
     db.prepare(`UPDATE account_mailing_consents SET withdrawn_at = MAX(confirmed_at, ?)
       WHERE registration_id = (SELECT id FROM account_registrations WHERE user_id = ?)
         AND withdrawn_at IS NULL`).run(now, user.id);
+    db.prepare(`UPDATE account_profile_mailing_consents SET withdrawn_at = MAX(confirmed_at, ?)
+      WHERE user_id = ? AND withdrawn_at IS NULL`).run(now, user.id);
   });
 }
 

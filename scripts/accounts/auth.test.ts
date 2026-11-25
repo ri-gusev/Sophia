@@ -14,7 +14,7 @@ import { handleAccountRequest } from "../../src/features/account/server/account-
 import { hashPassword, newToken, tokenHash } from "../../src/features/account/server/credentials.ts";
 import { readJson } from "../../src/features/account/server/http.ts";
 import { accountMailTransport } from "../../src/features/account/server/mail.ts";
-import { canUseAiChat, findSession } from "../../src/features/account/server/store.ts";
+import { canUseAiChat, findSession, hasMailingConsent } from "../../src/features/account/server/store.ts";
 import { createEmailService } from "../../src/lib/server/email-service.ts";
 
 const directory = await mkdtemp(join(tmpdir(), "sophia-accounts-"));
@@ -103,7 +103,7 @@ test("registration rejects a request without legal confirmations without creatin
 
 test("mailing consent is optional, versioned, confirmed by the email owner and withdrawable independently", async () => {
   const db = accountDb();
-  const mailing = { mailingConsentVersion: "1.0-draft.1" };
+  const mailing = { mailingConsentVersion: "1.0-draft.2" };
   const email = "mailing-owner@mail.ru";
   const register = { ...legalAcceptance, email, displayName: "София" };
   const before = Date.now();
@@ -144,6 +144,10 @@ test("mailing consent is optional, versioned, confirmed by the email owner and w
   assert.equal((await post(withdraw, { accountId }, { token: session })).status, 200);
   assert.deepEqual(receipt.get(registrationId), revoked);
   assert.equal(findSession(session)?.id, accountId);
+  assert.equal(hasMailingConsent(accountId), false);
+  assert.equal((await post("grant-mailing-consent", { accountId, ...mailing }, { token: session })).status, 200);
+  assert.equal(hasMailingConsent(accountId), true);
+  assert.deepEqual(receipt.get(registrationId), revoked);
   assert.equal((await post("delete-account", { accountId, password, confirm: true }, { token: session })).status, 200);
   assert.equal(receipt.get(registrationId), undefined);
 
@@ -155,6 +159,50 @@ test("mailing consent is optional, versioned, confirmed by the email owner and w
   assert.ok(receipt.get(uncheckedRegistration));
   assert.equal((await post("verify", { ...legalAcceptance, token: uncheckedToken, ...pair })).status, 200);
   assert.equal(receipt.get(uncheckedRegistration), undefined);
+});
+
+test("profile mailing consent supports repeated opt-in and revocation for a legacy account", async () => {
+  const db = accountDb();
+  const accountId = "legacy-mailing-user";
+  const email = "legacy-mailing@mail.ru";
+  const now = Date.now();
+  db.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(accountId, email, "София", await hashPassword(password), now, now, now);
+  const session = cookieFrom(await login(email));
+  const grant = "grant-mailing-consent";
+  const withdraw = "withdraw-mailing-consent";
+  const choice = { accountId, mailingConsentVersion: "1.0-draft.2" };
+  assert.equal(hasMailingConsent(accountId), false);
+  assert.equal((await post(grant, choice)).status, 401);
+  assert.equal((await post(grant, { ...choice, accountId: "another-account" }, { token: session })).status, 409);
+  assert.equal((await post(grant, choice, { token: session, origin: "https://other.example" })).status, 403);
+  assert.equal((await post(grant, { accountId }, { token: session })).status, 400);
+  assert.equal((await post(grant, { ...choice, mailingConsentVersion: "1.0-draft.1" }, { token: session })).status, 409);
+  assert.equal(hasMailingConsent(accountId), false);
+
+  const rows = db.prepare(`SELECT version, document, confirmed_at, withdrawn_at
+    FROM account_profile_mailing_consents WHERE user_id = ? ORDER BY id`);
+  assert.equal((await post(grant, choice, { token: session })).status, 200);
+  assert.equal(hasMailingConsent(accountId), true);
+  assert.equal((await post(grant, choice, { token: session })).status, 200);
+  assert.equal(rows.all(accountId).length, 1);
+  assert.equal((await post(withdraw, { accountId }, { token: session })).status, 200);
+  assert.equal(hasMailingConsent(accountId), false);
+  const first = rows.get(accountId);
+  assert.ok(first);
+  assert.equal(first.version, choice.mailingConsentVersion);
+  assert.match(String(first.document), /Согласие на получение рекламных и информационных рассылок/);
+  assert.ok(Number(first.confirmed_at) >= now);
+  assert.ok(Number(first.withdrawn_at) >= Number(first.confirmed_at));
+
+  assert.equal((await post(grant, choice, { token: session })).status, 200);
+  assert.equal(hasMailingConsent(accountId), true);
+  assert.deepEqual(rows.get(accountId), first);
+  assert.equal(rows.all(accountId).length, 2);
+  assert.equal(rows.all(accountId)[1].withdrawn_at, null);
+  assert.equal(findSession(session)?.id, accountId);
+  assert.equal((await post("delete-account", { accountId, password, confirm: true }, { token: session })).status, 200);
+  assert.equal(rows.all(accountId).length, 0);
 });
 
 test("drafts block registration, resend and activation in proxy mode before issuing mail", async () => {
@@ -326,7 +374,7 @@ test("migration removes a legacy verification link while preserving the account 
   legacy.close();
   const migrated = openAccountDatabase(path);
   try {
-    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 4);
+    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 5);
     assert.equal(migrated.prepare("SELECT COUNT(*) AS total FROM account_mailing_consents").get()?.total, 0);
     assert.equal(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'verify'").get(), undefined);
     assert.ok(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'reset'").get());
@@ -753,7 +801,7 @@ test("a local operator can migrate, grant and revoke AI access for a verified ac
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);
-  assert.match(migration.stdout, /schema 4/);
+  assert.match(migration.stdout, /schema 5/);
   assert.equal(cli("grant-ai-chat", email).status, 1);
   await activate(email);
   const user = findSession(cookieFrom(await login(email)));

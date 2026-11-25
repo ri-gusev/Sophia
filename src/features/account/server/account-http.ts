@@ -10,7 +10,7 @@ import { limitAccountRequests } from "./rate-limits.ts";
 import {
   ACCOUNT_SESSION_AGE, challengeExpired, checkChallenge, consumeChallenge, credentialsForEmail, deleteChallenge,
   eraseAccount, invalidLogin, issueChallenge, replaceSession, requireApprovedAccountEmail, revokeSession, updateDisplayName,
-  withdrawMailingConsent,
+  setProfileMailingConsent,
 } from "./store.ts";
 
 const fields = {
@@ -25,6 +25,7 @@ const fields = {
   "delete-account": ["accountId", "password", "confirm"],
   "withdraw-consent": ["accountId", "password", "confirm"],
   "withdraw-mailing-consent": ["accountId"],
+  "grant-mailing-consent": ["accountId", "mailingConsentVersion"],
 } satisfies Record<string, string[]>;
 
 type Action = keyof typeof fields;
@@ -112,8 +113,14 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
       updateDisplayName(sessionToken, body.accountId, nameField(body.displayName));
       return ok();
     case "withdraw-mailing-consent":
-      withdrawMailingConsent(sessionToken, body.accountId);
+      setProfileMailingConsent(sessionToken, body.accountId, null);
       return ok();
+    case "grant-mailing-consent": {
+      const consent = submittedMailingConsent(body.mailingConsentVersion);
+      if (!consent) throw new AccountError(400, "Подтверди согласие на рассылки.");
+      setProfileMailingConsent(sessionToken, body.accountId, consent);
+      return ok();
+    }
     case "delete-account":
     case "withdraw-consent":
       if (body.confirm !== true) throw new AccountError(400, "Подтверди удаление аккаунта.");
