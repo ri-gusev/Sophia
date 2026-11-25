@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowUpRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PhilosophyQuestion } from "@/features/philosophy-question/philosophy-question";
+import { getMoscowDay } from "@/features/philosophy-question/daily-calendar";
 import { Reveal } from "./reveal";
 
 export function Hero() {
@@ -18,7 +19,7 @@ export function Hero() {
         <p className="hero-note"><BookOpen size={15} aria-hidden="true" /> Первый вопрос — прямо здесь. Без регистрации.</p>
       </Reveal>
       <Reveal className="hero-question">
-        <PhilosophyQuestion />
+        <PhilosophyQuestion initialDay={getMoscowDay()} />
       </Reveal>
     </section>
   );

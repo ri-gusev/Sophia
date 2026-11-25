@@ -24,7 +24,7 @@
 | `src/components/landing/` | Hero, превью маршрута, выбор направления, мобильная шапка и Motion-обёртка |
 | `src/components/ui/` | Общая кнопка на основе композиции shadcn/ui |
 | `src/content/` | Данные превью маршрута и описание направления |
-| `src/features/philosophy-question/` | Самостоятельное демо: компонент вопроса, локальный выбор и отдельные типизированные данные |
+| `src/features/philosophy-question/` | Карточка и CSS Module, 250 вопросов в JSON, календарь Москвы, правила серии и синхронизация `localStorage` |
 | `src/features/course-map/` | `course-map.tsx`: карта и выбор узла; `course-map-data.ts`: учебные описания; `course-map-config.ts`: узлы, позиции, действия и parentId; `philosopher-catalog-data.ts`: отдельные данные каталога; `philosopher-catalog.tsx` и CSS Modules: адаптивная панель и стили |
 | `src/features/course-lesson/` | `lesson-data.ts`: девять утверждённых сцен, изображения, задания и источники; `lesson-state.ts`: чистые правила ответов, перестановок, URL и валидации состояния; `lesson-scene.tsx` / CSS: общий бесшовный шаблон и смена изображений; `lesson-exercise.tsx`: radio и порядок с кнопками; `lesson-introduction.tsx` / CSS: навигация, tab-local состояние, прогресс и завершение |
 | `src/features/philosopher-conversation/` | Общий UI, профили, контракты, корневой provider с памятью вкладки и CSS Module |

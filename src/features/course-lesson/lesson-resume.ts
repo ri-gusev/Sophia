@@ -1,9 +1,10 @@
+import { accountStoragePrefix as accountPrefix } from "../account/account-storage.ts";
+
 // Exercises and scroll are local, with separate guest and account namespaces.
 const LEGACY_PREFIX = "sophia.lesson-resume.v1:";
 const PREFIX = "sophia.lesson-resume.v2:";
 export const GUEST_LAST_OPENED_KEY = `${PREFIX}last-opened`;
 const part = encodeURIComponent;
-const accountPrefix = (accountId: string) => `sophia.account.${part(accountId)}.`;
 const lessonKey = (lessonId: string, accountId: string | null) => accountId === null
   ? PREFIX + part(lessonId)
   : accountPrefix(accountId) + "lesson-resume.v2:" + part(lessonId);

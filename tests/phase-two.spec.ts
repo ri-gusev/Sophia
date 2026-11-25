@@ -29,27 +29,6 @@ test("landing contains exactly three agreed sections and three direction cards",
   await expect(contact).toHaveAttribute("href", "mailto:support.sophia@ro.ru");
 });
 
-test("every philosophical answer receives a neutral explanation and can be retried", async ({ page }) => {
-  await page.goto("/");
-  const question = page.getByRole("group", { name: "Философский вопрос", exact: true });
-  const options = ["Да, это всё тот же корабль.", "Нет, это уже другой корабль.", "Зависит от того, что считать тождеством."];
-  for (const option of options) {
-    const answer = question.getByRole("button", { name: option, exact: true });
-    await answer.focus();
-    await page.keyboard.press("Enter");
-    await expect(answer).toHaveAttribute("aria-pressed", "true");
-    await expect(question.getByRole("status")).toHaveText("Это парадокс корабля Тесея. Философы используют его, чтобы исследовать проблему тождества: что позволяет вещи оставаться самой собой, даже когда она изменяется?");
-    await expect(question.getByRole("status")).not.toContainText(/верно|неверно|правильный/i);
-    await question.getByRole("button", { name: "Попробовать ещё раз" }).click();
-    await expect(question.getByRole("button", { name: options[0], exact: true })).toBeFocused();
-    await expect(question.getByRole("status")).toBeEmpty();
-  }
-  await question.getByRole("button", { name: options[0], exact: true }).click();
-  await page.reload();
-  await expect(question.getByRole("status")).toBeEmpty();
-  await expect(question.getByRole("button", { name: options[0], exact: true })).toHaveAttribute("aria-pressed", "false");
-});
-
 test("all course entry points lead to learn and return navigation works", async ({ page }) => {
   for (const label of ["Начать обучение", "Начать бесплатно", "Перейти к основному курсу", "Начать курс", "Обучение"]) {
     await page.goto("/");
@@ -114,7 +93,10 @@ test("both routes have no detected accessibility or runtime errors", async ({ pa
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   for (const route of ["/", "/learn"]) {
     await page.goto(route);
-    if (route === "/") await page.getByRole("button", { name: "Да, это всё тот же корабль.", exact: true }).click();
+    if (route === "/") {
+      await page.getByRole("radiogroup").getByRole("radio").first().check();
+      await page.getByRole("button", { name: "Проверить ответ" }).click();
+    }
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
     expect(result.violations).toEqual([]);
   }

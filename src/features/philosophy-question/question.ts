@@ -1,9 +1,21 @@
-export const PHILOSOPHY_QUESTION = {
-  prompt: "Если заменить все части корабля, останется ли он тем же кораблём?",
-  options: [
-    { id: "same", label: "Да, это всё тот же корабль." },
-    { id: "different", label: "Нет, это уже другой корабль." },
-    { id: "identity", label: "Зависит от того, что считать тождеством." },
-  ],
-  explanation: "Это парадокс корабля Тесея. Философы используют его, чтобы исследовать проблему тождества: что позволяет вещи оставаться самой собой, даже когда она изменяется?",
-} as const;
+import { cycleStartDay } from "./daily-calendar";
+import corpus from "./daily-questions.json";
+
+export type DailyQuestion = {
+  id: string;
+  category: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  source: string;
+  sourceUrl: string;
+  reference: string;
+};
+
+export const dailyQuestions: readonly DailyQuestion[] = corpus;
+
+export function questionForDay(day: number): DailyQuestion {
+  const count = dailyQuestions.length;
+  return dailyQuestions[((day - cycleStartDay) % count + count) % count];
+}
