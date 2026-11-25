@@ -6,6 +6,18 @@ import type { LegalRevision } from "./revisions.ts";
 
 export const REGISTRATION_AGE = 24 * 60 * 60_000;
 
+export function recordMailingConsent(db: DatabaseSync, registrationId: string, revision: LegalRevision | null, now: number): void {
+  if (!revision) {
+    db.prepare("DELETE FROM account_mailing_consents WHERE registration_id = ?").run(registrationId);
+    return;
+  }
+  db.prepare(`INSERT INTO account_mailing_consents (registration_id, version, document, confirmed_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(registration_id) DO UPDATE SET
+      version = excluded.version, document = excluded.document, confirmed_at = excluded.confirmed_at`)
+    .run(registrationId, revision.version, JSON.stringify(revision), now);
+}
+
 export function recordRegistration(db: DatabaseSync, revisions: readonly LegalRevision[], now: number): string {
   const privacy = revisions.find(revision => revision.kind === "privacy");
   if (!privacy) throw new Error("Missing privacy revision");

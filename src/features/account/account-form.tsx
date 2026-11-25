@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { confirmationKinds, legalConfirmations, legalDocuments, registrationClosed, type ConfirmationKind, type LegalVersions } from "@/features/legal/contract";
+import {
+  confirmationKinds, legalConfirmations, legalDocuments, mailingConsentLabel, mailingConsentVersion,
+  registrationClosed, type ConfirmationKind, type LegalVersions,
+} from "@/features/legal/contract";
 import { accountRequest, navigateAfterAccountChange } from "./account-client";
 import {
   ACCOUNT_LIMITS, APPROVED_ACCOUNT_EMAIL_DOMAINS, UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, isLoginPassword,
@@ -120,7 +123,8 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
     setPending(true);
     try {
       const confirmations = legalVersions ? { age: true, terms: true, consent: true, legalVersions } : {};
-      const body = { ...values, ...confirmations, ...(needsToken && { token }) };
+      const mailingConsent = registration && data.get("mailings") === "on" ? { mailingConsentVersion } : {};
+      const body = { ...values, ...confirmations, ...mailingConsent, ...(needsToken && { token }) };
       await accountRequest(mode, body);
       element.reset();
       if (mode === "login" || mode === "reset") {
@@ -188,6 +192,14 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
             </div>;
           })}
           {missingConfirmations.length > 0 && <p className={styles.error} id="account-legal-error">Отметьте каждое из трёх подтверждений.</p>}
+          <div className={styles.legalChoice} key={mode === "verify" ? token : undefined}>
+            <input type="checkbox" autoComplete="off" id="account-mailings" name="mailings" aria-describedby="account-mailings-hint" />
+            <label htmlFor="account-mailings">{mailingConsentLabel}</label>
+          </div>
+          <p className={styles.hint} id="account-mailings-hint">
+            {mode === "register" ? "Необязательно. Согласие можно подтвердить по ссылке из письма." : "Необязательно."}{" "}
+            <Link href={legalDocuments.mailings.href}>Условия рассылок</Link>
+          </p>
         </fieldset>}
         <div role="alert" className={styles.error}>{failure}</div>
         <Button type="submit" disabled={pending || token === undefined}>{pending ? "Подождите…" : form.action}</Button>
@@ -205,7 +217,8 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
           <Link href="/forgot-password">Забыли пароль?</Link>
           <p className={styles.registrationPrompt}>Нет аккаунта? <Link href="/register">Зарегистрироваться</Link></p>
         </> : <Link href="/login">Войти</Link>}
-        {registration && Object.values(legalDocuments).map(({ href, title }) => <Link key={href} href={href}>{title}</Link>)}
+        {registration && [legalDocuments.privacy, legalDocuments.terms, legalDocuments.consent].map(({ href, title }) =>
+          <Link key={href} href={href}>{title}</Link>)}
         {mode === "verify" && !done && !closed && <Link href="/register">Запросить новую ссылку</Link>}
         {mode === "reset" && !done && <Link href="/forgot-password">Запросить новую ссылку</Link>}
       </div>

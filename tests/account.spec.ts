@@ -25,11 +25,16 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
   await page.getByLabel("Отображаемое имя").fill("Мария Петрова");
   await page.getByLabel("Email").fill(address.toUpperCase());
-  await expect(page.getByRole("checkbox")).toHaveCount(3);
+  const mailingCheckbox = page.getByRole("checkbox", { name: "Согласен получать рекламные и информационные рассылки" });
+  await expect(page.getByRole("checkbox")).toHaveCount(4);
+  await expect(page.locator('input[type="checkbox"][required]')).toHaveCount(3);
+  await expect(mailingCheckbox).not.toBeChecked();
+  await expect(page.getByRole("main").getByRole("link", { name: "Условия рассылок" })).toHaveAttribute("href", "/mailing-consent");
   await page.getByRole("button", { name: "Отправить ссылку" }).click();
   await expect(page.getByRole("checkbox").first()).toBeFocused();
   await expect(page.getByRole("checkbox").first()).toHaveAccessibleDescription(/все|каждое/);
   await acceptLegalConditions(page);
+  await mailingCheckbox.check();
   await page.getByRole("button", { name: "Отправить ссылку" }).click();
   await expect(page.getByRole("status")).toContainText("Проверьте почту");
   const initialLink = await testMailLink(address, "verify");
@@ -37,10 +42,17 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await expect(resend).toBeVisible();
   await resend.click();
   await expect(page.getByRole("status")).toContainText("ссылку ещё раз");
-  await page.goto((await testMailLink(address, "verify", initialLink)).href);
+  const refreshedLink = await testMailLink(address, "verify", initialLink);
+  await page.goto(refreshedLink.href);
   await enterPassword(page);
-  await expect(page.getByRole("checkbox")).toHaveCount(3);
+  await expect(page.getByRole("checkbox")).toHaveCount(4);
+  await expect(mailingCheckbox).not.toBeChecked();
+  await mailingCheckbox.check();
+  await page.evaluate(() => { window.location.hash = `token=${"a".repeat(43)}`; });
+  await expect(mailingCheckbox).not.toBeChecked();
+  await page.evaluate(hash => { window.location.hash = hash; }, refreshedLink.hash);
   await acceptLegalConditions(page);
+  await mailingCheckbox.check();
   await page.getByRole("button", { name: "Подтвердить email" }).click();
   await expect(page.getByRole("status")).toContainText("Email подтверждён");
   await page.getByRole("main").getByRole("link", { name: "Войти", exact: true }).click();
@@ -50,7 +62,18 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByRole("heading", { name: "Мария Петрова" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Мой путь в философии" })).toBeVisible();
+  const mailings = page.getByRole("region", { name: "Рассылки" });
+  await expect(mailings.getByRole("status")).toHaveText("Согласие на рассылки предоставлено.");
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: 320, height: 850 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await mailings.getByRole("button", { name: "Отозвать согласие на рассылки" }).click();
+  await expect(mailings.getByRole("status")).toHaveText("Согласие на рассылки отозвано.");
+  await expect(mailings.getByRole("link", { name: "Условия рассылок" })).toBeFocused();
+  await page.setViewportSize(viewport);
   await page.reload();
+  await expect(mailings.getByRole("status")).toHaveText("Рассылки отключены.");
+  await expect(mailings.getByRole("button")).toHaveCount(0);
   await expect(page.getByRole("main").getByText(address)).toBeVisible();
   await page.getByRole("button", { name: "Изменить имя" }).click();
   await page.getByLabel("Отображаемое имя").fill("Мария Соколова");
@@ -150,13 +173,14 @@ test("the shared footer and readable legal drafts display the 18+ mark", async (
     ["/privacy", "Политика обработки персональных данных", "Сроки хранения"],
     ["/terms", "Пользовательское соглашение", "Доступ и регистрация"],
     ["/consent", "Согласие на обработку персональных данных", "Срок и отзыв"],
+    ["/mailing-consent", "Согласие на получение рекламных и информационных рассылок", "Добровольность согласия", "Согласие на рассылки"],
   ];
   await page.setViewportSize({ width: 320, height: 850 });
   await page.goto("/");
   const footer = page.getByRole("contentinfo");
   await expect(footer.getByText("18+", { exact: true })).toBeVisible();
-  for (const [path, label, section] of docs) {
-    await footer.getByRole("link", { name: label }).click();
+  for (const [path, label, section, footerLabel] of docs) {
+    await footer.getByRole("link", { name: footerLabel ?? label }).click();
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole("heading", { level: 1, name: `${label} Sophia` })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: new RegExp(section) })).toBeVisible();

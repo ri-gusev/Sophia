@@ -101,6 +101,62 @@ test("registration rejects a request without legal confirmations without creatin
   assert.equal(await readOutbox(), before);
 });
 
+test("mailing consent is optional, versioned, confirmed by the email owner and withdrawable independently", async () => {
+  const db = accountDb();
+  const mailing = { mailingConsentVersion: "1.0-draft.1" };
+  const email = "mailing-owner@mail.ru";
+  const register = { ...legalAcceptance, email, displayName: "София" };
+  const before = Date.now();
+  assert.equal((await post("register", { ...register, ...mailing, age: false })).status, 400);
+  assert.equal((await post("register", { ...register, mailingConsentVersion: "old" })).status, 409);
+  assert.equal((await post("register", { ...register, ...mailing })).status, 200);
+  const token = await tokenFromMail(email, "verify");
+  const receipt = db.prepare(`SELECT r.user_id, m.version, m.confirmed_at, m.withdrawn_at, m.document
+    FROM account_mailing_consents AS m JOIN account_registrations AS r ON r.id = m.registration_id
+    WHERE r.id = ?`);
+  const registrationId = String(db.prepare("SELECT registration_id FROM account_challenges WHERE token_hash = ?")
+    .get(tokenHash(token))?.registration_id);
+  const pending = receipt.get(registrationId);
+  assert.ok(pending);
+  assert.equal(pending.user_id, null);
+  assert.equal(pending.version, mailing.mailingConsentVersion);
+  assert.ok(Number(pending.confirmed_at) >= before);
+  assert.match(String(pending.document), /Согласие на получение рекламных и информационных рассылок/);
+  const verify = { ...legalAcceptance, token, ...pair };
+  assert.equal((await post("verify", { ...verify, mailingConsentVersion: true })).status, 409);
+  assert.equal((await post("verify", { ...verify, ...mailing })).status, 200);
+  const session = cookieFrom(await login(email));
+  const accountId = findSession(session)?.id;
+  assert.ok(accountId);
+  const confirmed = receipt.get(registrationId);
+  assert.equal(confirmed?.user_id, accountId);
+  assert.equal(confirmed?.version, pending.version);
+  assert.ok(Number(confirmed?.confirmed_at) >= Number(pending.confirmed_at));
+  assert.equal(confirmed?.withdrawn_at, null);
+
+  const withdraw = "withdraw-mailing-consent";
+  assert.equal((await post(withdraw, { accountId })).status, 401);
+  assert.equal((await post(withdraw, { accountId: "another-account" }, { token: session })).status, 409);
+  assert.equal((await post(withdraw, { accountId }, { token: session, origin: "https://other.example" })).status, 403);
+  assert.equal((await post(withdraw, { accountId }, { token: session })).status, 200);
+  const revoked = receipt.get(registrationId);
+  assert.ok(Number(revoked?.withdrawn_at) >= Number(confirmed?.confirmed_at));
+  assert.equal((await post(withdraw, { accountId }, { token: session })).status, 200);
+  assert.deepEqual(receipt.get(registrationId), revoked);
+  assert.equal(findSession(session)?.id, accountId);
+  assert.equal((await post("delete-account", { accountId, password, confirm: true }, { token: session })).status, 200);
+  assert.equal(receipt.get(registrationId), undefined);
+
+  const uncheckedEmail = "mailing-unchecked@mail.ru";
+  assert.equal((await post("register", { ...register, email: uncheckedEmail, ...mailing })).status, 200);
+  const uncheckedToken = await tokenFromMail(uncheckedEmail, "verify");
+  const uncheckedRegistration = String(db.prepare("SELECT registration_id FROM account_challenges WHERE token_hash = ?")
+    .get(tokenHash(uncheckedToken))?.registration_id);
+  assert.ok(receipt.get(uncheckedRegistration));
+  assert.equal((await post("verify", { ...legalAcceptance, token: uncheckedToken, ...pair })).status, 200);
+  assert.equal(receipt.get(uncheckedRegistration), undefined);
+});
+
 test("drafts block registration, resend and activation in proxy mode before issuing mail", async () => {
   const previous = process.env.CHAT_PROXY_SECRET;
   const secret = "f".repeat(64);
@@ -270,7 +326,8 @@ test("migration removes a legacy verification link while preserving the account 
   legacy.close();
   const migrated = openAccountDatabase(path);
   try {
-    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 3);
+    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 4);
+    assert.equal(migrated.prepare("SELECT COUNT(*) AS total FROM account_mailing_consents").get()?.total, 0);
     assert.equal(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'verify'").get(), undefined);
     assert.ok(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'reset'").get());
     assert.ok(migrated.prepare("SELECT 1 FROM account_users WHERE id = 'legacy-user'").get());
@@ -696,7 +753,7 @@ test("a local operator can migrate, grant and revoke AI access for a verified ac
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);
-  assert.match(migration.stdout, /schema 3/);
+  assert.match(migration.stdout, /schema 4/);
   assert.equal(cli("grant-ai-chat", email).status, 1);
   await activate(email);
   const user = findSession(cookieFrom(await login(email)));

@@ -65,7 +65,7 @@ test("guest transfer merges with account progress and later lesson changes stay 
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Не удалось перенести прогресс");
   expect((await progress(page.request)).progress.lessons.find(entry => entry.lessonId === socratic)?.completed).toBe(false);
   await transfer.click();
-  await expect(page.getByRole("status")).toContainText("Прогресс перенесён");
+  await expect(page.getByRole("status").filter({ hasText: "Прогресс перенесён" })).toHaveText("Прогресс перенесён в аккаунт.");
   const afterImport = (await progress(page.request)).progress;
   expect(afterImport.lessons.find(entry => entry.lessonId === intro)?.confirmedSceneIds).toEqual(["journey", "socrates"]);
   expect(afterImport.lessons.find(entry => entry.lessonId === socratic)?.completed).toBe(true);

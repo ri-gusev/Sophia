@@ -5,7 +5,8 @@ import { legalReleaseReady, legalRevision } from "./server/revisions";
 import styles from "../account/account.module.css";
 
 export function legalMetadata(kind: LegalDocumentKind): Metadata {
-  return { title: `${legalRevision(kind).title} — Sophia`, ...(!legalReleaseReady() && { robots: { index: false } }) };
+  const document = legalRevision(kind);
+  return { title: `${document.title} — Sophia`, ...((!document.effectiveDate || !legalReleaseReady()) && { robots: { index: false } }) };
 }
 
 function emphasis(text: string) {

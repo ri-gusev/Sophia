@@ -1,5 +1,5 @@
 import {
-  confirmationKinds, legalConfirmations, legalDocuments, registrationClosed, siteAgeCategory,
+  confirmationKinds, legalConfirmations, legalDocuments, mailingConsentVersion, registrationClosed, siteAgeCategory,
   type LegalDocumentKind, type LegalVersions, type RevisionKind,
 } from "../contract.ts";
 import { AccountError } from "../../account/server/errors.ts";
@@ -31,11 +31,19 @@ export function legalRevision(kind: LegalDocumentKind): LegalRevision {
 `;
   return {
     kind,
-    version: versions[kind],
+    version: kind === "mailings" ? mailingConsentVersion : versions[kind],
     title: `${legalDocuments[kind].title} Sophia`,
-    effectiveDate: release.effectiveDate,
+    effectiveDate: kind === "mailings" ? null : release.effectiveDate,
     body: age + documentText[kind],
   };
+}
+
+export function submittedMailingConsent(value: unknown): LegalRevision | null {
+  if (value === undefined) return null;
+  if (value !== mailingConsentVersion) {
+    throw new AccountError(409, "Обновите страницу и ознакомьтесь с текущей редакцией согласия на рассылки.");
+  }
+  return legalRevision("mailings");
 }
 
 export function registrationRevisions(): readonly LegalRevision[] {

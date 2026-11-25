@@ -49,3 +49,13 @@ export const ACCOUNT_LEGAL_SCHEMA = `
     completed_at INTEGER NOT NULL
   ) STRICT;
 `;
+
+export const ACCOUNT_MAILING_CONSENT_SCHEMA = `
+  CREATE TABLE account_mailing_consents (
+    registration_id TEXT PRIMARY KEY NOT NULL REFERENCES account_registrations(id) ON DELETE CASCADE,
+    version TEXT NOT NULL,
+    document TEXT NOT NULL,
+    confirmed_at INTEGER NOT NULL,
+    withdrawn_at INTEGER CHECK (withdrawn_at >= confirmed_at)
+  ) STRICT, WITHOUT ROWID;
+`;

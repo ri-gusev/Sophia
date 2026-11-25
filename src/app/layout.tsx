@@ -40,7 +40,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <p>Возрастная маркировка — <strong>{siteAgeCategory}</strong></p>
           <p>Поддержка и обращения по персональным данным</p>
           <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-          {Object.values(legalDocuments).map(({ href, title }) => <Link key={href} href={href}>{title}</Link>)}
+          {Object.values(legalDocuments).map(document => <Link key={document.href} href={document.href}>
+            {"footerTitle" in document ? document.footerTitle : document.title}
+          </Link>)}
         </div>
       </footer>
     </body>

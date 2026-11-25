@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/features/account/account-navigation";
 import { initials } from "@/features/account/account-display";
 import { ProfileName } from "@/features/account/profile-name";
+import { ProfileMailings } from "@/features/account/profile-mailings";
 import { ProfilePrivacy } from "@/features/account/profile-privacy";
 import { GuestProgressTransfer } from "@/features/account/progress/client/guest-progress-transfer";
 import { readAccountProgress } from "@/features/account/progress/server/store";
+import { hasMailingConsent } from "@/features/account/server/store";
 import { currentAccount } from "@/features/account/server/viewer";
 import { INTRO_LESSONS, type IntroLessonId } from "@/features/course-lesson/lesson-data";
 import { PHILOSOPHER_CATALOGS } from "@/features/course-map/philosopher-catalog-data";
@@ -31,6 +33,9 @@ export default async function ProfilePage() {
 
   let progress: ReturnType<typeof readAccountProgress> | undefined;
   try { progress = readAccountProgress(user.id); }
+  catch { /* The account details are still available. */ }
+  let mailingConsent: boolean | undefined;
+  try { mailingConsent = hasMailingConsent(user.id); }
   catch { /* The account details are still available. */ }
 
   const lessons = course.map(contentId => ({
@@ -76,6 +81,7 @@ export default async function ProfilePage() {
         <div><Button asChild><Link href={target}>{lastOpened || confirmedSlides || completed ? "Продолжить обучение" : "Начать первый урок"}</Link></Button></div>
       </>}
     </section>
+    <ProfileMailings accountId={user.id} consent={mailingConsent} />
     <ProfilePrivacy accountId={user.id} />
   </main>;
 }

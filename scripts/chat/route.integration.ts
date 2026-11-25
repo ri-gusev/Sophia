@@ -225,7 +225,7 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
       });
       assert.equal(db.prepare("SELECT 1 FROM account_rate_limits WHERE bucket = 'expired-fixture'").get(), undefined);
       assert.ok(db.prepare("SELECT completed_at FROM account_cleanup WHERE id = 1").get());
-      for (const path of ["/privacy", "/terms", "/consent"]) {
+      for (const path of ["/privacy", "/terms", "/consent", "/mailing-consent"]) {
         const response = await fetch(proxyServer + path);
         assert.equal(response.status, 200);
         assert.match(await response.text(), /Проект документа/);

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { registrationRevisions, requireLegalRegistration, type LegalRevision } from "../../legal/server/revisions.ts";
-import { currentPendingRegistration, recordRegistration, REGISTRATION_AGE } from "../../legal/server/store.ts";
+import { currentPendingRegistration, recordMailingConsent, recordRegistration, REGISTRATION_AGE } from "../../legal/server/store.ts";
 import { UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, type AccountUser } from "../account-contract.ts";
 import { accountDb, accountTransaction } from "./database.ts";
 import { matchesPassword, newToken, tokenHash, validToken } from "./credentials.ts";
@@ -59,7 +59,7 @@ export function replaceSession(email: string, authenticated: Credentials, previo
 }
 
 export function issueChallenge(kind: ChallengeKind, email: string, registration?: {
-  displayName: string; revisions: readonly LegalRevision[];
+  displayName: string; revisions: readonly LegalRevision[]; mailingConsent?: LegalRevision | null;
 }): string | null {
   if (kind === "verify") requireLegalRegistration();
   const db = accountDb();
@@ -73,6 +73,7 @@ export function issueChallenge(kind: ChallengeKind, email: string, registration?
     if (registration && kind === "verify") {
       displayName = registration.displayName;
       registrationId = recordRegistration(db, registration.revisions, now);
+      if (registration.mailingConsent) recordMailingConsent(db, registrationId, registration.mailingConsent, now);
       expiresAt = now + REGISTRATION_AGE;
     } else if (kind === "verify") {
       const revisions = registrationRevisions();
@@ -127,7 +128,7 @@ export function checkChallenge(kind: ChallengeKind, token: string): void {
   requireChallenge(accountDb(), kind, token, Date.now());
 }
 
-export function consumeChallenge(kind: ChallengeKind, token: string, passwordHash: string): void {
+export function consumeChallenge(kind: ChallengeKind, token: string, passwordHash: string, mailingConsent: LegalRevision | null = null): void {
   const db = accountDb();
   accountTransaction(db, () => {
     const now = Date.now();
@@ -137,6 +138,7 @@ export function consumeChallenge(kind: ChallengeKind, token: string, passwordHas
       const id = randomUUID();
       db.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)")
         .run(id, challenge.email, challenge.displayName, passwordHash, now, now, now);
+      recordMailingConsent(db, challenge.registrationId, mailingConsent, now);
       db.prepare("UPDATE account_registrations SET user_id = ?, expires_at = NULL, verified_at = ? WHERE id = ?")
         .run(id, now, challenge.registrationId);
       db.prepare(`DELETE FROM account_registrations WHERE user_id IS NULL AND id IN
@@ -153,6 +155,27 @@ export function consumeChallenge(kind: ChallengeKind, token: string, passwordHas
 
 function checkAccount(user: AccountUser | null, expected: unknown): void {
   if (user && user.id !== expected) throw new AccountError(409, "Аккаунт в этой вкладке изменился. Обнови страницу.");
+}
+
+export function hasMailingConsent(userId: string): boolean {
+  return Boolean(accountDb().prepare(`SELECT 1 FROM account_mailing_consents AS m
+    JOIN account_registrations AS r ON r.id = m.registration_id
+    WHERE r.user_id = ? AND m.withdrawn_at IS NULL`).get(userId));
+}
+
+export function withdrawMailingConsent(token: unknown, expected: unknown): void {
+  const unauthenticated = () => new AccountError(401, "Войди в аккаунт, чтобы отозвать согласие на рассылки.");
+  if (!validToken(token)) throw unauthenticated();
+  const db = accountDb();
+  accountTransaction(db, () => {
+    const now = Date.now();
+    const user = sessionIn(db, token, now);
+    if (!user) throw unauthenticated();
+    checkAccount(user, expected);
+    db.prepare(`UPDATE account_mailing_consents SET withdrawn_at = MAX(confirmed_at, ?)
+      WHERE registration_id = (SELECT id FROM account_registrations WHERE user_id = ?)
+        AND withdrawn_at IS NULL`).run(now, user.id);
+  });
 }
 
 export async function eraseAccount(token: unknown, expected: unknown, password: string, network: string): Promise<void> {
