@@ -16,8 +16,9 @@ type Field = "displayName" | "email" | "password" | "confirmPassword";
 
 const forms = {
   register: {
-    title: "Регистрация", action: "Создать аккаунт",
-    fields: ["displayName", "email", "password", "confirmPassword"],
+    title: "Регистрация", action: "Отправить ссылку",
+    fields: ["displayName", "email"],
+    description: "Сначала подтвердите почту. Пароль вы зададите по ссылке из письма.",
     success: "Проверьте почту. Если адрес можно зарегистрировать, мы отправим ссылку для подтверждения.",
   },
   login: { title: "Вход в Sophia", action: "Войти", fields: ["email", "password"], success: "" },
@@ -27,7 +28,7 @@ const forms = {
   },
   verify: {
     title: "Подтверждение email", action: "Подтвердить email", fields: ["password", "confirmPassword"],
-    description: "Установите пароль для аккаунта. Можно ввести ту же парольную фразу, которую вы указали при регистрации.",
+    description: "Задайте пароль для аккаунта.",
     success: "Email подтверждён. Теперь можно войти в Sophia.",
   },
   reset: {
@@ -64,7 +65,7 @@ function validate(mode: Mode, form: Partial<Record<Field, string>>) {
   }
   if (mode === "login") {
     if (!isLoginPassword(form.password)) errors.password = "Введите пароль.";
-  } else if (mode !== "forgot") {
+  } else if (mode === "verify" || mode === "reset") {
     const invalidPassword = passwordError(form.password);
     if (invalidPassword) errors.password = invalidPassword;
     if (!invalidPassword) {

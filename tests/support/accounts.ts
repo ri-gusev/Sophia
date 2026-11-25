@@ -29,7 +29,7 @@ export async function testMailLink(to: string, kind: "verify" | "reset", previou
 export async function createTestAccount(request: APIRequestContext, displayName = "Пользователь Sophia") {
   const email = testEmail();
   const password = testPassword;
-  expect((await postAccount(request, "register", { ...legalAcceptance, displayName, email, password, confirmPassword: password })).ok()).toBe(true);
+  expect((await postAccount(request, "register", { ...legalAcceptance, displayName, email })).ok()).toBe(true);
   const token = new URLSearchParams((await testMailLink(email, "verify")).hash.slice(1)).get("token");
   expect((await postAccount(request, "verify", { ...legalAcceptance, token, password, confirmPassword: password })).ok()).toBe(true);
   return { email, password };

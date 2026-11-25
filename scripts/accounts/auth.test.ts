@@ -70,25 +70,26 @@ function cookieFrom(response: Response) {
 }
 
 async function activate(email: string) {
-  assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София", ...pair })).status, 200);
+  assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София" })).status, 200);
   assert.equal((await post("verify", { ...legalAcceptance, token: await tokenFromMail(email, "verify"), ...pair })).status, 200);
 }
 
 const login = (email: string, candidate = password, token?: string) => post("login", { email, password: candidate }, { token });
 
 test("validates registration before accepting data", async () => {
-  const good = { email: "valid@mail.ru", displayName: "София", ...pair };
-  for (const change of [{ email: "wrong" }, { displayName: "" }, { password: "short" },
-    { password: "x".repeat(129) }, { confirmPassword: "different" }]) {
-    assert.equal((await post("register", { ...legalAcceptance, ...good, ...change })).status, 400);
+  const good = { email: "valid@mail.ru", displayName: "София", ...legalAcceptance };
+  for (const change of [{ email: "wrong" }, { displayName: "" }, pair]) {
+    assert.equal((await post("register", { ...good, ...change })).status, 400);
   }
   assert.equal((await post("register", {})).status, 400);
+  assert.equal((await post("register", good)).status, 200);
+  assert.ok(await tokenFromMail(good.email, "verify"));
 });
 
 test("registration rejects a request without legal confirmations without creating a challenge", async () => {
   const email = "no-consent@mail.ru";
   const before = await readOutbox();
-  const body = { email, displayName: "София", ...pair };
+  const body = { email, displayName: "София" };
   assert.equal((await post("register", body)).status, 400);
   for (const kind of ["age", "terms", "consent"]) {
     for (const value of [undefined, false, "true", 1]) {
@@ -109,7 +110,7 @@ test("drafts block registration, resend and activation in proxy mode before issu
     Object.assign(process.env, { ACCOUNT_ORIGIN: proxy, CHAT_PROXY_SECRET: secret });
     try {
       for (const [action, body] of [
-        ["register", { email: "closed@mail.ru", displayName: "София", ...pair, ...legalAcceptance }],
+        ["register", { email: "closed@mail.ru", displayName: "София", ...legalAcceptance }],
         ["resend-verification", { email: "closed@mail.ru" }],
         ["verify", { token: newToken(), ...pair, ...legalAcceptance }],
       ] as const) {
@@ -135,7 +136,7 @@ test("pins immutable legal revisions and requires all confirmations from the ema
   const email = "legal-evidence@mail.ru";
   const db = accountDb();
   const before = Date.now();
-  const body = { email, displayName: "София", ...pair, ...legalAcceptance };
+  const body = { email, displayName: "София", ...legalAcceptance };
   assert.equal((await post("register", body)).status, 200);
   const token = await tokenFromMail(email, "verify");
   const request = db.prepare(`SELECT id, privacy_version, account_registrations.expires_at AS expires_at FROM account_registrations
@@ -176,7 +177,7 @@ test("pins immutable legal revisions and requires all confirmations from the ema
 test("verification rejects a valid token whose registration evidence is incomplete", async () => {
   const email = "broken-evidence@mail.ru";
   const db = accountDb();
-  await post("register", { email, displayName: "София", ...pair, ...legalAcceptance });
+  await post("register", { email, displayName: "София", ...legalAcceptance });
   const token = await tokenFromMail(email, "verify");
   db.prepare(`DELETE FROM account_legal_confirmations WHERE kind = 'age' AND registration_id IN
     (SELECT registration_id FROM account_challenges WHERE email = ?)`).run(email);
@@ -229,7 +230,7 @@ test("account deletion and withdrawal require reauthentication and cascade throu
 test("daily cleanup removes expired sessions, tokens, pending requests and receipts", async () => {
   const db = accountDb();
   const email = "abandoned@mail.ru";
-  await post("register", { email, displayName: "София", ...pair, ...legalAcceptance });
+  await post("register", { email, displayName: "София", ...legalAcceptance });
   const pending = db.prepare("SELECT registration_id, expires_at FROM account_challenges WHERE email = ?").get(email);
   assert.ok(typeof pending?.registration_id === "string" && typeof pending.expires_at === "number");
   const activeEmail = "cleanup-active@mail.ru";
@@ -304,7 +305,7 @@ test("accepts each approved mail domain with whitespace and uppercase normalized
   for (const domain of ["yandex.ru", "ya.ru", "mail.ru", "inbox.ru", "list.ru", "bk.ru", "internet.ru",
     "rambler.ru", "ro.ru", "lenta.ru", "autorambler.ru", "myrambler.ru", "vk.com", "vk.ru"]) {
     accountDb().exec("DELETE FROM account_rate_limits");
-    const response = await post("register", { ...legalAcceptance, email: ` Domain-Fixture@${domain.toUpperCase()} `, displayName: "София", ...pair });
+    const response = await post("register", { ...legalAcceptance, email: ` Domain-Fixture@${domain.toUpperCase()} `, displayName: "София" });
     assert.equal(response.status, 200, domain);
     assert.ok(await tokenFromMail(`domain-fixture@${domain}`, "verify"));
   }
@@ -317,12 +318,12 @@ test("rejects unsupported domains before any database write or email delivery", 
   const countBefore = countChallenges();
   for (const email of ["person@gmail.com", "person@vk.net", "person@outlook.com", "person@xmail.ru", "person@sub.mail.ru",
     "person@mail.ru.example.org", "person@notmail.ru", "person@maіl.ru", "person@ｍail.ru", "person@mail。ru"]) {
-    const response = await post("register", { ...legalAcceptance, email, displayName: "София", ...pair });
+    const response = await post("register", { ...legalAcceptance, email, displayName: "София" });
     assert.equal(response.status, 400, email);
     assert.deepEqual(await response.json(), { error: unsupportedEmail }, email);
   }
   for (const email of ["person@other.org@mail.ru", "person@mail.ru.", "person@mail.ru/path", "person@mail.ru:443"]) {
-    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София", ...pair })).status, 400, email);
+    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София" })).status, 400, email);
   }
   assert.equal(countChallenges(), countBefore);
   assert.equal(db.prepare("SELECT 1 FROM account_rate_limits").get(), undefined);
@@ -332,7 +333,7 @@ test("rejects unsupported domains before any database write or email delivery", 
 test("a pending registration on an unsupported domain cannot resend or activate", async () => {
   const email = "pending-before-policy@example.net";
   const initial = "pending-before-policy@mail.ru";
-  await post("register", { email: initial, displayName: "София", ...pair, ...legalAcceptance });
+  await post("register", { email: initial, displayName: "София", ...legalAcceptance });
   const token = await tokenFromMail(initial, "verify");
   const db = accountDb();
   db.prepare("UPDATE account_challenges SET email = ? WHERE token_hash = ?").run(email, tokenHash(token));
@@ -348,19 +349,22 @@ test("a pending registration on an unsupported domain cannot resend or activate"
 
 test("accepts eight-character passwords and caps new account fields at fifty characters", async () => {
   const email = "short-pass@mail.ru";
-  const draft = { email, displayName: "a".repeat(50), password: "12345678", confirmPassword: "12345678" };
+  const draft = { email, displayName: "a".repeat(50) };
   for (const change of [
-    { password: "1234567", confirmPassword: "1234567" },
-    { password: "a".repeat(51), confirmPassword: "a".repeat(51) },
     { displayName: "a".repeat(51) },
     { email: "a".repeat(44) + "@mail.ru" },
   ]) assert.equal((await post("register", { ...legalAcceptance, ...draft, ...change })).status, 400);
   assert.equal((await post("register", { ...legalAcceptance, ...draft })).status, 200);
   const token = await tokenFromMail(email, "verify");
-  const tooLong = "a".repeat(51);
-  assert.equal((await post("verify", { ...legalAcceptance, token, password: tooLong, confirmPassword: tooLong })).status, 400);
-  assert.equal((await post("verify", { ...legalAcceptance, token, password: draft.password, confirmPassword: draft.password })).status, 200);
-  assert.equal((await login(email, draft.password)).status, 200);
+  const verification = { ...legalAcceptance, token };
+  const chosenPassword = "12345678";
+  assert.equal((await post("verify", verification)).status, 400);
+  for (const invalidPassword of ["1234567", "a".repeat(51)]) {
+    assert.equal((await post("verify", { ...verification, password: invalidPassword, confirmPassword: invalidPassword })).status, 400);
+  }
+  assert.equal((await post("verify", { ...verification, password: chosenPassword, confirmPassword: "different" })).status, 400);
+  assert.equal((await post("verify", { ...verification, password: chosenPassword, confirmPassword: chosenPassword })).status, 200);
+  assert.equal((await login(email, chosenPassword)).status, 200);
 });
 
 test("existing long credentials and an unsupported email still work for sign-in and recovery", async () => {
@@ -376,9 +380,9 @@ test("existing long credentials and an unsupported email still work for sign-in 
   assert.equal((await login(email, newPassword)).status, 200);
 });
 
-test("registration normalizes email and activation requires a fresh credential chosen by the email owner", async () => {
+test("registration normalizes email and the email owner sets the password at activation", async () => {
   const email = "owner@mail.ru";
-  assert.equal((await post("register", { ...legalAcceptance, email: " Owner@MAIL.RU ", displayName: "Первое имя", ...pair })).status, 200);
+  assert.equal((await post("register", { ...legalAcceptance, email: " Owner@MAIL.RU ", displayName: "Первое имя" })).status, 200);
   assert.equal((await login(email)).status, 401);
   const token = await tokenFromMail(email, "verify");
   const attempts = await Promise.all([1, 2].map(() => post("verify", { ...legalAcceptance, token, password: newPassword, confirmPassword: newPassword })));
@@ -386,7 +390,7 @@ test("registration normalizes email and activation requires a fresh credential c
   assert.equal((await login(email)).status, 401);
   assert.equal((await login(email, newPassword)).status, 200);
   const before = await readFile(outbox, "utf8");
-  assert.equal((await post("register", { ...legalAcceptance, email, displayName: "Чужое имя", ...pair })).status, 200);
+  assert.equal((await post("register", { ...legalAcceptance, email, displayName: "Чужое имя" })).status, 200);
   assert.equal(await readFile(outbox, "utf8"), before);
   assert.equal(accountDb().prepare("SELECT count(*) AS count FROM account_users WHERE email = ?").get(email)?.count, 1);
 });
@@ -407,7 +411,7 @@ test("sessions rotate at sign-in, expire, and cannot be replayed after logout", 
 
 test("resends verification for a pending address within the registration quota", async () => {
   const email = "resend@mail.ru";
-  const registration = { email, displayName: "Исходное имя", ...pair, ...legalAcceptance };
+  const registration = { email, displayName: "Исходное имя", ...legalAcceptance };
   assert.equal((await post("register", registration)).status, 200);
   const initial = await tokenFromMail(email, "verify");
   assert.equal((await post("resend-verification", { email }, { origin: "https://other.example" })).status, 403);
@@ -478,7 +482,7 @@ test("registration fails safely when configured test delivery fails", async () =
   const email = "no-delivery@mail.ru";
   process.env.ACCOUNT_TEST_OUTBOX = directory;
   try {
-    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София", ...pair })).status, 503);
+    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София" })).status, 503);
     assert.equal(accountDb().prepare("SELECT count(*) AS count FROM account_challenges WHERE email = ?").get(email)?.count, 0);
   } finally {
     process.env.ACCOUNT_TEST_OUTBOX = outbox;
@@ -614,7 +618,7 @@ test("fails closed without verified proxy headers and uses a host-only secure co
 test("stores only session and challenge token digests and a salted Argon2id password hash", async () => {
   const email = "hashes@mail.ru";
   const db = accountDb();
-  await post("register", { ...legalAcceptance, email, displayName: "София", ...pair });
+  await post("register", { ...legalAcceptance, email, displayName: "София" });
   const token = await tokenFromMail(email, "verify");
   const challenge = db.prepare("SELECT token_hash FROM account_challenges WHERE email = ?").get(email);
   assert.match(String(challenge?.token_hash), /^[a-f\d]{64}$/);
@@ -643,7 +647,7 @@ test("rejects a different database and never runs account migrations on it", () 
 
 test("rejects expired verification links and tokens from the wrong operation", async () => {
   const email = "expired@mail.ru";
-  await post("register", { ...legalAcceptance, email, displayName: "София", ...pair });
+  await post("register", { ...legalAcceptance, email, displayName: "София" });
   const token = await tokenFromMail(email, "verify");
   assert.equal((await post("reset", { token, ...pair })).status, 400);
   accountDb().prepare("UPDATE account_challenges SET expires_at = 1 WHERE email = ?").run(email);

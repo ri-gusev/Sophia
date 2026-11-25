@@ -21,15 +21,16 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await page.goto("/profile");
   await expect(page).toHaveURL(/\/login\?next=%2Fprofile$/);
   await page.getByRole("link", { name: "Зарегистрироваться" }).click();
+  await expect(page.getByText("Сначала подтвердите почту. Пароль вы зададите по ссылке из письма.")).toBeVisible();
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
   await page.getByLabel("Отображаемое имя").fill("Мария Петрова");
   await page.getByLabel("Email").fill(address.toUpperCase());
-  await enterPassword(page);
   await expect(page.getByRole("checkbox")).toHaveCount(3);
-  await page.getByRole("button", { name: "Создать аккаунт" }).click();
+  await page.getByRole("button", { name: "Отправить ссылку" }).click();
   await expect(page.getByRole("checkbox").first()).toBeFocused();
   await expect(page.getByRole("checkbox").first()).toHaveAccessibleDescription(/все|каждое/);
   await acceptLegalConditions(page);
-  await page.getByRole("button", { name: "Создать аккаунт" }).click();
+  await page.getByRole("button", { name: "Отправить ссылку" }).click();
   await expect(page.getByRole("status")).toContainText("Проверьте почту");
   const initialLink = await testMailLink(address, "verify");
   const resend = page.getByRole("button", { name: "Отправить повторно" });
@@ -99,7 +100,7 @@ test("keyboard validation links errors to the fields and focuses the first inval
   await name.focus();
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Email")).toBeFocused();
-  const submit = page.getByRole("button", { name: "Создать аккаунт" });
+  const submit = page.getByRole("button", { name: "Отправить ссылку" });
   await submit.focus();
   await page.keyboard.press("Enter");
   await expect(name).toBeFocused();
@@ -127,14 +128,13 @@ test("registration explains the email restriction and rejects unsupported domain
   const field = page.getByLabel("Email");
   await expect(field).toHaveAccessibleDescription(/yandex\.ru, ya\.ru, mail\.ru/);
   await field.fill("user@gmail.com");
-  await enterPassword(page);
-  await page.getByRole("button", { name: "Создать аккаунт" }).click();
+  await page.getByRole("button", { name: "Отправить ссылку" }).click();
   await expect(field).toBeFocused();
   await expect(field).toHaveAccessibleDescription(new RegExp(message.replaceAll(".", "\\.")));
   expect(intercepted).toEqual([]);
 
   const response = await postAccount(page.request, "register", {
-    ...legalAcceptance, displayName, email: "user@sub.mail.ru", password, confirmPassword: password,
+    ...legalAcceptance, displayName, email: "user@sub.mail.ru",
   });
   expect(response.status()).toBe(400);
   expect(await response.json()).toEqual({ error: message });
@@ -174,6 +174,7 @@ test("profile withdrawal checks the password and clears account-scoped browser d
   const { accountId } = await (await page.request.get("/api/progress")).json();
   const profile = page.getByRole("region", { name: "Персональные данные" });
   const label = "Отозвать согласие и удалить аккаунт";
+  await expect(profile.getByRole("button")).toHaveText([label]);
   await page.evaluate(accountId => {
     localStorage.setItem(`sophia.account.${accountId}.lesson-resume.v2:fixture`, "test");
     localStorage.setItem(`sophia.account.${accountId}.guest-progress-import.v1`, "test");
@@ -207,7 +208,8 @@ test("registration and new password fields cap pasted text at fifty characters",
   const text = "a".repeat(60);
   const token = "a".repeat(43);
   for (const [route, labels] of [
-    ["/register", ["Отображаемое имя", "Email", "Пароль", "Повтор пароля"]],
+    ["/register", ["Отображаемое имя", "Email"]],
+    [`/verify-email#token=${token}`, ["Пароль", "Повтор пароля"]],
     [`/reset-password#token=${token}`, ["Пароль", "Повтор пароля"]],
   ] as const) {
     await page.goto(route);

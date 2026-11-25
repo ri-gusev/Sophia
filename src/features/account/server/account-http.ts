@@ -13,7 +13,7 @@ import {
 } from "./store.ts";
 
 const fields = {
-  register: ["displayName", "email", "password", "confirmPassword", ...confirmationKinds, "legalVersions"],
+  register: ["displayName", "email", ...confirmationKinds, "legalVersions"],
   "resend-verification": ["email"],
   login: ["email", "password"],
   logout: ["accountId"],
@@ -87,7 +87,6 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
       const email = emailField(body.email, ACCOUNT_LIMITS.inputMax);
       requireApprovedAccountEmail(body.email);
       const displayName = nameField(body.displayName);
-      passwordField(body);
       const revisions = requireLegalConfirmations(body);
       const send = accountMailTransport();
       limitAccountRequests(action, network, email);
