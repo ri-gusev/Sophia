@@ -1,3 +1,5 @@
+export const siteAgeCategory = "18+";
+
 export const legalDocuments = {
   privacy: { href: "/privacy", title: "Политика обработки персональных данных" },
   terms: { href: "/terms", title: "Пользовательское соглашение" },

@@ -140,7 +140,7 @@ test("registration explains the email restriction and rejects unsupported domain
   expect(await response.json()).toEqual({ error: message });
 });
 
-test("the footer links to readable legal drafts with no third-party requests", async ({ page }) => {
+test("the shared footer and readable legal drafts display the 18+ mark", async ({ page }) => {
   const external = new Set<string>();
   page.on("request", request => {
     const url = new URL(request.url());
@@ -153,18 +153,23 @@ test("the footer links to readable legal drafts with no third-party requests", a
   ];
   await page.setViewportSize({ width: 320, height: 850 });
   await page.goto("/");
+  const footer = page.getByRole("contentinfo");
+  await expect(footer.getByText("18+", { exact: true })).toBeVisible();
   for (const [path, label, section] of docs) {
-    await page.locator("footer.site-footer").getByRole("link", { name: label }).click();
+    await footer.getByRole("link", { name: label }).click();
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole("heading", { level: 1, name: `${label} Sophia` })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: new RegExp(section) })).toBeVisible();
     await expect(page.getByRole("main")).toContainText("Проект документа");
+    await expect(page.getByRole("main").getByText(/Возрастная маркировка .*18\+/)).toBeVisible();
     await expect(page.getByRole("main")).not.toContainText("Приложение для владельца");
     if (path === "/privacy") await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(8);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()).violations).toEqual([]);
   }
   expect([...external]).toEqual([]);
+  await page.goto("/learn");
+  await expect(footer.getByText("18+", { exact: true })).toBeVisible();
 });
 
 test("profile withdrawal checks the password and clears account-scoped browser data", async ({ page }) => {

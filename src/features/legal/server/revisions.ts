@@ -1,5 +1,5 @@
 import {
-  confirmationKinds, legalConfirmations, legalDocuments, registrationClosed,
+  confirmationKinds, legalConfirmations, legalDocuments, registrationClosed, siteAgeCategory,
   type LegalDocumentKind, type LegalVersions, type RevisionKind,
 } from "../contract.ts";
 import { AccountError } from "../../account/server/errors.ts";
@@ -18,17 +18,17 @@ export type LegalRevision = Readonly<{
 const release: { approved: boolean; effectiveDate: string | null; ageCategory: string | null } = {
   approved: false,
   effectiveDate: null,
-  ageCategory: null,
+  ageCategory: siteAgeCategory,
 };
 
 const publicKinds = ["privacy", "terms", "consent"] as const;
 export const revisionKinds = [...publicKinds, "age"] as const;
-const versions: LegalVersions = { privacy: "1.0-draft.1", terms: "1.0-draft.1", consent: "1.0-draft.1", age: "1.0" };
+const versions: LegalVersions = { privacy: "1.0-draft.2", terms: "1.0-draft.2", consent: "1.0-draft.2", age: "1.0" };
 
 export function legalRevision(kind: LegalDocumentKind): LegalRevision {
-  const age = kind === "terms" ? `Возрастная категория информационной продукции: ${release.ageCategory ?? "уточняется"}.
+  const age = `Возрастная маркировка сайта Sophia и всех его образовательных материалов — ${release.ageCategory ?? "уточняется"}.
 
-` : "";
+`;
   return {
     kind,
     version: versions[kind],
