@@ -1,11 +1,19 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { accountTestSettings } from "./support/account-test-settings";
-import { createTestAccount, loginTestAccount, postAccount, testEmail, testMailLink, testPassword as password } from "./support/accounts";
+import { createTestAccount, loginTestAccount, postAccount, seedVerifiedTestAccount, testEmail, testMailLink, testPassword as password } from "./support/accounts";
+import { legalAcceptance } from "./support/legal-confirmations";
 
 async function enterPassword(page: Page, value = password) {
   await page.getByLabel("Пароль", { exact: true }).fill(value);
   await page.getByLabel("Повтор пароля").fill(value);
+}
+
+async function acceptLegalConditions(page: Page) {
+  for (const checkbox of await page.getByRole("checkbox").all()) {
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+  }
 }
 
 test("registration, mailbox verification, profile edit and logout through the UI", async ({ page }) => {
@@ -16,6 +24,11 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await page.getByLabel("Отображаемое имя").fill("Мария Петрова");
   await page.getByLabel("Email").fill(address.toUpperCase());
   await enterPassword(page);
+  await expect(page.getByRole("checkbox")).toHaveCount(3);
+  await page.getByRole("button", { name: "Создать аккаунт" }).click();
+  await expect(page.getByRole("checkbox").first()).toBeFocused();
+  await expect(page.getByRole("checkbox").first()).toHaveAccessibleDescription(/все|каждое/);
+  await acceptLegalConditions(page);
   await page.getByRole("button", { name: "Создать аккаунт" }).click();
   await expect(page.getByRole("status")).toContainText("Проверьте почту");
   const initialLink = await testMailLink(address, "verify");
@@ -25,6 +38,8 @@ test("registration, mailbox verification, profile edit and logout through the UI
   await expect(page.getByRole("status")).toContainText("ссылку ещё раз");
   await page.goto((await testMailLink(address, "verify", initialLink)).href);
   await enterPassword(page);
+  await expect(page.getByRole("checkbox")).toHaveCount(3);
+  await acceptLegalConditions(page);
   await page.getByRole("button", { name: "Подтвердить email" }).click();
   await expect(page.getByRole("status")).toContainText("Email подтверждён");
   await page.getByRole("main").getByRole("link", { name: "Войти", exact: true }).click();
@@ -100,7 +115,7 @@ test("registration explains the email restriction and rejects unsupported domain
   await page.getByRole("main").getByRole("link", { name: "Пользовательское соглашение" }).click();
   await expect(page).toHaveURL(/\/terms$/);
   await expect(page.getByRole("heading", { name: "Пользовательское соглашение Sophia" })).toBeVisible();
-  await expect(page.getByRole("main")).toContainText("yandex.ru, ya.ru, mail.ru");
+  await expect(page.getByRole("main")).toContainText("Редакция");
   await page.goBack();
 
   const intercepted: string[] = [];
@@ -110,18 +125,81 @@ test("registration explains the email restriction and rejects unsupported domain
   });
   await page.getByLabel("Отображаемое имя").fill(displayName);
   const field = page.getByLabel("Email");
+  await expect(field).toHaveAccessibleDescription(/yandex\.ru, ya\.ru, mail\.ru/);
   await field.fill("user@gmail.com");
   await enterPassword(page);
   await page.getByRole("button", { name: "Создать аккаунт" }).click();
   await expect(field).toBeFocused();
-  await expect(field).toHaveAccessibleDescription(message);
+  await expect(field).toHaveAccessibleDescription(new RegExp(message.replaceAll(".", "\\.")));
   expect(intercepted).toEqual([]);
 
   const response = await postAccount(page.request, "register", {
-    displayName, email: "user@sub.mail.ru", password, confirmPassword: password,
+    ...legalAcceptance, displayName, email: "user@sub.mail.ru", password, confirmPassword: password,
   });
   expect(response.status()).toBe(400);
   expect(await response.json()).toEqual({ error: message });
+});
+
+test("the footer links to readable legal drafts with no third-party requests", async ({ page }) => {
+  const external = new Set<string>();
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.protocol.startsWith("http") && url.origin !== accountTestSettings().origin) external.add(url.origin);
+  });
+  const docs = [
+    ["/privacy", "Политика обработки персональных данных", "Сроки хранения"],
+    ["/terms", "Пользовательское соглашение", "Доступ и регистрация"],
+    ["/consent", "Согласие на обработку персональных данных", "Срок и отзыв"],
+  ];
+  await page.setViewportSize({ width: 320, height: 850 });
+  await page.goto("/");
+  for (const [path, label, section] of docs) {
+    await page.locator("footer.site-footer").getByRole("link", { name: label }).click();
+    await expect(page).toHaveURL(new RegExp(`${path}$`));
+    await expect(page.getByRole("heading", { level: 1, name: `${label} Sophia` })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: new RegExp(section) })).toBeVisible();
+    await expect(page.getByRole("main")).toContainText("Проект документа");
+    await expect(page.getByRole("main")).not.toContainText("Приложение для владельца");
+    if (path === "/privacy") await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(8);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()).violations).toEqual([]);
+  }
+  expect([...external]).toEqual([]);
+});
+
+test("profile withdrawal checks the password and clears account-scoped browser data", async ({ page }) => {
+  const account = await seedVerifiedTestAccount();
+  await loginTestAccount(page.request, account);
+  await page.goto("/profile");
+  const { accountId } = await (await page.request.get("/api/progress")).json();
+  const profile = page.getByRole("region", { name: "Персональные данные" });
+  const label = "Отозвать согласие и удалить аккаунт";
+  await page.evaluate(accountId => {
+    localStorage.setItem(`sophia.account.${accountId}.lesson-resume.v2:fixture`, "test");
+    localStorage.setItem(`sophia.account.${accountId}.guest-progress-import.v1`, "test");
+    localStorage.setItem("sophia.lesson-resume.v2:guest-fixture", "test");
+  }, accountId);
+  await profile.getByRole("button", { name: label }).click();
+  await profile.getByLabel("Текущий пароль").fill("Некорректная парольная фраза");
+  await profile.getByRole("checkbox").check();
+  await profile.getByRole("button", { name: label }).click();
+  await expect(profile.getByRole("alert")).toContainText("Текущий пароль указан неверно.");
+  const lessonTab = await page.context().newPage();
+  await lessonTab.goto("/learn#lesson=plato-introduction&scene=journey");
+  await expect(lessonTab.getByTestId("lesson-introduction")).toBeVisible();
+  await lessonTab.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await profile.getByLabel("Текущий пароль").fill(password);
+  await profile.getByRole("button", { name: label }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(lessonTab).toHaveURL(/\/learn$/);
+  expect(await page.evaluate(accountId => ({
+    accountKeys: Object.keys(localStorage).filter(key => key.startsWith(`sophia.account.${accountId}.`)),
+    markerContainsAccountId: localStorage.getItem("sophia.account-session-change")?.includes(accountId),
+    guest: localStorage.getItem("sophia.lesson-resume.v2:guest-fixture"),
+  }), accountId)).toEqual({ accountKeys: [], markerContainsAccountId: false, guest: "test" });
+  await lessonTab.close();
+  await page.goto("/profile");
+  await expect(page).toHaveURL(/\/login\?next=%2Fprofile$/);
 });
 
 test("registration and new password fields cap pasted text at fifty characters", async ({ page, context }) => {

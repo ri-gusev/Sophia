@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, type APIRequestContext } from "@playwright/test";
+import { openAccountDatabase } from "../../src/features/account/server/database";
+import { hashPassword } from "../../src/features/account/server/credentials";
 import { accountTestSettings } from "./account-test-settings";
+import { legalAcceptance } from "./legal-confirmations";
 
 export const testPassword = "Длинная и удобная парольная фраза";
 export const testEmail = () => `${randomUUID()}@mail.ru`;
@@ -26,10 +29,23 @@ export async function testMailLink(to: string, kind: "verify" | "reset", previou
 export async function createTestAccount(request: APIRequestContext, displayName = "Пользователь Sophia") {
   const email = testEmail();
   const password = testPassword;
-  expect((await postAccount(request, "register", { displayName, email, password, confirmPassword: password })).ok()).toBe(true);
+  expect((await postAccount(request, "register", { ...legalAcceptance, displayName, email, password, confirmPassword: password })).ok()).toBe(true);
   const token = new URLSearchParams((await testMailLink(email, "verify")).hash.slice(1)).get("token");
-  expect((await postAccount(request, "verify", { token, password, confirmPassword: password })).ok()).toBe(true);
+  expect((await postAccount(request, "verify", { ...legalAcceptance, token, password, confirmPassword: password })).ok()).toBe(true);
   return { email, password };
+}
+
+export async function seedVerifiedTestAccount(displayName = "Пользователь Sophia") {
+  const email = testEmail();
+  const hash = await hashPassword(testPassword);
+  const now = Date.now();
+  const db = openAccountDatabase(accountTestSettings().database, true);
+  try {
+    db.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)").run(randomUUID(), email, displayName, hash, now, now, now);
+  } finally {
+    db.close();
+  }
+  return { email, password: testPassword };
 }
 
 export async function loginTestAccount(request: APIRequestContext, credentials: { email: string; password: string }) {

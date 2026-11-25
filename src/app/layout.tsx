@@ -8,6 +8,7 @@ import { AccountViewer } from "@/features/account/account-viewer";
 import { LessonProgressProvider } from "@/features/account/progress/client/lesson-progress-provider";
 import { canUseAiChat } from "@/features/account/server/session";
 import { currentAccount } from "@/features/account/server/viewer";
+import { legalDocuments } from "@/features/legal/contract";
 
 const SUPPORT_EMAIL = "support.sophia@ro.ru";
 
@@ -38,7 +39,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <div className="site-footer-inner container">
           <p>Поддержка и обращения по персональным данным</p>
           <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-          <Link href="/terms">Пользовательское соглашение</Link>
+          {Object.values(legalDocuments).map(({ href, title }) => <Link key={href} href={href}>{title}</Link>)}
         </div>
       </footer>
     </body>

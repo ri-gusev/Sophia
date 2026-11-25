@@ -1,6 +1,7 @@
 import { normalizeEmail } from "../../src/features/account/account-contract.ts";
 import { accountSettings } from "../../src/features/account/server/config.ts";
 import { accountTransaction, openAccountDatabase } from "../../src/features/account/server/database.ts";
+import { cleanupAccounts } from "../../src/features/account/server/cleanup.ts";
 
 function main() {
   const [command, email, ...extra] = process.argv.slice(2);
@@ -12,8 +13,18 @@ function main() {
     console.log(`Accounts database ready (schema ${version}).`);
     return;
   }
+  if (command === "cleanup" && email === undefined) {
+    const db = openAccountDatabase(path);
+    try {
+      cleanupAccounts(db, { force: true });
+    } finally {
+      db.close();
+    }
+    console.log("Expired account data cleaned.");
+    return;
+  }
   if ((command !== "grant-ai-chat" && command !== "revoke-ai-chat") || extra.length > 0) {
-    throw new Error("Usage: node scripts/accounts/cli.ts migrate | grant-ai-chat <email> | revoke-ai-chat <email>");
+    throw new Error("Usage: node scripts/accounts/cli.ts migrate | cleanup | grant-ai-chat <email> | revoke-ai-chat <email>");
   }
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) throw new Error("Provide a valid email address.");

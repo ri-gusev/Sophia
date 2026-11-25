@@ -1,4 +1,6 @@
 import { ACCOUNT_LIMITS, isLoginPassword, normalizeDisplayName, normalizeEmail, passwordPairError } from "../account-contract.ts";
+import { confirmationKinds } from "../../legal/contract.ts";
+import { requireLegalConfirmations, requireLegalRegistration } from "../../legal/server/revisions.ts";
 import { accountSettings } from "./config.ts";
 import { hashPassword, matchesPassword, validToken } from "./credentials.ts";
 import { AccountError, accountUnavailable } from "./errors.ts";
@@ -7,18 +9,20 @@ import { accountMailTransport } from "./mail.ts";
 import { limitAccountRequests } from "./rate-limits.ts";
 import {
   ACCOUNT_SESSION_AGE, challengeExpired, checkChallenge, consumeChallenge, credentialsForEmail, deleteChallenge,
-  invalidLogin, issueChallenge, replaceSession, requireApprovedAccountEmail, revokeSession, updateDisplayName,
+  eraseAccount, invalidLogin, issueChallenge, replaceSession, requireApprovedAccountEmail, revokeSession, updateDisplayName,
 } from "./store.ts";
 
 const fields = {
-  register: ["displayName", "email", "password", "confirmPassword"],
+  register: ["displayName", "email", "password", "confirmPassword", ...confirmationKinds, "legalVersions"],
   "resend-verification": ["email"],
   login: ["email", "password"],
   logout: ["accountId"],
-  verify: ["token", "password", "confirmPassword"],
+  verify: ["token", "password", "confirmPassword", ...confirmationKinds, "legalVersions"],
   forgot: ["email"],
   reset: ["token", "password", "confirmPassword"],
   profile: ["displayName", "accountId"],
+  "delete-account": ["accountId", "password", "confirm"],
+  "withdraw-consent": ["accountId", "password", "confirm"],
 } satisfies Record<string, string[]>;
 
 type Action = keyof typeof fields;
@@ -84,9 +88,10 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
       requireApprovedAccountEmail(body.email);
       const displayName = nameField(body.displayName);
       passwordField(body);
+      const revisions = requireLegalConfirmations(body);
       const send = accountMailTransport();
       limitAccountRequests(action, network, email);
-      const token = issueChallenge("verify", email, displayName);
+      const token = issueChallenge("verify", email, { displayName, revisions });
       if (token) await sendChallenge("verify", email, send, token);
       return ok();
     }
@@ -104,11 +109,20 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
     case "profile":
       updateDisplayName(sessionToken, body.accountId, nameField(body.displayName));
       return ok();
+    case "delete-account":
+    case "withdraw-consent":
+      if (body.confirm !== true) throw new AccountError(400, "Подтверди удаление аккаунта.");
+      if (!isLoginPassword(body.password)) throw new AccountError(400, "Укажи текущий пароль.");
+      await eraseAccount(sessionToken, body.accountId, body.password, network);
+      return ok(sessionCookie(""));
     case "forgot":
     case "resend-verification": {
       const email = emailField(body.email);
       const recovery = action === "forgot";
-      if (!recovery) requireApprovedAccountEmail(body.email);
+      if (!recovery) {
+        requireApprovedAccountEmail(body.email);
+        requireLegalRegistration();
+      }
       const send = accountMailTransport();
       const kind = recovery ? "reset" : "verify";
       limitAccountRequests(recovery ? "forgot" : "register", network, email);
@@ -126,6 +140,7 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
     case "verify":
     case "reset": {
       const password = passwordField(body);
+      if (action === "verify") requireLegalConfirmations(body);
       limitAccountRequests(action, network);
       if (!validToken(body.token)) throw challengeExpired();
       checkChallenge(action, body.token);

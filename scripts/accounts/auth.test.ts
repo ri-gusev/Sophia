@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, beforeEach, test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
+import { legalAcceptance, legalVersions } from "../../tests/support/legal-confirmations.ts";
+import { cleanupAccounts } from "../../src/features/account/server/cleanup.ts";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
@@ -68,8 +70,8 @@ function cookieFrom(response: Response) {
 }
 
 async function activate(email: string) {
-  assert.equal((await post("register", { email, displayName: "София", ...pair })).status, 200);
-  assert.equal((await post("verify", { token: await tokenFromMail(email, "verify"), ...pair })).status, 200);
+  assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София", ...pair })).status, 200);
+  assert.equal((await post("verify", { ...legalAcceptance, token: await tokenFromMail(email, "verify"), ...pair })).status, 200);
 }
 
 const login = (email: string, candidate = password, token?: string) => post("login", { email, password: candidate }, { token });
@@ -78,16 +80,231 @@ test("validates registration before accepting data", async () => {
   const good = { email: "valid@mail.ru", displayName: "София", ...pair };
   for (const change of [{ email: "wrong" }, { displayName: "" }, { password: "short" },
     { password: "x".repeat(129) }, { confirmPassword: "different" }]) {
-    assert.equal((await post("register", { ...good, ...change })).status, 400);
+    assert.equal((await post("register", { ...legalAcceptance, ...good, ...change })).status, 400);
   }
   assert.equal((await post("register", {})).status, 400);
+});
+
+test("registration rejects a request without legal confirmations without creating a challenge", async () => {
+  const email = "no-consent@mail.ru";
+  const before = await readOutbox();
+  const body = { email, displayName: "София", ...pair };
+  assert.equal((await post("register", body)).status, 400);
+  for (const kind of ["age", "terms", "consent"]) {
+    for (const value of [undefined, false, "true", 1]) {
+      assert.equal((await post("register", { ...body, ...legalAcceptance, [kind]: value })).status, 400);
+    }
+  }
+  assert.equal((await post("register", { ...body, ...legalAcceptance, legalVersions: { ...legalVersions, privacy: "0.9" } })).status, 409);
+  assert.equal(accountDb().prepare("SELECT 1 FROM account_challenges WHERE email = ?").get(email), undefined);
+  assert.equal(await readOutbox(), before);
+});
+
+test("drafts block registration, resend and activation in proxy mode before issuing mail", async () => {
+  const previous = process.env.CHAT_PROXY_SECRET;
+  const secret = "f".repeat(64);
+  const proxy = "https://example.test";
+  const before = await readOutbox();
+  await withSmtpSettings(async () => {
+    Object.assign(process.env, { ACCOUNT_ORIGIN: proxy, CHAT_PROXY_SECRET: secret });
+    try {
+      for (const [action, body] of [
+        ["register", { email: "closed@mail.ru", displayName: "София", ...pair, ...legalAcceptance }],
+        ["resend-verification", { email: "closed@mail.ru" }],
+        ["verify", { token: newToken(), ...pair, ...legalAcceptance }],
+      ] as const) {
+        const response = await handleAccountRequest(new Request(proxy, {
+          method: "POST", headers: { origin: proxy, "content-type": "application/json",
+            "x-sophia-proxy-token": secret, "x-sophia-client-ip": "192.0.2.1" },
+          body: JSON.stringify(body),
+        }), action, () => undefined, () => assert.fail("must not schedule mail"));
+        assert.equal(response.status, 503);
+        assert.deepEqual(await response.json(), { error: "Регистрация пока недоступна." });
+      }
+    } finally {
+      if (previous === undefined) delete process.env.CHAT_PROXY_SECRET;
+      else process.env.CHAT_PROXY_SECRET = previous;
+    }
+  });
+  assert.equal(accountDb().prepare("SELECT 1 FROM account_challenges WHERE email = 'closed@mail.ru'").get(), undefined);
+  assert.equal(accountDb().prepare("SELECT 1 FROM account_rate_limits").get(), undefined);
+  assert.equal(await readOutbox(), before);
+});
+
+test("pins immutable legal revisions and requires all confirmations from the email owner", async () => {
+  const email = "legal-evidence@mail.ru";
+  const db = accountDb();
+  const before = Date.now();
+  const body = { email, displayName: "София", ...pair, ...legalAcceptance };
+  assert.equal((await post("register", body)).status, 200);
+  const token = await tokenFromMail(email, "verify");
+  const request = db.prepare(`SELECT id, privacy_version, account_registrations.expires_at AS expires_at FROM account_registrations
+    JOIN account_challenges ON registration_id = id WHERE token_hash = ?`).get(tokenHash(token));
+  assert.equal(typeof request?.id, "string");
+  assert.ok(request && typeof request.id === "string" && typeof request.expires_at === "number");
+  assert.equal(request.privacy_version, legalVersions.privacy);
+  const receipts = db.prepare("SELECT kind, version, confirmed_at FROM account_legal_confirmations WHERE registration_id = ? ORDER BY kind").all(request.id);
+  assert.deepEqual(receipts.map(({ kind, version }) => [kind, version]), [
+    ["age", legalVersions.age], ["consent", legalVersions.consent], ["terms", legalVersions.terms],
+  ]);
+  for (const receipt of receipts) assert.ok(Number(receipt.confirmed_at) >= before);
+  const original = db.prepare("SELECT content, sha256 FROM legal_revisions WHERE kind = 'terms' AND version = ?").get(legalVersions.terms);
+  assert.ok(original && typeof original.content === "string");
+  assert.ok(JSON.parse(original.content).body.includes("Стороны и предмет"));
+  assert.equal(original.sha256, tokenHash(original.content));
+  assert.throws(() => db.exec("UPDATE legal_revisions SET content = 'rewritten'"), /immutable/);
+  assert.throws(() => db.exec("DELETE FROM legal_revisions"), /immutable/);
+  assert.throws(() => db.exec("INSERT OR REPLACE INTO legal_revisions SELECT * FROM legal_revisions"), /immutable/);
+
+  assert.equal((await post("resend-verification", { email })).status, 200);
+  const resent = await tokenFromMail(email, "verify");
+  assert.deepEqual({ ...db.prepare("SELECT registration_id, expires_at FROM account_challenges WHERE token_hash = ?").get(tokenHash(resent)) },
+    { registration_id: request.id, expires_at: request.expires_at });
+  assert.equal((await post("verify", { token: resent, ...pair })).status, 400);
+  assert.equal((await post("verify", { token: resent, ...pair, ...legalAcceptance, consent: false })).status, 400);
+  assert.equal((await post("verify", { token: resent, ...pair, ...legalAcceptance,
+    legalVersions: { ...legalVersions, consent: "0.9" } })).status, 409);
+  assert.equal((await post("verify", { token: resent, ...pair, ...legalAcceptance })).status, 200);
+  const linked = db.prepare(`SELECT u.email, r.verified_at, r.expires_at FROM account_registrations AS r
+    JOIN account_users AS u ON u.id = r.user_id WHERE r.id = ?`).get(request.id);
+  assert.equal(linked?.email, email);
+  assert.equal(linked?.expires_at, null);
+  assert.ok(Number(linked?.verified_at) >= Number(receipts[0].confirmed_at));
+  assert.deepEqual(db.prepare("SELECT kind, version, confirmed_at FROM account_legal_confirmations WHERE registration_id = ? ORDER BY kind").all(request.id), receipts);
+});
+
+test("verification rejects a valid token whose registration evidence is incomplete", async () => {
+  const email = "broken-evidence@mail.ru";
+  const db = accountDb();
+  await post("register", { email, displayName: "София", ...pair, ...legalAcceptance });
+  const token = await tokenFromMail(email, "verify");
+  db.prepare(`DELETE FROM account_legal_confirmations WHERE kind = 'age' AND registration_id IN
+    (SELECT registration_id FROM account_challenges WHERE email = ?)`).run(email);
+  const result = await post("verify", { token, ...pair, ...legalAcceptance });
+  assert.equal(result.status, 400);
+  assert.equal(db.prepare("SELECT 1 FROM account_users WHERE email = ?").get(email), undefined);
+});
+
+test("account deletion and withdrawal require reauthentication and cascade through account data", async () => {
+  const db = accountDb();
+  for (const action of ["delete-account", "withdraw-consent"]) {
+    const email = `${action}@mail.ru`;
+    await activate(email);
+    const session = cookieFrom(await login(email));
+    const second = cookieFrom(await login(email));
+    const user = findSession(session);
+    assert.ok(user);
+    const request = db.prepare("SELECT id FROM account_registrations WHERE user_id = ?").get(user.id);
+    assert.ok(typeof request?.id === "string");
+    const body = { accountId: user.id, password, confirm: true };
+    db.prepare("INSERT INTO account_lesson_progress (user_id, lesson_id) VALUES (?, 'fixture')").run(user.id);
+    db.prepare("INSERT INTO account_slide_progress VALUES (?, 'fixture', 'first')").run(user.id);
+    db.prepare("INSERT INTO account_last_opened_lesson VALUES (?, 'fixture')").run(user.id);
+    db.prepare("INSERT INTO account_entitlements VALUES (?, 'ai_chat', ?)").run(user.id, Date.now());
+    assert.equal((await post("forgot", { email })).status, 200);
+    const reset = await tokenFromMail(email, "reset");
+    assert.equal((await post(action, body)).status, 401);
+    assert.equal((await post(action, body, { token: session, origin: "https://other.example" })).status, 403);
+    assert.equal((await post(action, { ...body, accountId: "other" }, { token: session })).status, 409);
+    assert.equal((await post(action, { ...body, confirm: "true" }, { token: session })).status, 400);
+    assert.equal((await post(action, { ...body, password: newPassword }, { token: session })).status, 401);
+    assert.ok(findSession(second));
+    const removals = await Promise.all([post(action, body, { token: session }), post(action, body, { token: second })]);
+    assert.deepEqual(removals.map(result => result.status).sort(), [200, 401]);
+    const response = removals.find(result => result.ok);
+    assert.match(response?.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    assert.equal(findSession(session), null);
+    assert.equal(findSession(second), null);
+    assert.equal((await post("reset", { token: reset, ...pair })).status, 400);
+    assert.equal(db.prepare("SELECT 1 FROM account_users WHERE id = ?").get(user.id), undefined);
+    for (const table of ["account_sessions", "account_entitlements", "account_lesson_progress", "account_slide_progress",
+      "account_last_opened_lesson", "account_registrations", "account_challenges"]) {
+      assert.equal(db.prepare(`SELECT 1 FROM ${table} WHERE user_id = ?`).get(user.id), undefined, table);
+    }
+    assert.equal(db.prepare("SELECT 1 FROM account_legal_confirmations WHERE registration_id = ?").get(request.id), undefined);
+    assert.ok(db.prepare("SELECT 1 FROM legal_revisions WHERE kind = 'terms'").get());
+  }
+});
+
+test("daily cleanup removes expired sessions, tokens, pending requests and receipts", async () => {
+  const db = accountDb();
+  const email = "abandoned@mail.ru";
+  await post("register", { email, displayName: "София", ...pair, ...legalAcceptance });
+  const pending = db.prepare("SELECT registration_id, expires_at FROM account_challenges WHERE email = ?").get(email);
+  assert.ok(typeof pending?.registration_id === "string" && typeof pending.expires_at === "number");
+  const activeEmail = "cleanup-active@mail.ru";
+  await activate(activeEmail);
+  const session = cookieFrom(await login(activeEmail));
+  assert.equal((await post("forgot", { email: activeEmail })).status, 200);
+  const reset = await tokenFromMail(activeEmail, "reset");
+  const now = pending.expires_at + 1;
+  db.prepare("UPDATE account_sessions SET expires_at = ? WHERE token_hash = ?").run(now, tokenHash(session));
+  const next = cleanupAccounts(db, { now, force: true });
+  assert.equal(next - now, 24 * 60 * 60_000);
+  assert.equal(cleanupAccounts(db, { now: now + 10 }), next);
+  assert.equal(db.prepare("SELECT 1 FROM account_sessions WHERE token_hash = ?").get(tokenHash(session)), undefined);
+  assert.equal(db.prepare("SELECT 1 FROM account_challenges WHERE token_hash = ?").get(tokenHash(reset)), undefined);
+  assert.equal(db.prepare("SELECT 1 FROM account_challenges WHERE email = ?").get(email), undefined);
+  assert.equal(db.prepare("SELECT 1 FROM account_registrations WHERE id = ?").get(pending.registration_id), undefined);
+  assert.equal(db.prepare("SELECT 1 FROM account_legal_confirmations WHERE registration_id = ?").get(pending.registration_id), undefined);
+  assert.equal(db.prepare("SELECT 1 FROM account_rate_limits WHERE expires_at <= ?").get(now), undefined);
+  assert.ok(db.prepare("SELECT 1 FROM account_registrations WHERE user_id IN (SELECT id FROM account_users WHERE email = ?)").get(activeEmail));
+  assert.ok(db.prepare("SELECT 1 FROM legal_revisions").get());
+});
+
+test("migration removes a legacy verification link while preserving the account and reset token", () => {
+  const path = join(directory, "legacy.sqlite");
+  const legacy = new DatabaseSync(path);
+  legacy.exec(`PRAGMA application_id = 1397706824;
+    PRAGMA user_version = 2;
+    CREATE TABLE account_users (id TEXT PRIMARY KEY);
+    CREATE TABLE account_challenges (
+      token_hash TEXT PRIMARY KEY, kind TEXT, email TEXT, user_id TEXT REFERENCES account_users(id),
+      display_name TEXT, expires_at INTEGER
+    );
+    INSERT INTO account_users VALUES ('legacy-user');
+    INSERT INTO account_challenges VALUES ('legacy-verify', 'verify', 'a@mail.ru', NULL, 'Name', 100);
+    INSERT INTO account_challenges VALUES ('legacy-reset', 'reset', 'b@mail.ru', 'legacy-user', NULL, 100);
+  `);
+  legacy.close();
+  const migrated = openAccountDatabase(path);
+  try {
+    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 3);
+    assert.equal(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'verify'").get(), undefined);
+    assert.ok(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'reset'").get());
+    assert.ok(migrated.prepare("SELECT 1 FROM account_users WHERE id = 'legacy-user'").get());
+    assert.throws(() => migrated.exec("INSERT INTO account_challenges (kind) VALUES ('verify')"), /registration request/);
+  } finally {
+    migrated.close();
+  }
+});
+
+test("cleanup retries an occupied WAL without postponing it to the next day", () => {
+  const path = join(directory, "cleanup-wal.sqlite");
+  const db = openAccountDatabase(path, true);
+  const reader = new DatabaseSync(path, { readOnly: true });
+  try {
+    db.exec("INSERT INTO account_rate_limits VALUES ('old', 1, 1)");
+    reader.exec("BEGIN");
+    assert.ok(reader.prepare("SELECT 1 FROM account_rate_limits WHERE bucket = 'old'").get());
+    const now = Date.now();
+    assert.throws(() => cleanupAccounts(db, { now }), /write-ahead log is busy/);
+    assert.equal(db.prepare("SELECT 1 FROM account_rate_limits WHERE bucket = 'old'").get(), undefined);
+    assert.ok(statSync(path + "-wal").size > 0);
+    reader.exec("ROLLBACK");
+    assert.equal(cleanupAccounts(db, { now: now + 10 }), now + 24 * 60 * 60_000);
+    assert.equal(statSync(path + "-wal").size, 0);
+  } finally {
+    reader.close();
+    db.close();
+  }
 });
 
 test("accepts each approved mail domain with whitespace and uppercase normalized", async () => {
   for (const domain of ["yandex.ru", "ya.ru", "mail.ru", "inbox.ru", "list.ru", "bk.ru", "internet.ru",
     "rambler.ru", "ro.ru", "lenta.ru", "autorambler.ru", "myrambler.ru", "vk.com", "vk.ru"]) {
     accountDb().exec("DELETE FROM account_rate_limits");
-    const response = await post("register", { email: ` Domain-Fixture@${domain.toUpperCase()} `, displayName: "София", ...pair });
+    const response = await post("register", { ...legalAcceptance, email: ` Domain-Fixture@${domain.toUpperCase()} `, displayName: "София", ...pair });
     assert.equal(response.status, 200, domain);
     assert.ok(await tokenFromMail(`domain-fixture@${domain}`, "verify"));
   }
@@ -98,14 +315,14 @@ test("rejects unsupported domains before any database write or email delivery", 
   const db = accountDb();
   const countChallenges = () => db.prepare("SELECT count(*) AS count FROM account_challenges").get()?.count;
   const countBefore = countChallenges();
-  for (const email of ["person@gmail.com", "person@outlook.com", "person@xmail.ru", "person@sub.mail.ru",
+  for (const email of ["person@gmail.com", "person@vk.net", "person@outlook.com", "person@xmail.ru", "person@sub.mail.ru",
     "person@mail.ru.example.org", "person@notmail.ru", "person@maіl.ru", "person@ｍail.ru", "person@mail。ru"]) {
-    const response = await post("register", { email, displayName: "София", ...pair });
+    const response = await post("register", { ...legalAcceptance, email, displayName: "София", ...pair });
     assert.equal(response.status, 400, email);
     assert.deepEqual(await response.json(), { error: unsupportedEmail }, email);
   }
   for (const email of ["person@other.org@mail.ru", "person@mail.ru.", "person@mail.ru/path", "person@mail.ru:443"]) {
-    assert.equal((await post("register", { email, displayName: "София", ...pair })).status, 400, email);
+    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София", ...pair })).status, 400, email);
   }
   assert.equal(countChallenges(), countBefore);
   assert.equal(db.prepare("SELECT 1 FROM account_rate_limits").get(), undefined);
@@ -114,12 +331,13 @@ test("rejects unsupported domains before any database write or email delivery", 
 
 test("a pending registration on an unsupported domain cannot resend or activate", async () => {
   const email = "pending-before-policy@example.net";
-  const token = newToken();
+  const initial = "pending-before-policy@mail.ru";
+  await post("register", { email: initial, displayName: "София", ...pair, ...legalAcceptance });
+  const token = await tokenFromMail(initial, "verify");
   const db = accountDb();
-  db.prepare("INSERT INTO account_challenges VALUES (?, 'verify', ?, NULL, ?, ?)")
-    .run(tokenHash(token), email, "София", Date.now() + 60_000);
+  db.prepare("UPDATE account_challenges SET email = ? WHERE token_hash = ?").run(email, tokenHash(token));
   const before = await readOutbox();
-  for (const response of [await post("resend-verification", { email }), await post("verify", { token, ...pair })]) {
+  for (const response of [await post("resend-verification", { email }), await post("verify", { ...legalAcceptance, token, ...pair })]) {
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), { error: unsupportedEmail });
   }
@@ -136,12 +354,12 @@ test("accepts eight-character passwords and caps new account fields at fifty cha
     { password: "a".repeat(51), confirmPassword: "a".repeat(51) },
     { displayName: "a".repeat(51) },
     { email: "a".repeat(44) + "@mail.ru" },
-  ]) assert.equal((await post("register", { ...draft, ...change })).status, 400);
-  assert.equal((await post("register", draft)).status, 200);
+  ]) assert.equal((await post("register", { ...legalAcceptance, ...draft, ...change })).status, 400);
+  assert.equal((await post("register", { ...legalAcceptance, ...draft })).status, 200);
   const token = await tokenFromMail(email, "verify");
   const tooLong = "a".repeat(51);
-  assert.equal((await post("verify", { token, password: tooLong, confirmPassword: tooLong })).status, 400);
-  assert.equal((await post("verify", { token, password: draft.password, confirmPassword: draft.password })).status, 200);
+  assert.equal((await post("verify", { ...legalAcceptance, token, password: tooLong, confirmPassword: tooLong })).status, 400);
+  assert.equal((await post("verify", { ...legalAcceptance, token, password: draft.password, confirmPassword: draft.password })).status, 200);
   assert.equal((await login(email, draft.password)).status, 200);
 });
 
@@ -160,15 +378,15 @@ test("existing long credentials and an unsupported email still work for sign-in 
 
 test("registration normalizes email and activation requires a fresh credential chosen by the email owner", async () => {
   const email = "owner@mail.ru";
-  assert.equal((await post("register", { email: " Owner@MAIL.RU ", displayName: "Первое имя", ...pair })).status, 200);
+  assert.equal((await post("register", { ...legalAcceptance, email: " Owner@MAIL.RU ", displayName: "Первое имя", ...pair })).status, 200);
   assert.equal((await login(email)).status, 401);
   const token = await tokenFromMail(email, "verify");
-  const attempts = await Promise.all([1, 2].map(() => post("verify", { token, password: newPassword, confirmPassword: newPassword })));
+  const attempts = await Promise.all([1, 2].map(() => post("verify", { ...legalAcceptance, token, password: newPassword, confirmPassword: newPassword })));
   assert.deepEqual(attempts.map(result => result.status).sort(), [200, 400]);
   assert.equal((await login(email)).status, 401);
   assert.equal((await login(email, newPassword)).status, 200);
   const before = await readFile(outbox, "utf8");
-  assert.equal((await post("register", { email, displayName: "Чужое имя", ...pair })).status, 200);
+  assert.equal((await post("register", { ...legalAcceptance, email, displayName: "Чужое имя", ...pair })).status, 200);
   assert.equal(await readFile(outbox, "utf8"), before);
   assert.equal(accountDb().prepare("SELECT count(*) AS count FROM account_users WHERE email = ?").get(email)?.count, 1);
 });
@@ -189,7 +407,7 @@ test("sessions rotate at sign-in, expire, and cannot be replayed after logout", 
 
 test("resends verification for a pending address within the registration quota", async () => {
   const email = "resend@mail.ru";
-  const registration = { email, displayName: "Исходное имя", ...pair };
+  const registration = { email, displayName: "Исходное имя", ...pair, ...legalAcceptance };
   assert.equal((await post("register", registration)).status, 200);
   const initial = await tokenFromMail(email, "verify");
   assert.equal((await post("resend-verification", { email }, { origin: "https://other.example" })).status, 403);
@@ -198,8 +416,8 @@ test("resends verification for a pending address within the registration quota",
   const acknowledged = await resent.json();
   const renewed = await tokenFromMail(email, "verify");
   assert.notEqual(renewed, initial);
-  assert.equal((await post("verify", { token: renewed, ...pair })).status, 200);
-  assert.equal((await post("verify", { token: initial, ...pair })).status, 400);
+  assert.equal((await post("verify", { ...legalAcceptance, token: renewed, ...pair })).status, 200);
+  assert.equal((await post("verify", { ...legalAcceptance, token: initial, ...pair })).status, 400);
   assert.equal(accountDb().prepare("SELECT display_name FROM account_users WHERE email = ?").get(email)?.display_name, registration.displayName);
 
   const before = await readFile(outbox, "utf8");
@@ -260,7 +478,7 @@ test("registration fails safely when configured test delivery fails", async () =
   const email = "no-delivery@mail.ru";
   process.env.ACCOUNT_TEST_OUTBOX = directory;
   try {
-    assert.equal((await post("register", { email, displayName: "София", ...pair })).status, 503);
+    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София", ...pair })).status, 503);
     assert.equal(accountDb().prepare("SELECT count(*) AS count FROM account_challenges WHERE email = ?").get(email)?.count, 0);
   } finally {
     process.env.ACCOUNT_TEST_OUTBOX = outbox;
@@ -316,7 +534,7 @@ test("sends both account templates through authenticated SMTP with mandatory STA
     assert.equal(verify.from, smtpSettings.SMTP_FROM);
     assert.deepEqual(smtp.mock.calls[0].arguments[0].message.getEnvelope().to, [to]);
     assert.equal(verify.subject, "Подтверди почту в Sophia");
-    assert.equal(verify.text, "Перейди по ссылке, чтобы подтвердить почту и установить пароль. Ссылка действует 24 часа.\nhttps://sophia.example.net/verify-email#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
+    assert.equal(verify.text, "Перейди по ссылке, чтобы подтвердить почту и установить пароль. Ссылка действует в пределах 24 часов с момента подачи заявки.\nhttps://sophia.example.net/verify-email#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
     assert.equal(reset.subject, "Восстановление доступа к Sophia");
     assert.equal(reset.text, "Перейди по ссылке, чтобы установить новый пароль. Ссылка действует 30 минут.\nhttps://sophia.example.net/reset-password#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
   });
@@ -396,11 +614,11 @@ test("fails closed without verified proxy headers and uses a host-only secure co
 test("stores only session and challenge token digests and a salted Argon2id password hash", async () => {
   const email = "hashes@mail.ru";
   const db = accountDb();
-  await post("register", { email, displayName: "София", ...pair });
+  await post("register", { ...legalAcceptance, email, displayName: "София", ...pair });
   const token = await tokenFromMail(email, "verify");
   const challenge = db.prepare("SELECT token_hash FROM account_challenges WHERE email = ?").get(email);
   assert.match(String(challenge?.token_hash), /^[a-f\d]{64}$/);
-  await post("verify", { token, ...pair });
+  await post("verify", { ...legalAcceptance, token, ...pair });
   const cookie = cookieFrom(await login(email));
   const user = findSession(cookie);
   assert.ok(user);
@@ -425,11 +643,11 @@ test("rejects a different database and never runs account migrations on it", () 
 
 test("rejects expired verification links and tokens from the wrong operation", async () => {
   const email = "expired@mail.ru";
-  await post("register", { email, displayName: "София", ...pair });
+  await post("register", { ...legalAcceptance, email, displayName: "София", ...pair });
   const token = await tokenFromMail(email, "verify");
   assert.equal((await post("reset", { token, ...pair })).status, 400);
   accountDb().prepare("UPDATE account_challenges SET expires_at = 1 WHERE email = ?").run(email);
-  assert.equal((await post("verify", { token, ...pair })).status, 400);
+  assert.equal((await post("verify", { ...legalAcceptance, token, ...pair })).status, 400);
   assert.equal((await login(email)).status, 401);
 });
 
@@ -474,7 +692,7 @@ test("a local operator can migrate, grant and revoke AI access for a verified ac
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);
-  assert.match(migration.stdout, /schema 2/);
+  assert.match(migration.stdout, /schema 3/);
   assert.equal(cli("grant-ai-chat", email).status, 1);
   await activate(email);
   const user = findSession(cookieFrom(await login(email)));

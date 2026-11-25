@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { subscribeLessonProgress } from "@/features/course-lesson/lesson-slide-progress";
+import { canSaveAccountLessonStorage } from "@/features/course-lesson/lesson-resume";
 import type { AccountProgress } from "../contract";
 import { collectGuestProgress } from "./guest-progress";
 import { useProgressSnapshot, useProgressStore } from "./lesson-progress-provider";
@@ -43,7 +44,9 @@ export function GuestProgressTransfer() {
       setStatus("failed");
       return;
     }
-    try { window.localStorage.setItem(receiptKey(accountId), offer); } catch { /* The server merge can safely be repeated. */ }
+    if (canSaveAccountLessonStorage(accountId)) {
+      try { window.localStorage.setItem(receiptKey(accountId), offer); } catch { /* The server merge can safely be repeated. */ }
+    }
     setStatus("saved");
     router.refresh();
   }

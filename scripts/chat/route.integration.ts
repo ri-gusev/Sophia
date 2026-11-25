@@ -14,6 +14,7 @@ import { EMPTY_CHAT_MEMORY } from "../../src/features/philosopher-conversation/c
 import { readChatResponse } from "../../src/features/philosopher-conversation/chat-stream.ts";
 import { ragConfig } from "../../src/features/philosopher-conversation/server/rag/config.ts";
 import { indexKnowledge } from "../../src/features/philosopher-conversation/server/rag/index-store.ts";
+import { legalAcceptance } from "../../tests/support/legal-confirmations.ts";
 
 const proxyOrigin = "https://sophia.example";
 const proxyToken = "ab".repeat(32);
@@ -143,7 +144,7 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
   const denied = await chat({ body: { isPremium: true, role: "admin", userId: "somebody" } });
   assert.equal(denied.status, 401);
   assert.equal(denied.headers.get("cache-control"), "no-store");
-  assert.equal((await account("register", accountData)).status, 200);
+  assert.equal((await account("register", { ...accountData, ...legalAcceptance })).status, 200);
   assert.equal((await account("login", { email: accountData.email, password })).status, 401);
   assert.equal((await chat()).status, 401);
 
@@ -151,7 +152,7 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
   const letter = JSON.parse(readFileSync(outbox, "utf8").trim());
   const token = new URLSearchParams(new URL(letter.url).hash.slice(1)).get("token");
   assert.ok(token);
-  assert.equal((await account("verify", { token, password, confirmPassword: password })).status, 200);
+  assert.equal((await account("verify", { ...legalAcceptance, token, password, confirmPassword: password })).status, 200);
   const login = await account("login", { email: accountData.email, password });
   assert.equal(login.status, 200);
   const cookie = login.headers.get("set-cookie")?.split(";")[0];
@@ -214,6 +215,41 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
       else assert.equal(existsSync(ledgerPath), false);
     });
   }
+
+  await t.test("proxy production serves legal drafts with registration closed and cleans expired account rows on startup", async () => {
+    const db = new DatabaseSync(accountDb, { timeout: 250 });
+    try {
+      db.prepare("INSERT INTO account_rate_limits VALUES ('expired-fixture', 1, ?)").run(Date.now() - 1);
+      const { origin: proxyServer } = await startChatServer({
+        ACCOUNT_MODE: "proxy", ACCOUNT_ORIGIN: proxyOrigin, ACCOUNT_MAIL_TRANSPORT: "smtp",
+      });
+      assert.equal(db.prepare("SELECT 1 FROM account_rate_limits WHERE bucket = 'expired-fixture'").get(), undefined);
+      assert.ok(db.prepare("SELECT completed_at FROM account_cleanup WHERE id = 1").get());
+      for (const path of ["/privacy", "/terms", "/consent"]) {
+        const response = await fetch(proxyServer + path);
+        assert.equal(response.status, 200);
+        assert.match(await response.text(), /Проект документа/);
+      }
+      for (const path of ["/register", "/verify-email"]) {
+        const response = await fetch(proxyServer + path);
+        assert.equal(response.status, 200);
+        const html = await response.text();
+        assert.match(html, /Регистрация пока недоступна/);
+        assert.doesNotMatch(html, /name="password"/);
+      }
+      const response = await fetch(`${proxyServer}/api/account/register`, {
+        method: "POST", headers: { origin: proxyOrigin, "content-type": "application/json",
+          "x-sophia-proxy-token": proxyToken, "x-sophia-client-ip": "192.0.2.1" },
+        body: JSON.stringify({ ...accountData, ...legalAcceptance, email: "closed@mail.ru" }),
+      });
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), { error: "Регистрация пока недоступна." });
+      assert.equal(db.prepare("SELECT 1 FROM account_challenges WHERE email = 'closed@mail.ru'").get(), undefined);
+      assert.equal(readFileSync(providerLog, "utf8"), "");
+    } finally {
+      db.close();
+    }
+  });
 
   assert.equal((await chat({ cookie, scope: "stale-tab" })).status, 403);
   assert.equal((await chat({ cookie, body: { philosopherId: "aristotle" } })).status, 400);

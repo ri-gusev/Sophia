@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/features/account/account-navigation";
 import { initials } from "@/features/account/account-display";
 import { ProfileName } from "@/features/account/profile-name";
+import { ProfilePrivacy } from "@/features/account/profile-privacy";
 import { GuestProgressTransfer } from "@/features/account/progress/client/guest-progress-transfer";
 import { readAccountProgress } from "@/features/account/progress/server/store";
 import { currentAccount } from "@/features/account/server/viewer";
@@ -75,5 +76,6 @@ export default async function ProfilePage() {
         <div><Button asChild><Link href={target}>{lastOpened || confirmedSlides || completed ? "Продолжить обучение" : "Начать первый урок"}</Link></Button></div>
       </>}
     </section>
+    <ProfilePrivacy accountId={user.id} />
   </main>;
 }

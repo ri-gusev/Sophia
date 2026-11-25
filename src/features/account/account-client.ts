@@ -14,11 +14,14 @@ export async function accountRequest(action: string, data: object) {
 }
 
 export const accountChangeKey = "sophia.account-session-change";
+export const accountErasurePrefix = "erase:";
 
-export function navigateAfterAccountChange(destination: string) {
+export function navigateAfterAccountChange(destination: string, erasedAccountId?: string) {
   try {
-    // A storage event carries no personal data and wakes other tabs on this origin.
-    localStorage.setItem(accountChangeKey, window.crypto.randomUUID());
+    const marker = window.crypto.randomUUID();
+    // Storage events carry the transient value to open tabs before it is replaced.
+    if (erasedAccountId) localStorage.setItem(accountChangeKey, accountErasurePrefix + erasedAccountId);
+    localStorage.setItem(accountChangeKey, marker);
   } catch { /* Account changes still refresh the current document. */ }
   window.location.replace(destination);
 }

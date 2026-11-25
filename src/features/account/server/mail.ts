@@ -22,7 +22,7 @@ export function accountMailTransport(): MailTransport {
     const verify = mail.kind === "verify";
     const subject = verify ? "Подтверди почту в Sophia" : "Восстановление доступа к Sophia";
     const text = verify
-      ? `Перейди по ссылке, чтобы подтвердить почту и установить пароль. Ссылка действует 24 часа.\n${mail.url}`
+      ? `Перейди по ссылке, чтобы подтвердить почту и установить пароль. Ссылка действует в пределах 24 часов с момента подачи заявки.\n${mail.url}`
       : `Перейди по ссылке, чтобы установить новый пароль. Ссылка действует 30 минут.\n${mail.url}`;
     await email.send({
       to: mail.to, subject, text: `${text}\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.`,

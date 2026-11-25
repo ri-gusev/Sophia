@@ -18,6 +18,7 @@
     "test:accounts": "node --test scripts/accounts/auth.test.ts",
     "test:progress": "node --test scripts/accounts/progress.test.ts",
     "accounts:migrate": "node scripts/accounts/cli.ts migrate",
+    "accounts:cleanup": "node scripts/accounts/cli.ts cleanup",
     "accounts:grant-chat": "node scripts/accounts/cli.ts grant-ai-chat",
     "accounts:revoke-chat": "node scripts/accounts/cli.ts revoke-ai-chat",
     "knowledge:import": "node scripts/knowledge/cli.ts import",

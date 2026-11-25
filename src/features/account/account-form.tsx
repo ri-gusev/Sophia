@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { confirmationKinds, legalConfirmations, legalDocuments, registrationClosed, type ConfirmationKind, type LegalVersions } from "@/features/legal/contract";
 import { accountRequest, navigateAfterAccountChange } from "./account-client";
 import {
-  ACCOUNT_LIMITS, UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, isLoginPassword,
+  ACCOUNT_LIMITS, APPROVED_ACCOUNT_EMAIL_DOMAINS, UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, isLoginPassword,
   normalizeDisplayName, normalizeEmail, passwordError, passwordPairError,
 } from "./account-contract";
 import styles from "./account.module.css";
@@ -74,11 +75,12 @@ function validate(mode: Mode, form: Partial<Record<Field, string>>) {
   return errors;
 }
 
-export function AccountForm({ mode, destination = "/profile", recoveryComplete = false }: {
-  mode: Mode; destination?: string; recoveryComplete?: boolean;
+export function AccountForm({ mode, destination = "/profile", recoveryComplete = false, legalVersions }: {
+  mode: Mode; destination?: string; recoveryComplete?: boolean; legalVersions?: LegalVersions | null;
 }) {
   const token = useSyncExternalStore<string | null | undefined>(subscribeToken, readToken, initialToken);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [missingConfirmations, setMissingConfirmations] = useState<ConfirmationKind[]>([]);
   const [failure, setFailure] = useState("");
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
@@ -87,7 +89,9 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
   const form: { title: string; action: string; fields: Field[]; description?: string; success: string } = forms[mode];
   const needsToken = mode === "verify" || mode === "reset";
   const hasToken = typeof token === "string" && /^[A-Za-z0-9_-]{43}$/.test(token);
-  const canSubmit = !needsToken || hasToken;
+  const registration = mode === "register" || mode === "verify";
+  const closed = registration && !legalVersions;
+  const canSubmit = !closed && (!needsToken || hasToken);
   // Access to existing accounts can require credentials saved under the earlier limits.
   const maxLength = mode === "login" || mode === "forgot" ? undefined : ACCOUNT_LIMITS.inputMax;
   const status = resendAccepted ? "Если адрес ожидает подтверждения, мы отправим ссылку ещё раз."
@@ -100,9 +104,11 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
     const data = new FormData(element);
     const values = Object.fromEntries(form.fields.map(field => [field, String(data.get(field) ?? "")]));
     const validation = validate(mode, values);
+    const missing = legalVersions ? confirmationKinds.filter(kind => data.get(kind) !== "on") : [];
     setErrors(validation);
+    setMissingConfirmations(missing);
     setFailure("");
-    const invalidField = form.fields.find(field => validation[field]);
+    const invalidField = form.fields.find(field => validation[field]) ?? missing[0];
     if (invalidField) {
       setFailure("Проверьте отмеченные поля.");
       const input = element.elements.namedItem(invalidField);
@@ -112,7 +118,8 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
 
     setPending(true);
     try {
-      const body = needsToken ? { ...values, token } : values;
+      const confirmations = legalVersions ? { age: true, terms: true, consent: true, legalVersions } : {};
+      const body = { ...values, ...confirmations, ...(needsToken && { token }) };
       await accountRequest(mode, body);
       element.reset();
       if (mode === "login" || mode === "reset") {
@@ -146,12 +153,13 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
   return <main id="main" className={`container ${styles.formPage}`}>
     <div className={`glass ${styles.card} ${styles.authCard}`}>
       <h1>{form.title}</h1>
-      {form.description && !done && <p className={styles.description}>{form.description}</p>}
-      <div className={styles.notice} role="status">{status}</div>
+      {form.description && !done && !closed && <p className={styles.description}>{form.description}</p>}
+      <div className={styles.notice} role="status">{closed ? registrationClosed : status}</div>
       {!done && canSubmit && <form className={styles.form} method="post" noValidate onSubmit={submit} aria-busy={pending}>
         {form.fields.map(field => {
           const isPassword = field === "password" || field === "confirmPassword";
           const hint = field === "password" && mode !== "login";
+          const domainHint = mode === "register" && field === "email";
           const error = errors[field];
           const inputId = `account-${field}`;
           return <div className={styles.field} key={field}>
@@ -161,11 +169,25 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
               maxLength={maxLength}
               required
               aria-invalid={error ? true : undefined}
-              aria-describedby={[hint ? `${inputId}-hint` : "", error ? `${inputId}-error` : ""].filter(Boolean).join(" ") || undefined} />
+              aria-describedby={[(hint || domainHint) ? `${inputId}-hint` : "", error ? `${inputId}-error` : ""].filter(Boolean).join(" ") || undefined} />
             {hint && <p id={`${inputId}-hint`} className={styles.hint}>От {ACCOUNT_LIMITS.passwordMin} до {ACCOUNT_LIMITS.inputMax} символов. Можно использовать парольную фразу.</p>}
+            {domainHint && <p id={`${inputId}-hint`} className={styles.hint}>Поддерживаемые домены: {APPROVED_ACCOUNT_EMAIL_DOMAINS.join(", ")}.</p>}
             {error && <p className={styles.error} id={`${inputId}-error`}>{error}</p>}
           </div>;
         })}
+        {legalVersions && <fieldset className={styles.legalChoices}>
+          <legend>{mode === "verify" ? "Подтвердите условия ещё раз" : "Условия регистрации"}</legend>
+          {confirmationKinds.map(kind => {
+            const missing = missingConfirmations.includes(kind);
+            return <div className={styles.legalChoice} key={kind}>
+              <input type="checkbox" autoComplete="off" id={`account-${kind}`} name={kind} required
+                aria-invalid={missing || undefined} aria-describedby={missing ? "account-legal-error" : undefined}
+                onChange={() => setMissingConfirmations(current => current.filter(item => item !== kind))} />
+              <label htmlFor={`account-${kind}`}>{legalConfirmations[kind]}</label>
+            </div>;
+          })}
+          {missingConfirmations.length > 0 && <p className={styles.error} id="account-legal-error">Отметьте каждое из трёх подтверждений.</p>}
+        </fieldset>}
         <div role="alert" className={styles.error}>{failure}</div>
         <Button type="submit" disabled={pending || token === undefined}>{pending ? "Подождите…" : form.action}</Button>
       </form>}
@@ -176,14 +198,14 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
         {failure && <p role="alert" className={styles.error}>{failure}</p>}
       </div>}
       <noscript><p className={styles.description}>Для работы с аккаунтом включите JavaScript.</p></noscript>
-      {needsToken && token !== undefined && !hasToken && !done && <p role="alert" className={styles.error}>Откройте ссылку целиком из письма Sophia.</p>}
+      {needsToken && !closed && token !== undefined && !hasToken && !done && <p role="alert" className={styles.error}>Откройте ссылку целиком из письма Sophia.</p>}
       <div className={styles.formLinks}>
         {mode === "login" ? <>
           <Link href="/forgot-password">Забыли пароль?</Link>
           <p className={styles.registrationPrompt}>Нет аккаунта? <Link href="/register">Зарегистрироваться</Link></p>
         </> : <Link href="/login">Войти</Link>}
-        {mode === "register" && <Link href="/terms">Пользовательское соглашение</Link>}
-        {mode === "verify" && !done && <Link href="/register">Запросить новую ссылку</Link>}
+        {registration && Object.values(legalDocuments).map(({ href, title }) => <Link key={href} href={href}>{title}</Link>)}
+        {mode === "verify" && !done && !closed && <Link href="/register">Запросить новую ссылку</Link>}
         {mode === "reset" && !done && <Link href="/forgot-password">Запросить новую ссылку</Link>}
       </div>
     </div>

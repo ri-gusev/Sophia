@@ -3,15 +3,38 @@ const LEGACY_PREFIX = "sophia.lesson-resume.v1:";
 const PREFIX = "sophia.lesson-resume.v2:";
 export const GUEST_LAST_OPENED_KEY = `${PREFIX}last-opened`;
 const part = encodeURIComponent;
+const accountPrefix = (accountId: string) => `sophia.account.${part(accountId)}.`;
 const lessonKey = (lessonId: string, accountId: string | null) => accountId === null
   ? PREFIX + part(lessonId)
-  : `sophia.account.${part(accountId)}.lesson-resume.v2:${part(lessonId)}`;
+  : accountPrefix(accountId) + "lesson-resume.v2:" + part(lessonId);
 const sceneKey = (lessonId: string, sceneId: string, accountId: string | null) =>
   `${lessonKey(lessonId, accountId)}:scene:${part(sceneId)}`;
 
 // One overlay per scene with a rejected reset, scoped to this document.
 // Never publish an old reset after recovery: another tab may have edited the scene.
 const temporaryScenes = new Map<string, Map<string, unknown>>();
+let suspendedAccountPrefix: string | undefined;
+
+export function suspendAccountLessonStorage(accountId: string) {
+  suspendedAccountPrefix = accountPrefix(accountId);
+}
+
+export function canSaveAccountLessonStorage(accountId: string) {
+  return suspendedAccountPrefix !== accountPrefix(accountId);
+}
+
+export function clearAccountLessonStorage(accountId: string) {
+  suspendAccountLessonStorage(accountId);
+  const prefix = accountPrefix(accountId);
+  for (const key of temporaryScenes.keys()) {
+    if (key.startsWith(prefix)) temporaryScenes.delete(key);
+  }
+  try {
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith(prefix)) window.localStorage.removeItem(key);
+    }
+  } catch { /* Browser data can be cleared through its settings if storage access is blocked. */ }
+}
 
 function read(key: string): unknown {
   try { return JSON.parse(window.localStorage.getItem(key) ?? "null"); }
@@ -29,6 +52,7 @@ function legacy(lessonId: string, accountId: string | null, reader = read) {
 }
 
 function write(key: string, value: unknown) {
+  if (suspendedAccountPrefix && key.startsWith(suspendedAccountPrefix)) return false;
   try {
     window.localStorage.setItem(key, JSON.stringify({ value }));
     return true;

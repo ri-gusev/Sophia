@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { ACCOUNT_PROGRESS_SCHEMA } from "../progress/server/schema.ts";
+import { ACCOUNT_LEGAL_SCHEMA } from "../../legal/server/schema.ts";
 import { accountSettings } from "./config.ts";
 
 const APPLICATION_ID = 0x534f5048;
@@ -49,6 +50,7 @@ const MIGRATIONS = [
     PRIMARY KEY (user_id, capability)
   ) STRICT;`,
   ACCOUNT_PROGRESS_SCHEMA,
+  ACCOUNT_LEGAL_SCHEMA,
 ];
 
 export function accountTransaction<T>(db: DatabaseSync, run: () => T): T {
@@ -85,6 +87,7 @@ export function openAccountDatabase(path: string, create = false): DatabaseSync 
   if (create) createEmptyFile(path);
   const db = new DatabaseSync(`${pathToFileURL(path).href}?mode=rw`, { timeout: 250 });
   try {
+    db.exec("PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON");
     accountTransaction(db, () => {
       const application = db.prepare("PRAGMA application_id").get()?.application_id;
       const version = Number(db.prepare("PRAGMA user_version").get()?.user_version);

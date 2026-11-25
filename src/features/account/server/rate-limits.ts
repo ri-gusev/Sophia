@@ -11,15 +11,16 @@ const limits = {
   verify: { duration: 15 * MINUTE, global: 150, network: 20 },
   forgot: { duration: HOUR, global: 60, network: 10, email: 3, daily: 240 },
   reset: { duration: 15 * MINUTE, global: 150, network: 20 },
+  erase: { duration: 15 * MINUTE, global: 150, network: 20, email: 6 },
 } as const;
 
-export function limitAccountRequests(action: keyof typeof limits, network: string, email?: string): void {
+export function limitAccountRequests(action: keyof typeof limits, network: string, identity?: string): void {
   const limit = limits[action];
   const buckets: { key: string; max: number; ttl: number }[] = [
     { key: `${action}:global`, max: limit.global, ttl: limit.duration },
     { key: `${action}:network:${network}`, max: limit.network, ttl: limit.duration },
   ];
-  if (email && "email" in limit) buckets.push({ key: `${action}:email:${tokenHash(email)}`, max: limit.email, ttl: limit.duration });
+  if (identity && "email" in limit) buckets.push({ key: `${action}:email:${tokenHash(identity)}`, max: limit.email, ttl: limit.duration });
   if ("daily" in limit) buckets.push({ key: `${action}:global:daily`, max: limit.daily, ttl: 24 * HOUR });
 
   const db = accountDb();
