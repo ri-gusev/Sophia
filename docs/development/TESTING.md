@@ -1,5 +1,9 @@
 # Стратегия проверок
 
+## Тематические курсы и общее меню
+
+После `npm.cmd run build` запустите `npm.cmd test -- tests/thematic-courses.spec.ts tests/phase-two.spec.ts tests/atlas.spec.ts`. Сценарии охватывают каталог, четыре страницы направлений, локальные обложки, неизвестный адрес, раскрытие меню, клавиатуру и активное состояние на настольном и мобильном Chromium. [Отчёт и скриншоты](THEMATIC_COURSES.md).
+
 ## Библиотека и читалка
 
 Для персональной библиотеки запустите `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/reader/*.test.ts` и полный Playwright на production-сборке. Профильные сценарии находятся в `tests/{reader,reader-enhancements,profile-library}.spec.ts`. [Матрица источников и результатов](READER_ENHANCEMENTS.md)

@@ -16,6 +16,7 @@
 | `docs/superpowers/plans/` | Планы реализации главной, разделения маршрутов и восстановления карты |
 | `src/app/` | Общий корневой layout, CSS-токены и favicon |
 | `src/app/(marketing)/` | Layout с полной шапкой и композиция трёх секций маршрута `/` |
+| `src/app/(marketing)/courses/` | Серверные страницы `/courses` и `/courses/[slug]`, метаданные и обработка неизвестного направления |
 | `src/app/(learning)/` | Независимый layout с компактной навигацией и серверная композиция карты `learn/page.tsx` для `/learn` |
 | `src/app/atlas/` | Серверная композиция `/atlas` и метаданные |
 | `src/features/philosophy-atlas/` | `atlas-view.tsx`: оболочка/год/выбор/ошибки; `earth-globe.tsx`: Canvas и текстура; `atlas-controls.tsx`: OrbitControls; `page-scroll-edges.tsx`: боковые зоны прокрутки документа; `earth-palette.ts`: палитра; `historical-time.ts`, `geo-utils.ts`, `marker-groups.ts`: чистая логика; `philosophers-data.ts`/`portrait-credits.ts`: каталог и права; `timeline.tsx`, `philosopher-markers.tsx`, `philosopher-card.tsx`, `philosopher-portrait.tsx`: UI с CSS Modules |
@@ -25,6 +26,7 @@
 | `src/components/ui/` | Общая кнопка на основе композиции shadcn/ui |
 | `src/content/` | Данные превью маршрута и описание направления |
 | `src/features/philosophy-question/` | Карточка и CSS Module, 250 вопросов в JSON, календарь Москвы, правила серии и синхронизация `localStorage` |
+| `src/features/thematic-courses/` | Типизированный каталог направлений, разметка карточек и страниц, общие стили и обложки на основе `next/image` |
 | `src/features/course-map/` | `course-map.tsx`: карта и выбор узла; `course-map-data.ts`: учебные описания; `course-map-config.ts`: узлы, позиции, действия и parentId; `philosopher-catalog-data.ts`: отдельные данные каталога; `philosopher-catalog.tsx` и CSS Modules: адаптивная панель и стили |
 | `src/features/course-lesson/` | `lesson-data.ts`: девять утверждённых сцен, изображения, задания и источники; `lesson-state.ts`: чистые правила ответов, перестановок, URL и валидации состояния; `lesson-scene.tsx` / CSS: общий бесшовный шаблон и смена изображений; `lesson-exercise.tsx`: radio и порядок с кнопками; `lesson-introduction.tsx` / CSS: навигация, tab-local состояние, прогресс и завершение |
 | `src/features/philosopher-conversation/` | Общий UI, профили, контракты, корневой provider с памятью вкладки и CSS Module |
@@ -33,6 +35,7 @@
 | `scripts/chat/` | Синтетические unit-тесты памяти, транспорта, валидации и источников |
 | `public/images/philosophers/` | Локальные фотографии бюстов и README с источниками и лицензиями |
 | `public/images/course-map/` | `adventure/{era-id}.webp` и `adventure/transition-{left-id}-{right-id}.webp`; независимые сцены и переходы в одной системе координат, README с происхождением и экспортом |
+| `public/images/courses/` | Четыре локальные WebP-обложки тематических направлений, README с происхождением и параметрами экспорта |
 | `src/lib/` | Утилита объединения CSS-классов |
 | `tests/` | Браузерные сценарии Playwright и axe |
 | `database/knowledge/` | Версионированная SQL-схема единой базы корпусов |

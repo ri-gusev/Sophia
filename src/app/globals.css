@@ -154,7 +154,7 @@ h2 span { color: #708873; }
   .header-inner { min-height: 76px; }
   .wordmark { font-size: 30px; }
   .menu-toggle { display: flex; }
-  .main-nav { display: none; position: absolute; left: 20px; right: 20px; top: 69px; padding: 22px; background: #fcfdf9; border: 1px solid #dce5d7; box-shadow: var(--shadow); border-radius: 20px; align-items: stretch; gap: 3px; }
+  .main-nav { display: none; position: absolute; left: 20px; right: 20px; top: 69px; max-height: calc(100dvh - 82px); overflow-y: auto; overscroll-behavior: contain; padding: clamp(12px, 4vw, 22px); background: #fcfdf9; border: 1px solid #dce5d7; box-shadow: var(--shadow); border-radius: 20px; align-items: stretch; gap: 3px; }
   .main-nav.is-open { display: flex; flex-direction: column; }
   .main-nav > a:not(.button) { padding: 14px 8px; font-size: 14px; }
   .main-nav .account-nav { padding: 0 8px; margin-bottom: 9px; font-size: 14px; }

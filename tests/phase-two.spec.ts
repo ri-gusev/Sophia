@@ -26,9 +26,10 @@ test("landing contains exactly three agreed sections and three direction cards",
 });
 
 test("all course entry points lead to learn and return navigation works", async ({ page }) => {
-  for (const label of ["Начать обучение", "Начать бесплатно", "Перейти к основному курсу", "Начать курс", "Обучение"]) {
+  for (const label of ["Начать обучение", "Начать бесплатно", "Перейти к основному курсу", "Начать курс", "Основной курс"]) {
     await page.goto("/");
-    if (label === "Начать бесплатно" || label === "Обучение") await openNavigation(page);
+    if (label === "Начать бесплатно" || label === "Основной курс") await openNavigation(page);
+    if (label === "Основной курс") await page.getByRole("button", { name: "Обучение", exact: true }).click();
     await page.getByRole("link", { name: label, exact: true }).click();
     await expect(page).toHaveURL(/\/learn$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Основной курс философии");
@@ -61,8 +62,11 @@ test("how-it-works anchors work from both routes and mobile menu closes", async 
   }
   await page.goto("/");
   await openNavigation(page);
-  await expect(page.getByRole("link", { name: "Атлас", exact: true })).toHaveAttribute("href", "/atlas");
   const navigation = page.getByRole("navigation", { name: "Основная навигация" });
+  const education = navigation.getByRole("button", { name: "Обучение", exact: true });
+  await education.click();
+  await expect(navigation.getByRole("link", { name: "Философский атлас", exact: true })).toHaveAttribute("href", "/atlas");
+  await education.click();
   await expect(navigation.locator('a[href="/register"]')).toHaveCount(0);
   await navigation.getByRole("link", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);

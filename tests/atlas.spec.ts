@@ -41,7 +41,9 @@ test("atlas opens from the existing header and returns to the home page", async 
   await page.goto("/");
   const toggle = page.getByRole("button", { name: "Открыть меню" });
   if (await toggle.isVisible()) await toggle.click();
-  await page.getByRole("link", { name: "Атлас", exact: true }).click();
+  const navigation = page.getByRole("navigation", { name: "Основная навигация" });
+  await navigation.getByRole("button", { name: "Обучение", exact: true }).click();
+  await navigation.getByRole("link", { name: "Философский атлас", exact: true }).click();
   await expect(page).toHaveURL(/\/atlas$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Философский атлас");
   await page.getByRole("link", { name: "Вернуться на главную", exact: true }).click();
