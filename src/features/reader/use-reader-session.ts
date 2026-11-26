@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useReaderStorage, type ReaderPosition } from "./reader-storage";
-import type { ReaderParagraph, ReaderWork } from "./reader-types";
+import type { ReaderQuote } from "./reader-quote-types";
+import { paragraphText, precedingReference, resolveQuote } from "./reader-quotes";
+import { lineOffset, paragraphElement, textRange } from "./reader-text-range";
+import { readerEdition, type ReaderParagraph, type ReaderSavedTarget, type ReaderWork } from "./reader-types";
 
 type Destination = {
   sectionId: string;
   position?: ReaderPosition;
   reference?: string;
   record?: boolean;
+  quote?: ReaderQuote;
+  missing?: boolean;
 };
 
 type LoadedSection = { sectionId: string; paragraphs: ReaderParagraph[] };
@@ -23,11 +28,19 @@ function urlReference() {
   try { return decodeURIComponent(window.location.hash.slice(1)).toLowerCase(); } catch { return ""; }
 }
 
-function clearReference() {
-  if (location.hash) history.replaceState(history.state, "", location.pathname + location.search);
+function clearReference(clearSaved = false) {
+  const url = new URL(location.href);
+  url.hash = "";
+  if (clearSaved) {
+    url.searchParams.delete("quote");
+    url.searchParams.delete("bookmark");
+  }
+  if (url.href !== location.href) history.replaceState(history.state, "", url.pathname + url.search);
 }
 
-export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElement | null>) {
+export function useReaderSession(
+  work: ReaderWork, pane: RefObject<HTMLDivElement | null>, savedTarget?: ReaderSavedTarget,
+) {
   const storage = useReaderStorage();
   const activity = storage.works[work.id];
   const [destination, setDestination] = useState<Destination | null>(null);
@@ -40,6 +53,17 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
   const sectionId = destination?.sectionId;
   const active = loaded && loaded.sectionId === sectionId ? loaded : null;
   const unknownReference = destination?.reference && !sectionForReference(work, destination.reference);
+  const focusedQuote = active && destination?.quote &&
+    resolveQuote(active.paragraphs, destination.quote, readerEdition(work));
+  const missingTarget = destination?.missing || Boolean(active && (destination?.quote && !focusedQuote ||
+    savedTarget?.kind === "bookmark" && destination?.position &&
+    !active.paragraphs.some(p => p.id === destination.position?.paragraphId)));
+  const priorReference = useMemo(() => {
+    const index = work.sections.findIndex(section => section.id === sectionId);
+    if (index < 1) return "";
+    const priorSections = new Set(work.sections.slice(0, index).map(section => section.id));
+    return Object.entries(work.anchors ?? {}).findLast(([, id]) => id && priorSections.has(id))?.[0] ?? "";
+  }, [work, sectionId]);
 
   const restoreDestination = useEffectEvent(() => {
     flush();
@@ -47,11 +71,18 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
     const citedSection = sectionForReference(work, reference);
     const saved = activity?.position ?? undefined;
     const savedSection = work.sections.find(section => section.id === saved?.sectionId);
+    const quote = savedTarget?.kind === "quote"
+      ? storage.quotes.find(item => item.id === savedTarget.id && item.workId === work.id) : undefined;
+    const bookmark = savedTarget?.kind === "bookmark"
+      ? storage.bookmarks.find(item => item.paragraphId === savedTarget.id && item.workId === work.id) : undefined;
+    const targetSection = work.sections.find(section => section.id === (quote?.sectionId ?? bookmark?.sectionId));
     setDestination({
-      sectionId: citedSection ?? savedSection?.id ?? work.sections[0].id,
-      position: citedSection ? undefined : saved,
+      sectionId: targetSection?.id ?? citedSection ?? savedSection?.id ?? work.sections[0].id,
+      position: targetSection ? bookmark : citedSection ? undefined : saved,
+      quote: targetSection ? quote : undefined,
+      missing: Boolean(savedTarget && !targetSection),
       reference: reference || undefined,
-      record: !reference && !saved,
+      record: !savedTarget && !reference && !saved,
     });
   });
 
@@ -62,7 +93,7 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
     const onHashChange = () => { if (location.hash !== "#main") restore(); };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [storage.ready]);
+  }, [storage.ready, savedTarget]);
 
   useEffect(() => {
     if (!sectionId || active) return;
@@ -95,27 +126,34 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
     }
     const node = nodes[index];
     const bounds = node.getBoundingClientRect();
+    const text = node.querySelector<HTMLElement>("[data-reader-text]");
+    const paragraphId = node.dataset.paragraph!;
     return {
       sectionId: active.sectionId,
-      paragraphId: node.dataset.paragraph!,
+      paragraphId,
       fraction: Math.max(0, Math.min(1, (line - bounds.top) / Math.max(1, bounds.height))),
+      offset: text ? lineOffset(text, line) : undefined,
+      reference: precedingReference(active.paragraphs, paragraphId, priorReference),
     };
   }
 
   function scrollToPosition(target?: ReaderPosition, reference?: string) {
     const viewport = pane.current;
     if (!viewport) return;
-    const nodes = paragraphsInViewport();
     const node = reference
       ? document.getElementById(reference)
-      : Array.from(nodes ?? []).find(item => item.dataset.paragraph === target?.paragraphId);
+      : target && paragraphElement(viewport, target.paragraphId);
     if (!node || !viewport.contains(node)) {
       viewport.scrollTo({ top: 0, behavior: "instant" });
       return;
     }
     const bounds = node.getBoundingClientRect();
-    const top = viewport.scrollTop + bounds.top - viewport.getBoundingClientRect().top +
-      bounds.height * (target?.fraction ?? 0) - readingInset;
+    const text = node.querySelector<HTMLElement>("[data-reader-text]");
+    const offset = target?.offset;
+    const targetTop = text && offset !== undefined && offset < (text.textContent?.length ?? 0)
+      ? textRange(text, offset, offset + 1).getBoundingClientRect().top : undefined;
+    const top = viewport.scrollTop + (targetTop ?? bounds.top + bounds.height * (target?.fraction ?? 0)) -
+      viewport.getBoundingClientRect().top - readingInset;
     viewport.scrollTo({ top, behavior: "instant" });
   }
 
@@ -128,7 +166,8 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
     }
     for (const paragraph of active.paragraphs) {
       if (paragraph.id === next.paragraphId) {
-        before += paragraph.text.length * next.fraction;
+        const fraction = next.offset === undefined ? next.fraction : next.offset / Math.max(1, paragraphText(paragraph).length);
+        before += paragraph.text.length * Math.min(1, fraction);
         break;
       }
       before += paragraph.text.length;
@@ -160,12 +199,16 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
 
   const initializeSection = useEffectEvent(() => {
     if (!active || !destination) return;
+    window.scrollTo({ top: 0, behavior: "instant" });
     canRecord.current = false;
-    const saved = destination.position;
+    const saved = focusedQuote ? {
+      sectionId: active.sectionId, paragraphId: focusedQuote.startParagraphId, fraction: 0, offset: focusedQuote.startOffset,
+    } : destination.position;
     const reference = unknownReference ? undefined : destination.reference;
-    const atStart = saved?.paragraphId === active.paragraphs[0]?.id && saved?.fraction === 0;
+    const atStart = !destination.quote && !savedTarget && saved?.paragraphId === active.paragraphs[0]?.id &&
+      saved?.fraction === 0 && !saved.offset;
     scrollToPosition(atStart ? undefined : saved, reference);
-    position.current = measurePosition();
+    position.current = focusedQuote ? saved ?? null : measurePosition();
     if (destination.record && position.current) storage.savePosition(work.id, position.current, progressAt(position.current));
   });
   useLayoutEffect(() => {
@@ -203,31 +246,33 @@ export function useReaderSession(work: ReaderWork, pane: RefObject<HTMLDivElemen
     const next = measurePosition();
     if (!viewport || !next) return;
     position.current = next;
+    if (destination?.quote || destination?.missing) return;
     const atEnd = next.sectionId === work.sections.at(-1)?.id &&
       viewport.scrollHeight > viewport.clientHeight &&
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 2;
-    const maximum = Math.max(pending.current?.maximum ?? 0, atEnd ? 100 : progressAt(next));
+    const current = atEnd ? 100 : progressAt(next);
+    const maximum = Math.max(pending.current?.maximum ?? 0, current);
     if (pending.current) clearTimeout(pending.current.timer);
     pending.current = {
       timer: setTimeout(flush, 180),
       maximum,
       commit: () => {
-        if (reference && urlReference() === reference) clearReference();
-        storage.savePosition(work.id, next, maximum);
+        if (reference && urlReference() === reference || savedTarget?.kind === "bookmark") clearReference(true);
+        storage.savePosition(work.id, next, maximum, current);
       },
     };
   }
 
   function navigate(next: Destination) {
     flush();
-    clearReference();
+    clearReference(true);
     setFailed(null);
     setDestination(next);
   }
 
   return {
-    ...storage, activity, active, sectionId, failed: failed === sectionId, unknownReference,
-    onScroll, flush, navigate, measurePosition,
+    ...storage, activity, active, sectionId, failed: failed === sectionId, unknownReference, focusedQuote, missingTarget,
+    onScroll, flush, navigate, measurePosition, priorReference,
     retry: () => { setFailed(null); setAttempt(previous => previous + 1); },
     allowRecording: () => { canRecord.current = true; },
   };

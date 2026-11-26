@@ -8,6 +8,11 @@ const firstPosition = { sectionId: "opening", paragraphId: "paragraph-1", fracti
 const laterPosition = { sectionId: "closing", paragraphId: "paragraph-8", fraction: 0.8 };
 const firstBookmark = { ...firstPosition, workId: "phaedo", excerpt: "Opening passage", reference: "57a" };
 const laterBookmark = { ...laterPosition, workId: "phaedo", excerpt: "Further passage", reference: "116a" };
+const firstQuote = {
+  workId: "phaedo", sectionId: "opening", startParagraphId: "paragraph-1", endParagraphId: "paragraph-1",
+  startOffset: 7, endOffset: 11, text: "  Я ", reference: "57a", edition: "karpov",
+};
+const secondQuote = { ...firstQuote, startOffset: 9, endOffset: 15, text: "Я здесь" };
 
 let browser: EventTarget;
 let storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -36,14 +41,14 @@ test("a backward jump updates resume without reducing progress or marking the wo
 
   const reopened = createReaderLocalStore(null).getSnapshot().works.phaedo;
   assert.ok(reopened);
-  assert.deepEqual(reopened.position, firstPosition);
+  assert.deepEqual(reopened.position, { ...firstPosition, percent: 5 });
   assert.equal(reopened.maxProgress, 100);
   assert.equal(reopened.completed, false);
   assert.ok(reopened.lastActivityAt && Number.isFinite(Date.parse(reopened.lastActivityAt)));
 
   reader.setCompleted("phaedo");
   assert.equal(createReaderLocalStore(null).getSnapshot().works.phaedo?.completed, true);
-  assert.deepEqual(reader.getSnapshot().works.phaedo?.position, firstPosition);
+  assert.deepEqual(reader.getSnapshot().works.phaedo?.position, { ...firstPosition, percent: 5 });
 });
 
 test("guest and account scopes persist separately and account erasure blocks stale writes", () => {
@@ -55,7 +60,7 @@ test("guest and account scopes persist separately and account erasure blocks sta
   first.updateSettings({ theme: "dark" });
   second.addBookmark(firstBookmark);
 
-  assert.deepEqual(createReaderLocalStore(null).getSnapshot().works.phaedo?.position, firstPosition);
+  assert.deepEqual(createReaderLocalStore(null).getSnapshot().works.phaedo?.position, { ...firstPosition, percent: 5 });
   assert.equal(createReaderLocalStore("first").getSnapshot().settings.theme, "dark");
   assert.equal(createReaderLocalStore("second").getSnapshot().works.phaedo, undefined);
 
@@ -125,5 +130,94 @@ test("changes in another browser document refresh subscribed snapshots and survi
   assert.equal(other.getSnapshot().settings.fontSize, 23);
   assert.equal(other.getSnapshot().works.phaedo?.maxProgress, 5);
   assert.equal(other.getSnapshot().bookmarks.length, 1);
+  unsubscribe();
+});
+
+test("v1 bookmarks and reading positions remain available and gain optional exact locations", () => {
+  const key = readerStorageKey(null);
+  const savedAt = "2026-11-26T12:34:56.789Z";
+  storage.setItem(key, JSON.stringify({
+    settings: { theme: "dark", fontSize: 22, lineHeight: 1.9 },
+    works: { phaedo: { position: firstPosition, maxProgress: 96, lastActivityAt: savedAt, completed: true } },
+    bookmarks: [{
+      workId: "phaedo", sectionId: "opening", paragraphId: "paragraph-1", excerpt: "Opening passage",
+      reference: "57a", createdAt: savedAt,
+    }],
+  }));
+  const reader = createReaderLocalStore(null);
+  assert.deepEqual(reader.getSnapshot().bookmarks[0], {
+    ...firstBookmark, fraction: 0, createdAt: savedAt,
+  });
+  assert.deepEqual(reader.getSnapshot().works.phaedo?.position, firstPosition);
+
+  const exactLocation = { ...laterPosition, offset: 212, reference: "116a" };
+  reader.savePosition("phaedo", exactLocation, 92, 14);
+  reader.addBookmark({ ...laterBookmark, offset: exactLocation.offset });
+  const reopened = createReaderLocalStore(null).getSnapshot();
+  assert.deepEqual(reopened.works.phaedo?.position, { ...exactLocation, percent: 14 });
+  assert.equal(reopened.works.phaedo?.maxProgress, 96);
+  assert.equal(reopened.works.phaedo?.completed, true);
+  assert.deepEqual(reopened.settings, { theme: "dark", fontSize: 22, lineHeight: 1.9 });
+  assert.equal(reopened.bookmarks[0].fraction, 0.8);
+  assert.equal(reopened.bookmarks[0].offset, 212);
+  assert.equal(reopened.bookmarks[1].createdAt, savedAt);
+});
+
+test("quotes preserve the exact selected text, allow overlapping ranges, and reject duplicates", () => {
+  const reader = createReaderLocalStore(null);
+  assert.equal(reader.addQuote(firstQuote), true);
+  assert.equal(reader.addQuote({ ...firstQuote, text: "different content for the same range" }), false);
+  assert.equal(reader.addQuote(secondQuote), true);
+
+  const reopened = createReaderLocalStore(null);
+  const saved = reopened.getSnapshot().quotes.find(quote => quote.startOffset === 7);
+  assert.ok(saved);
+  assert.equal(saved.text, "  Я ");
+  assert.ok(Number.isFinite(Date.parse(saved.createdAt)));
+  assert.equal(reopened.getSnapshot().quotes.length, 2);
+  reopened.removeQuote(saved.id);
+  assert.deepEqual(createReaderLocalStore(null).getSnapshot().quotes.map(quote => quote.text), ["Я здесь"]);
+});
+
+test("interleaved quotes, progress, and bookmarks from different tabs persist independently", () => {
+  const first = createReaderLocalStore(null);
+  const second = createReaderLocalStore(null);
+  let interleaved = false;
+  const originalSet = storage.setItem.bind(storage);
+  storage.setItem = (key, value) => {
+    if (!interleaved) {
+      interleaved = true;
+      second.addQuote(secondQuote);
+      second.savePosition("phaedo", laterPosition, 95);
+      second.addBookmark(laterBookmark);
+    }
+    originalSet(key, value);
+  };
+
+  first.addQuote(firstQuote);
+  const reopened = createReaderLocalStore(null).getSnapshot();
+  assert.deepEqual(new Set(reopened.quotes.map(quote => quote.startOffset)), new Set([7, 9]));
+  assert.deepEqual(reopened.works.phaedo?.position, { ...laterPosition, percent: 95 });
+  assert.equal(reopened.bookmarks[0].paragraphId, laterBookmark.paragraphId);
+});
+
+test("quote storage events update open documents and deleting an account removes only its quotes", () => {
+  const guest = createReaderLocalStore(null);
+  const writingTab = createReaderLocalStore("quote-owner");
+  const readingTab = createReaderLocalStore("quote-owner");
+  guest.addQuote(firstQuote);
+  const unsubscribe = readingTab.subscribe(() => {});
+  assert.equal(readingTab.getSnapshot().quotes.length, 0);
+  writingTab.addQuote(secondQuote);
+  const key = Object.keys(storage).find(candidate => candidate.includes("quote-owner"));
+  assert.ok(key);
+  browser.dispatchEvent(Object.assign(new Event("storage"), { key }));
+  assert.equal(readingTab.getSnapshot().quotes[0].text, secondQuote.text);
+
+  clearAccountLessonStorage("quote-owner");
+  assert.equal(writingTab.addQuote(firstQuote), false);
+  assert.equal(storage.getItem(key), null);
+  assert.equal(readingTab.getSnapshot().quotes.length, 0);
+  assert.equal(guest.getSnapshot().quotes.length, 1);
   unsubscribe();
 });

@@ -93,6 +93,7 @@ npm.cmd test
 | [CONVENTIONS.md](docs/development/CONVENTIONS.md) | Именование и организация кода |
 | [TESTING.md](docs/development/TESTING.md) | Стратегия и доступность проверок |
 | [READER_IMPLEMENTATION.md](docs/development/READER_IMPLEMENTATION.md) | Библиотека, читалка, источники корпуса и проверки |
+| [READER_ENHANCEMENTS.md](docs/development/READER_ENHANCEMENTS.md) | Цитатник, персональная библиотека, «Менон» и аудит ссылок из уроков |
 | [DAILY_QUESTIONS_AUDIT.md](docs/development/DAILY_QUESTIONS_AUDIT.md) | Сверка 250 ежедневных вопросов и ссылки на источники |
 | [CURRENT_STATE.md](docs/development/CURRENT_STATE.md) | Реализованное, планы, проблемы и следующий шаг |
 | [references/README.md](docs/references/README.md) | Учёт исходных материалов и референсов |

@@ -16,6 +16,7 @@ export interface ReaderWork {
   sourceUrl: string;
   publicationYear: number;
   edition: string;
+  editionVersion?: string;
   rightsStatus: string;
   rightsJustification: string;
   sections: ReaderSection[];
@@ -31,7 +32,19 @@ export interface ReaderParagraph {
   continuation?: boolean;
 }
 
-export function readerHref(workId: string, reference?: string) {
-  return "/reader/" + encodeURIComponent(workId) +
+export type ReaderLesson = { lessonId: string; sceneId: string };
+export type ReaderSavedTarget = { kind: "quote" | "bookmark"; id: string };
+
+export function readerEdition(work: ReaderWork) {
+  return `${work.id}-${work.publicationYear}-${work.editionVersion ?? "1"}`;
+}
+
+export function readerHref(workId: string, reference?: string, lesson?: ReaderLesson) {
+  const query = lesson ? "?" + new URLSearchParams({ lesson: lesson.lessonId, scene: lesson.sceneId }) : "";
+  return "/reader/" + encodeURIComponent(workId) + query +
     (reference ? "#" + encodeURIComponent(reference) : "");
+}
+
+export function readerSavedHref(workId: string, kind: ReaderSavedTarget["kind"], id: string) {
+  return readerHref(workId) + "?" + new URLSearchParams({ [kind]: id });
 }

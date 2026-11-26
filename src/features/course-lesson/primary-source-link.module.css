@@ -1,0 +1,7 @@
+.source { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 12px; padding: 12px 15px; border: 1px solid var(--line); border-radius: 15px; color: var(--ink); background: #f5f8f1; }
+.source p { font-size: 13px; font-weight: 750; }
+.source small { color: var(--muted); font-size: 12px; }
+.source a { margin-left: auto; }
+.icon { color: var(--green); }
+.source div { flex: 1 1 225px; min-width: 0; }
+@media (max-width: 440px) { .source div { flex-basis: calc(100% - 35px); } }

@@ -22,6 +22,8 @@ import { LessonSlideNavigator } from "./lesson-slide-navigator";
 import { confirmedSlides, confirmSlideTransition, finishLesson, subscribeLessonProgress } from "./lesson-slide-progress";
 import { initialAnswer, isCorrect, lessonHash, readLessonLocation, restoreRun, type ExerciseAnswer } from "./lesson-state";
 import { useSceneState } from "./use-scene-state";
+import { PRIMARY_SOURCES } from "./primary-source-data";
+import { PrimarySourceLink } from "./primary-source-link";
 import { isBoolean, readResumeRun, readResumeScroll, resetSceneResume, writeResumeAnswer, writeResumeScene, writeResumeScroll } from "./lesson-resume";
 import styles from "./lesson-introduction.module.css";
 
@@ -284,6 +286,8 @@ export function LessonIntroduction({ lesson, initialSceneId, onClose }: {
         ? <LessonExercise scene={exercise} answer={answer} onChange={updateAnswer} />
         : scene.type === "completion" ? feedback : null}
     </LessonScene>}
+    {PRIMARY_SOURCES[lesson.id]?.[scene.id]?.map(source => <PrimarySourceLink
+      key={source.title + source.range} source={source} lesson={{ lessonId: lesson.id, sceneId: scene.id }} />)}
     {!virtueScene && scene.type !== "dialogue" && scene.type !== "mentor-dialogue" && scene.type !== "guided-practice" && scene.type !== "question-workshop" && scene.type !== "lesson-reflection" && <LessonSources key={scene.id} scene={scene} lesson={lesson} />}
     </div>
     </div>

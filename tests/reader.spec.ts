@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { loginTestAccount, postAccount, seedVerifiedTestAccount } from "./support/accounts";
 
 const guestKey = "sophia.reader.v1";
-const bookIds = ["apology", "euthyphro", "crito", "phaedo", "symposium", "republic"];
+const bookIds = ["apology", "euthyphro", "crito", "phaedo", "symposium", "meno", "republic"];
 const content = (page: Page) => page.getByRole("region", { name: "Текст произведения" });
 const currentParagraphs = (page: Page) => content(page).locator("[data-paragraph]");
 const citation = (page: Page, reference: string) => page.locator(`[id="${reference}"]`);
@@ -16,7 +16,7 @@ test("библиотека открывается с главной и ищет 
   await search.fill("государство");
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("Государство");
   await search.fill("платон");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(6);
+  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(bookIds.length);
   await search.fill("");
   await page.getByRole("button", { name: "Читаю" }).click();
   await expect(page.getByText("Здесь появятся начатые произведения")).toBeVisible();
@@ -51,8 +51,8 @@ test("каждый текст доступен гостю, библиотека 
   await page.getByRole("button", { name: "Отметить прочитанным" }).click();
   await page.getByRole("link", { name: "Вернуться в библиотеку" }).click();
   await page.getByRole("button", { name: "Читаю" }).click();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(5);
-  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText("Пир");
+  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(bookIds.length - 1);
+  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText("Менон");
   await page.getByRole("button", { name: "Прочитано" }).click();
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("Государство");
   await expect(page.getByRole("progressbar")).toHaveAttribute("value", "100");
@@ -163,7 +163,7 @@ test("темы и настройки доступны с клавиатуры, �
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/library");
   await expect(page.getByRole("heading", { name: "Библиотека", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(6);
+  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(bookIds.length);
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: testInfo.outputPath("library.png"), fullPage: true });
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);

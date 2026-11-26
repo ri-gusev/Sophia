@@ -65,7 +65,7 @@ export function Library({ works }: { works: LibraryWork[] }) {
               <p className={styles.author}>{work.author}</p>
               <p className={styles.description}>{work.description}</p>
               {(state?.position || state?.completed) && <div className={styles.progress}>
-                <progress aria-label={`Прогресс чтения — ${work.title}`} max={100} value={progress} />
+                <progress aria-label={`Дальняя позиция по тексту — ${work.title}`} max={100} value={progress} />
                 <span>{progress}%</span>
               </div>}
               {work.available

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ProfileLearning } from "@/features/account/profile-learning";
+import { ProfileLibrary } from "@/features/account/profile-library";
 import { buildProfileLearning } from "@/features/account/profile-learning-data";
 import { ProfileLearningOverview } from "@/features/account/profile-learning-overview";
 import { ProfileSettings } from "@/features/account/profile-settings";
@@ -9,6 +10,7 @@ import { readAccountLearningProgress } from "@/features/account/progress/server/
 import { hasMailingConsent } from "@/features/account/server/store";
 import { currentAccount } from "@/features/account/server/viewer";
 import { getMoscowDay } from "@/features/philosophy-question/daily-calendar";
+import { readerCatalog } from "@/features/reader/reader-catalog";
 import styles from "@/features/account/profile-dashboard.module.css";
 
 export const metadata: Metadata = { title: "Профиль — Sophia", robots: { index: false } };
@@ -61,6 +63,9 @@ export default async function ProfilePage() {
           <p role="alert">Прогресс временно недоступен. Попробуйте обновить страницу позже.</p>
         </section>}
     </ProfileLearningOverview>
+    <ProfileLibrary works={readerCatalog.filter(work => work.sections.length).map(({ id, title, author, translator, cover }) => ({
+      id, title, author, translator, cover,
+    }))} />
     <ProfileSettings accountId={user.id} displayName={user.displayName} email={user.email} mailingConsent={mailingConsent} />
   </main>;
 }

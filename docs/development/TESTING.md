@@ -2,6 +2,8 @@
 
 ## Библиотека и читалка
 
+Для персональной библиотеки запустите `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/reader/*.test.ts` и полный Playwright на production-сборке. Профильные сценарии находятся в `tests/{reader,reader-enhancements,profile-library}.spec.ts`. [Матрица источников и результатов](READER_ENHANCEMENTS.md)
+
 - `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/reader/reader-corpus.test.ts scripts/reader/reader-storage.test.ts` проверяет каталог, якоря, стабильные ID, локальное состояние, изоляцию и удаление данных аккаунта.
 - После production-сборки `npm.cmd test -- tests/reader.spec.ts tests/phase-two.spec.ts tests/account.spec.ts tests/account-progress.spec.ts` проверяет desktop и mobile Chromium, навигацию, возобновление, цитаты, оформление, закладки и аккаунты. Тест настроек сохраняет восемь снимков в каталоге Playwright. [Результаты и снимки](READER_IMPLEMENTATION.md)
 

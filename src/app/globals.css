@@ -33,6 +33,8 @@ a { color: inherit; text-decoration: none; }
 button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 ::selection { background: var(--mint); color: var(--ink); }
+[data-theme] ::highlight(sophia-quote) { background-color: var(--quote); }
+[data-theme] ::highlight(sophia-quote-focus) { background-color: var(--quote-focus); }
 :focus-visible { outline: 3px solid #3c7565; outline-offset: 5px; }
 h1, h2, h3, p { margin: 0; }
 h1, h2, h3 { text-wrap: balance; }
@@ -209,5 +211,6 @@ h2 span { color: #708873; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .button:hover { transform: none; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
