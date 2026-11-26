@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { accountRequest, navigateAfterAccountChange } from "./account-client";
 import { initials } from "./account-display";
 import { useAccountViewer } from "./account-viewer";
 
-export function LogoutButton({ accountId, className }: { accountId: string; className?: string }) {
+export function LogoutButton({ accountId, className, label = "Выйти", icon }: {
+  accountId: string;
+  className?: string;
+  label?: string;
+  icon?: ReactNode;
+}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
   async function logout() {
@@ -21,7 +26,7 @@ export function LogoutButton({ accountId, className }: { accountId: string; clas
     }
   }
   return <>
-    <button className={className} type="button" disabled={pending} onClick={logout}>{pending ? "Выходим…" : "Выйти"}</button>
+    <button className={className} type="button" disabled={pending} onClick={logout}>{icon}{pending ? "Выходим…" : label}</button>
     {error && <p className="account-nav-error" role="alert">Не удалось выйти. Обновите страницу и попробуйте ещё раз.</p>}
   </>;
 }

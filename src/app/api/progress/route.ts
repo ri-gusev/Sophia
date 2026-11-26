@@ -1,7 +1,7 @@
 import {
   EXPECTED_PROGRESS_ACCOUNT_HEADER, PROGRESS_BODY_LIMIT, parseProgressMutation,
 } from "@/features/account/progress/contract";
-import { applyProgressMutation, readAccountProgress } from "@/features/account/progress/server/store";
+import { applyProgressMutation, readAccountLearningProgress } from "@/features/account/progress/server/store";
 import { accountDb } from "@/features/account/server/database";
 import { AccountError, readJson, verifyOrigin } from "@/features/account/server/http";
 import { readSession } from "@/features/account/server/session";
@@ -20,7 +20,8 @@ export async function GET(request: Request) {
     if (!user) throw new AccountError(401, "Войди в аккаунт, чтобы открыть учебный прогресс.");
     const expected = request.headers.get(EXPECTED_PROGRESS_ACCOUNT_HEADER);
     if (expected !== null && expected !== user.id) throw new AccountError(409, "Аккаунт изменился. Обнови страницу.");
-    return Response.json({ accountId: user.id, progress: readAccountProgress(user.id) }, { headers });
+    const { progress, revision } = readAccountLearningProgress(user.id);
+    return Response.json({ accountId: user.id, progress, revision }, { headers });
   } catch (error) {
     return failure(error);
   }

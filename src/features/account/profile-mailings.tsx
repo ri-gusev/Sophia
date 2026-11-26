@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { legalDocuments, mailingConsentVersion } from "@/features/legal/contract";
 import { accountRequest } from "./account-client";
 import styles from "./account.module.css";
+import settings from "./profile-settings.module.css";
 
 export function ProfileMailings({ accountId, consent }: { accountId: string; consent: boolean | undefined }) {
   const termsLink = useRef<HTMLAnchorElement>(null);
@@ -30,8 +31,7 @@ export function ProfileMailings({ accountId, consent }: { accountId: string; con
     }
   }
 
-  return <section className={`glass ${styles.card} ${styles.journey}`} aria-labelledby="profile-mailings-title">
-    <h2 id="profile-mailings-title">Рассылки</h2>
+  return <div className={settings.mailings}>
     <p role="status">{active === undefined ? "Статус согласия временно недоступен."
       : active ? "Согласие на рассылки предоставлено."
       : choice === false ? "Согласие на рассылки отозвано." : "Рассылки отключены."}</p>
@@ -39,8 +39,8 @@ export function ProfileMailings({ accountId, consent }: { accountId: string; con
       {active !== undefined && <Button type="button" variant="outline" size="sm" onClick={changeConsent} disabled={pending}>
         {pending ? "Сохраняем…" : active ? "Отозвать согласие на рассылки" : "Дать согласие на рассылки"}
       </Button>}
-      <Link ref={termsLink} href={legalDocuments.mailings.href}>Условия рассылок</Link>
+      <Link ref={termsLink} className={settings.link} href={legalDocuments.mailings.href}>Условия рассылок</Link>
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
-  </section>;
+  </div>;
 }

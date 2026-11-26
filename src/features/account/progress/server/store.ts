@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { INTRO_LESSONS, type IntroLessonId } from "../../../course-lesson/lesson-data.ts";
 import { accountDb, accountTransaction } from "../../server/database.ts";
@@ -5,9 +6,16 @@ import {
   isProgressSceneId, progressLessonIds, type AccountProgress, type LessonPosition, type ProgressMutation, type ProgressResult,
 } from "../contract.ts";
 
-export function readProgress(db: DatabaseSync, userId: string): AccountProgress {
+export type LearningProgress = {
+  progress: AccountProgress;
+  history: Partial<Record<IntroLessonId, { completedAt: number | null; activityOrder: number }>>;
+  revision: string;
+};
+
+export function readLearningProgress(db: DatabaseSync, userId: string): LearningProgress {
   const rows = db.prepare(`
     SELECT lesson.lesson_id, lesson.completed, lesson.legacy_completed, lesson.resume_scene_id,
+      lesson.completed_at, lesson.activity_order,
       slide.scene_id, (last.lesson_id = lesson.lesson_id) AS last_opened
     FROM account_lesson_progress AS lesson
     LEFT JOIN account_slide_progress AS slide USING (user_id, lesson_id)
@@ -15,9 +23,14 @@ export function readProgress(db: DatabaseSync, userId: string): AccountProgress 
     WHERE lesson.user_id = ?
   `).all(userId);
   let lastOpened: LessonPosition | null = null;
+  const history: LearningProgress["history"] = {};
   const lessons = progressLessonIds.map(lessonId => {
     const entries = rows.filter(row => row.lesson_id === lessonId);
     const entry = entries[0];
+    if (entry) history[lessonId] = {
+      completedAt: typeof entry.completed_at === "number" ? entry.completed_at : null,
+      activityOrder: Number(entry.activity_order),
+    };
     const { scenes } = INTRO_LESSONS[lessonId];
     const confirmedSceneIds = scenes.filter(scene => entries.some(row => row.scene_id === scene.id)).map(scene => scene.id);
     const resume = entry?.resume_scene_id;
@@ -28,11 +41,17 @@ export function readProgress(db: DatabaseSync, userId: string): AccountProgress 
       legacyCompleted: entry?.legacy_completed === 1, resumeSceneId,
     };
   });
-  return { lessons, lastOpened };
+  const progress = { lessons, lastOpened };
+  const revision = createHash("sha256").update(JSON.stringify([progress, history])).digest("base64url");
+  return { progress, history, revision };
 }
 
-export function readAccountProgress(userId: string): AccountProgress {
-  return readProgress(accountDb(), userId);
+export function readProgress(db: DatabaseSync, userId: string): AccountProgress {
+  return readLearningProgress(db, userId).progress;
+}
+
+export function readAccountLearningProgress(userId: string): LearningProgress {
+  return readLearningProgress(accountDb(), userId);
 }
 
 function ensureLesson(db: DatabaseSync, userId: string, lessonId: IntroLessonId) {
@@ -43,13 +62,21 @@ function ensureLesson(db: DatabaseSync, userId: string, lessonId: IntroLessonId)
 }
 
 function addConfirmation(db: DatabaseSync, userId: string, { lessonId, sceneId }: LessonPosition) {
-  db.prepare(`
+  return db.prepare(`
     INSERT INTO account_slide_progress (user_id, lesson_id, scene_id) VALUES (?, ?, ?)
     ON CONFLICT DO NOTHING
-  `).run(userId, lessonId, sceneId);
+  `).run(userId, lessonId, sceneId).changes;
 }
 
-function applyMutation(db: DatabaseSync, userId: string, mutation: ProgressMutation): string | undefined {
+function advanceActivityOrder(db: DatabaseSync, userId: string, lessonId: IntroLessonId) {
+  db.prepare(`
+    UPDATE account_lesson_progress
+    SET activity_order = (SELECT MAX(activity_order) + 1 FROM account_lesson_progress WHERE user_id = ?)
+    WHERE user_id = ? AND lesson_id = ?
+  `).run(userId, userId, lessonId);
+}
+
+function applyMutation(db: DatabaseSync, userId: string, mutation: ProgressMutation, now?: number): string | undefined {
   if (mutation.action === "import") {
     const upsert = db.prepare(`
       INSERT INTO account_lesson_progress (user_id, lesson_id, completed, legacy_completed, resume_scene_id)
@@ -94,15 +121,21 @@ function applyMutation(db: DatabaseSync, userId: string, mutation: ProgressMutat
       INSERT INTO account_last_opened_lesson (user_id, lesson_id) VALUES (?, ?)
       ON CONFLICT (user_id) DO UPDATE SET lesson_id = excluded.lesson_id
     `).run(userId, lessonId);
+    advanceActivityOrder(db, userId, lessonId);
     return;
   }
-  addConfirmation(db, userId, mutation);
-  if (action === "finish") db.prepare("UPDATE account_lesson_progress SET completed = 1 WHERE user_id = ? AND lesson_id = ?").run(userId, lessonId);
+  const confirmed = addConfirmation(db, userId, mutation);
+  const completed = action === "finish" ? db.prepare(`
+    UPDATE account_lesson_progress SET completed = 1, completed_at = ?
+    WHERE user_id = ? AND lesson_id = ? AND completed = 0
+  `).run(now ?? Date.now(), userId, lessonId).changes : 0;
+  if (confirmed || completed) advanceActivityOrder(db, userId, lessonId);
 }
 
-export function applyProgressMutation(db: DatabaseSync, userId: string, mutation: ProgressMutation): ProgressResult {
+export function applyProgressMutation(db: DatabaseSync, userId: string, mutation: ProgressMutation, now?: number): ProgressResult {
   return accountTransaction(db, () => {
-    const missingSceneId = applyMutation(db, userId, mutation);
-    return { progress: readProgress(db, userId), missingSceneId };
+    const missingSceneId = applyMutation(db, userId, mutation, now);
+    const { progress, revision } = readLearningProgress(db, userId);
+    return { progress, revision, missingSceneId };
   });
 }

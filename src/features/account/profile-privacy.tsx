@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { clearAccountLessonStorage } from "@/features/course-lesson/lesson-resume";
 import { accountRequest, navigateAfterAccountChange } from "./account-client";
 import styles from "./account.module.css";
+import settings from "./profile-settings.module.css";
 
 const withdrawLabel = "Отозвать согласие и удалить аккаунт";
 
 export function ProfilePrivacy({ accountId }: { accountId: string }) {
+  const withdrawButton = useRef<HTMLButtonElement>(null);
+  const passwordInput = useRef<HTMLInputElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -29,23 +32,30 @@ export function ProfilePrivacy({ accountId }: { accountId: string }) {
     }
   }
 
-  return <section className={`glass ${styles.card} ${styles.journey}`} aria-labelledby="profile-privacy-title">
-    <h2 id="profile-privacy-title">Персональные данные</h2>
+  return <section className={settings.danger} aria-labelledby="profile-privacy-title">
+    <h3 id="profile-privacy-title">Удаление аккаунта</h3>
     <p>При удалении аккаунта сохраняемые в нём данные и учебный прогресс удаляются, а вход завершается на всех устройствах.</p>
     {!confirming ? <div className={styles.actions}>
-      <Button type="button" variant="outline" onClick={() => setConfirming(true)}>{withdrawLabel}</Button>
+      <Button ref={withdrawButton} className={settings.dangerButton} type="button" variant="outline" size="sm" onClick={() => {
+        setConfirming(true);
+        requestAnimationFrame(() => passwordInput.current?.focus());
+      }}>{withdrawLabel}</Button>
     </div> : <form className={styles.nameForm} method="post" onSubmit={submit} aria-busy={pending}>
       <div className={styles.field}>
         <label htmlFor="profile-current-password">Текущий пароль</label>
-        <input id="profile-current-password" type="password" name="password" autoComplete="current-password" required />
+        <input ref={passwordInput} id="profile-current-password" type="password" name="password" autoComplete="current-password" required />
       </div>
       <label className={styles.legalChoice}>
         <input type="checkbox" name="confirm" required /> Подтверждаю отзыв согласия и удаление аккаунта.
       </label>
       <div role="alert" className={styles.error}>{error}</div>
       <div className={styles.actions}>
-        <Button type="submit" disabled={pending}>{withdrawLabel}</Button>
-        <Button type="button" variant="ghost" disabled={pending} onClick={() => { setConfirming(false); setError(""); }}>Отмена</Button>
+        <Button className={settings.dangerButton} type="submit" variant="outline" size="sm" disabled={pending}>{withdrawLabel}</Button>
+        <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => {
+          setConfirming(false);
+          setError("");
+          requestAnimationFrame(() => withdrawButton.current?.focus());
+        }}>Отмена</Button>
       </div>
     </form>}
   </section>;

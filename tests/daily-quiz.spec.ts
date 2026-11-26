@@ -23,7 +23,7 @@ async function choose(page: Page, option: number) {
 
 async function logout(page: Page) {
   await page.goto("/profile");
-  await page.getByRole("main").getByRole("button", { name: "Выйти", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Выйти из аккаунта", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
 

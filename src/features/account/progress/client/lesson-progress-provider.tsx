@@ -9,6 +9,7 @@ import {
 type Snapshot = {
   status: "ready" | "loading" | "failed" | "stale" | "session-unavailable";
   progress: AccountProgress | null;
+  revision?: string;
 };
 
 function createProgressStore(accountId: string | null, sessionUnavailable: boolean) {
@@ -58,7 +59,7 @@ function createProgressStore(accountId: string | null, sessionUnavailable: boole
       const result: ProgressResponse = await response.json();
       if (expectedRevision !== revision) throw new Error("Account changed");
       if (result.accountId !== accountId) expire();
-      publish({ status: "ready", progress: result.progress });
+      publish({ status: "ready", progress: result.progress, revision: result.revision });
       return result;
     });
     queue = run.catch(() => {});

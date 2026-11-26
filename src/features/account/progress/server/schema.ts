@@ -22,3 +22,8 @@ export const ACCOUNT_PROGRESS_SCHEMA = `
     FOREIGN KEY (user_id, lesson_id) REFERENCES account_lesson_progress(user_id, lesson_id) ON DELETE CASCADE
   ) STRICT, WITHOUT ROWID;
 `;
+
+export const ACCOUNT_PROGRESS_HISTORY_SCHEMA = `
+  ALTER TABLE account_lesson_progress ADD COLUMN completed_at INTEGER CHECK (completed_at > 0);
+  ALTER TABLE account_lesson_progress ADD COLUMN activity_order INTEGER NOT NULL DEFAULT 0 CHECK (activity_order >= 0);
+`;

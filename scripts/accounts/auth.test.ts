@@ -8,6 +8,7 @@ import { after, beforeEach, test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { legalAcceptance, legalVersions } from "../../tests/support/legal-confirmations.ts";
 import { cleanupAccounts } from "../../src/features/account/server/cleanup.ts";
+import { ACCOUNT_PROGRESS_SCHEMA } from "../../src/features/account/progress/server/schema.ts";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
@@ -371,10 +372,11 @@ test("migration removes a legacy verification link while preserving the account 
     INSERT INTO account_challenges VALUES ('legacy-verify', 'verify', 'a@mail.ru', NULL, 'Name', 100);
     INSERT INTO account_challenges VALUES ('legacy-reset', 'reset', 'b@mail.ru', 'legacy-user', NULL, 100);
   `);
+  legacy.exec(ACCOUNT_PROGRESS_SCHEMA);
   legacy.close();
   const migrated = openAccountDatabase(path);
   try {
-    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 5);
+    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 6);
     assert.equal(migrated.prepare("SELECT COUNT(*) AS total FROM account_mailing_consents").get()?.total, 0);
     assert.equal(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'verify'").get(), undefined);
     assert.ok(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'reset'").get());
@@ -801,7 +803,7 @@ test("a local operator can migrate, grant and revoke AI access for a verified ac
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);
-  assert.match(migration.stdout, /schema 5/);
+  assert.match(migration.stdout, /schema 6/);
   assert.equal(cli("grant-ai-chat", email).status, 1);
   await activate(email);
   const user = findSession(cookieFrom(await login(email)));

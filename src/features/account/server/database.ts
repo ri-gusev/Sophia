@@ -2,7 +2,7 @@ import { closeSync, mkdirSync, openSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
-import { ACCOUNT_PROGRESS_SCHEMA } from "../progress/server/schema.ts";
+import { ACCOUNT_PROGRESS_HISTORY_SCHEMA, ACCOUNT_PROGRESS_SCHEMA } from "../progress/server/schema.ts";
 import { ACCOUNT_LEGAL_SCHEMA, ACCOUNT_MAILING_CONSENT_SCHEMA, ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA } from "../../legal/server/schema.ts";
 import { accountSettings } from "./config.ts";
 
@@ -53,6 +53,7 @@ const MIGRATIONS = [
   ACCOUNT_LEGAL_SCHEMA,
   ACCOUNT_MAILING_CONSENT_SCHEMA,
   ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA,
+  ACCOUNT_PROGRESS_HISTORY_SCHEMA,
 ];
 
 export function accountTransaction<T>(db: DatabaseSync, run: () => T): T {

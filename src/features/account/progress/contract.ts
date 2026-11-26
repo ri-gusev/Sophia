@@ -19,7 +19,7 @@ export type AccountProgress = {
 export type ProgressMutation =
   | ({ action: "confirm" | "finish" | "resume" } & LessonPosition)
   | ({ action: "import" } & AccountProgress);
-export type ProgressResult = { progress: AccountProgress; missingSceneId?: string };
+export type ProgressResult = { progress: AccountProgress; revision: string; missingSceneId?: string };
 export type ProgressResponse = ProgressResult & { accountId: string };
 
 export function isProgressLessonId(value: unknown): value is IntroLessonId {

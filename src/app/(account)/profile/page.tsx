@@ -1,87 +1,66 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Settings } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { LogoutButton } from "@/features/account/account-navigation";
-import { initials } from "@/features/account/account-display";
-import { ProfileName } from "@/features/account/profile-name";
-import { ProfileMailings } from "@/features/account/profile-mailings";
-import { ProfilePrivacy } from "@/features/account/profile-privacy";
-import { GuestProgressTransfer } from "@/features/account/progress/client/guest-progress-transfer";
-import { readAccountProgress } from "@/features/account/progress/server/store";
+import { ProfileLearning } from "@/features/account/profile-learning";
+import { buildProfileLearning } from "@/features/account/profile-learning-data";
+import { ProfileLearningOverview } from "@/features/account/profile-learning-overview";
+import { ProfileSettings } from "@/features/account/profile-settings";
+import { readAccountLearningProgress } from "@/features/account/progress/server/store";
 import { hasMailingConsent } from "@/features/account/server/store";
 import { currentAccount } from "@/features/account/server/viewer";
-import { INTRO_LESSONS, type IntroLessonId } from "@/features/course-lesson/lesson-data";
-import { PHILOSOPHER_CATALOGS } from "@/features/course-map/philosopher-catalog-data";
-import styles from "@/features/account/account.module.css";
+import { getMoscowDay } from "@/features/philosophy-question/daily-calendar";
+import styles from "@/features/account/profile-dashboard.module.css";
 
 export const metadata: Metadata = { title: "Профиль — Sophia", robots: { index: false } };
 
-const course = PHILOSOPHER_CATALOGS.plato.sections[0].blocks.flatMap<IntroLessonId>(block =>
-  block.lessons.map(lesson => lesson.contentId));
-const dateFormat = new Intl.DateTimeFormat("ru", { dateStyle: "long", timeZone: "UTC" });
+const registrationDate = new Intl.DateTimeFormat("ru", {
+  day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow",
+});
 
 export default async function ProfilePage() {
   const user = await currentAccount().catch(() => undefined);
   if (user === null) redirect("/login?next=%2Fprofile");
-  if (!user) return <main id="main" className={`container ${styles.profilePage}`}>
-    <div className={`glass ${styles.card}`}>
+  if (!user) return <main id="main" className={`container ${styles.page}`}>
+    <div className={`glass ${styles.unavailable}`}>
       <h1>Профиль</h1>
       <p role="alert">Профиль временно недоступен. Попробуйте обновить страницу позже.</p>
     </div>
   </main>;
 
-  let progress: ReturnType<typeof readAccountProgress> | undefined;
-  try { progress = readAccountProgress(user.id); }
-  catch { /* The account details are still available. */ }
+  const today = getMoscowDay();
+  let learning: ReturnType<typeof buildProfileLearning> | undefined;
+  try { learning = buildProfileLearning(readAccountLearningProgress(user.id), today); }
+  catch { /* The account settings are still available. */ }
   let mailingConsent: boolean | undefined;
   try { mailingConsent = hasMailingConsent(user.id); }
-  catch { /* The account details are still available. */ }
+  catch { /* The rest of the profile is still available. */ }
 
-  const lessons = course.map(contentId => ({
-    lesson: INTRO_LESSONS[contentId], entry: progress?.lessons.find(item => item.lessonId === contentId),
-  }));
-  const completed = lessons.filter(item => item.entry?.completed).length;
-  const confirmedSlides = lessons.reduce((sum, item) => sum + (item.entry?.confirmedSceneIds.length ?? 0), 0);
-  const lastOpened = progress?.lastOpened;
-  const target = lastOpened
-    ? `/learn#lesson=${lastOpened.lessonId}&scene=${lastOpened.sceneId}`
-    : `/learn#lesson=${(lessons.find(item => !item.entry?.completed) ?? lessons[0]).lesson.id}`;
+  const firstLetter = Array.from(user.displayName.trim())[0]?.toLocaleUpperCase("ru");
+  const parts = registrationDate.formatToParts(user.createdAt);
+  const month = parts.find(part => part.type === "month")?.value;
+  const year = parts.find(part => part.type === "year")?.value;
 
-  return <main id="main" className={`container ${styles.profilePage}`}>
-    <div className={`glass ${styles.card} ${styles.identity}`}>
-      <span className={styles.avatar} aria-hidden="true">{initials(user.displayName)}</span>
+  return <main id="main" className={`container ${styles.page}`}>
+    <header className={styles.identity}>
+      <span className={styles.avatar} aria-hidden="true">{firstLetter}</span>
       <div className={styles.identityCopy}>
         <h1>{user.displayName}</h1>
-        <p>{user.email}</p>
-        <p>В Sophia с <time dateTime={new Date(user.createdAt).toISOString()}>{dateFormat.format(user.createdAt)}</time></p>
-        <div className={styles.actions}>
-          <ProfileName accountId={user.id} displayName={user.displayName} />
-          <LogoutButton accountId={user.id} className="button button-ghost button-sm" />
-        </div>
+        <p className={styles.motto}>На пути к мудрости</p>
+        <p className={styles.date}>На Sophia с <time dateTime={new Date(user.createdAt).toISOString()}>{month} {year}</time></p>
       </div>
-    </div>
-    <GuestProgressTransfer />
-    <section className={`glass ${styles.card} ${styles.journey}`} aria-labelledby="journey-title">
-      <h2 id="journey-title">Мой путь в философии</h2>
-      {!progress ? <p role="alert">Прогресс временно недоступен. Попробуйте обновить страницу позже.</p> : <>
-        <dl className={styles.stats}>
-          <div><dt>Завершено уроков</dt><dd>{completed}</dd></div>
-          <div><dt>Подтверждено слайдов</dt><dd>{confirmedSlides}</dd></div>
-        </dl>
-        {lastOpened && <p>Последний открытый урок — {INTRO_LESSONS[lastOpened.lessonId].title}</p>}
-        {!lastOpened && !confirmedSlides && !completed && <p>Ваш путь начинается здесь. Откройте первый урок курса Платона.</p>}
-        <h3>Уроки Платона</h3>
-        <ul className={styles.lessons}>
-          {lessons.map(({ lesson, entry }) => <li key={lesson.id}>
-            <Link href={`/learn#lesson=${lesson.id}${entry?.resumeSceneId ? `&scene=${entry.resumeSceneId}` : ""}`}>{lesson.title}</Link>
-            <span>{entry?.completed ? "Пройдено" : entry?.legacyCompleted ? "Завершено ранее" : `${entry?.confirmedSceneIds.length ?? 0} из ${lesson.scenes.length} слайдов`}</span>
-          </li>)}
-        </ul>
-        <div><Button asChild><Link href={target}>{lastOpened || confirmedSlides || completed ? "Продолжить обучение" : "Начать первый урок"}</Link></Button></div>
-      </>}
-    </section>
-    <ProfileMailings accountId={user.id} consent={mailingConsent} />
-    <ProfilePrivacy accountId={user.id} />
+      <a className={styles.settingsLink} href="#account-settings" aria-label="Настройки аккаунта">
+        <Settings size={20} aria-hidden="true" />
+      </a>
+    </header>
+    <ProfileLearningOverview key={user.id} accountId={user.id} initialDay={today}
+      completed={learning?.completed} philosophers={learning?.philosophers} activity={learning?.activity}
+      revision={learning?.revision}>
+      {learning ? <ProfileLearning directions={learning.directions} /> :
+        <section className={`glass ${styles.unavailable}`} aria-labelledby="profile-learning-unavailable">
+          <h2 id="profile-learning-unavailable">Твоё обучение</h2>
+          <p role="alert">Прогресс временно недоступен. Попробуйте обновить страницу позже.</p>
+        </section>}
+    </ProfileLearningOverview>
+    <ProfileSettings accountId={user.id} displayName={user.displayName} email={user.email} mailingConsent={mailingConsent} />
   </main>;
 }

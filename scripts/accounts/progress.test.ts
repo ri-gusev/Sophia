@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test, { type TestContext } from "node:test";
 import { INTRO_LESSONS } from "../../src/features/course-lesson/lesson-data.ts";
 import { parseProgressMutation } from "../../src/features/account/progress/contract.ts";
 import { collectGuestProgress } from "../../src/features/account/progress/client/guest-progress.ts";
-import { ACCOUNT_PROGRESS_SCHEMA } from "../../src/features/account/progress/server/schema.ts";
-import { applyProgressMutation, readProgress } from "../../src/features/account/progress/server/store.ts";
+import { ACCOUNT_PROGRESS_HISTORY_SCHEMA, ACCOUNT_PROGRESS_SCHEMA } from "../../src/features/account/progress/server/schema.ts";
+import { applyProgressMutation, readLearningProgress, readProgress } from "../../src/features/account/progress/server/store.ts";
+import { openAccountDatabase } from "../../src/features/account/server/database.ts";
+import { buildProfileLearning } from "../../src/features/account/profile-learning-data.ts";
+import { getMoscowDay } from "../../src/features/philosophy-question/daily-calendar.ts";
 
 const accountId = "00000000-0000-4000-8000-000000000001";
 const otherId = "00000000-0000-4000-8000-000000000002";
@@ -21,9 +27,85 @@ function fixture(t: TestContext) {
   db.exec("CREATE TABLE account_users(id TEXT PRIMARY KEY);");
   db.prepare("INSERT INTO account_users VALUES (?), (?)").run(accountId, otherId);
   db.exec(ACCOUNT_PROGRESS_SCHEMA);
+  db.exec(ACCOUNT_PROGRESS_HISTORY_SCHEMA);
   const read = (id = accountId) => readProgress(db, id);
   return { db, read };
 }
+
+test("profile activity uses the first valid finish and Moscow midnight, and is isolated and cascades", t => {
+  const { db } = fixture(t);
+  const beforeMidnight = Date.parse("2028-02-28T20:59:59.999Z");
+  const afterMidnight = beforeMidnight + 1;
+  const dashboard = (id = accountId) => buildProfileLearning(readLearningProgress(db, id), getMoscowDay(afterMidnight));
+  const finish = (id: typeof lessonId | "plato-socratic-question", now: number) => {
+    const lessonScenes = INTRO_LESSONS[id].scenes.map(scene => scene.id);
+    for (const sceneId of lessonScenes.slice(0, -1)) applyProgressMutation(db, accountId, { action: "confirm", lessonId: id, sceneId });
+    applyProgressMutation(db, accountId, { action: "finish", lessonId: id, sceneId: lessonScenes.at(-1)! }, now);
+  };
+
+  assert.deepEqual(dashboard().activity, {});
+  applyProgressMutation(db, accountId, { action: "resume", lessonId, sceneId: first });
+  applyProgressMutation(db, accountId, { action: "finish", lessonId, sceneId: final }, beforeMidnight);
+  assert.deepEqual(dashboard().activity, {});
+  finish(lessonId, beforeMidnight);
+  finish(lessonId, afterMidnight);
+  finish("plato-socratic-question", afterMidnight);
+  assert.deepEqual(dashboard().activity, { "2028-02-28": 1, "2028-02-29": 1 });
+  assert.equal(dashboard().completed, 2);
+  assert.deepEqual(dashboard(otherId).activity, {});
+  assert.equal(dashboard(otherId).philosophers, 0);
+  assert.deepEqual(dashboard(otherId).directions, []);
+  db.prepare("DELETE FROM account_users WHERE id = ?").run(accountId);
+  assert.deepEqual(dashboard().activity, {});
+  assert.equal(db.prepare("SELECT COUNT(*) AS total FROM account_lesson_progress").get()?.total, 0);
+});
+
+test("the profile continues the most recently opened unfinished lesson, including after an already finished lesson was opened", t => {
+  const { db } = fixture(t);
+  const intro = "plato-introduction";
+  const socratic = "plato-socratic-question";
+  const dashboard = () => buildProfileLearning(readLearningProgress(db, accountId), getMoscowDay());
+  applyProgressMutation(db, accountId, { action: "resume", lessonId: intro, sceneId: "athens" });
+  applyProgressMutation(db, accountId, { action: "resume", lessonId, sceneId: second });
+  applyProgressMutation(db, accountId, { action: "import", lastOpened: null, lessons: [{
+    lessonId: socratic, confirmedSceneIds: INTRO_LESSONS[socratic].scenes.map(scene => scene.id),
+    completed: true, legacyCompleted: false, resumeSceneId: null,
+  }] });
+  applyProgressMutation(db, accountId, { action: "resume", lessonId: socratic, sceneId: "first-step" });
+  applyProgressMutation(db, accountId, { action: "finish", lessonId: socratic, sceneId: "first-step" });
+
+  assert.equal(dashboard().completed, 1);
+  assert.deepEqual(dashboard().activity, {});
+  assert.equal(dashboard().philosophers, 1);
+  assert.deepEqual(dashboard().directions.map(item => [item.name, item.total, item.continueAt]), [
+    ["Сократ и рождение философского вопроса", 2, { lessonId: intro, sceneId: "athens" }],
+    ["Добродетель и правильная жизнь", 1, position],
+  ]);
+  applyProgressMutation(db, accountId, { action: "confirm", lessonId, sceneId: first });
+  assert.equal(dashboard().directions[0].name, "Добродетель и правильная жизнь");
+  applyProgressMutation(db, accountId, { action: "confirm", lessonId: intro, sceneId: "journey" });
+  assert.equal(dashboard().directions[0].name, "Сократ и рождение философского вопроса");
+});
+
+test("schema 5 progress migrates with unknown completion dates and the saved resume position", t => {
+  const dir = mkdtempSync(join(tmpdir(), "sophia-profile-migration-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const path = join(dir, "account.sqlite");
+  using before = openAccountDatabase(path, true);
+  before.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)").run(accountId, "legacy@mail.ru", "Имя", "hash", 1, 1, 1);
+  before.prepare("INSERT INTO account_lesson_progress (user_id, lesson_id, completed, resume_scene_id) VALUES (?, ?, 1, ?)").run(accountId, lessonId, final);
+  const addSlide = before.prepare("INSERT INTO account_slide_progress (user_id, lesson_id, scene_id) VALUES (?, ?, ?)");
+  for (const sceneId of scenes) addSlide.run(accountId, lessonId, sceneId);
+  before.prepare("INSERT INTO account_last_opened_lesson VALUES (?, ?)").run(accountId, lessonId);
+  before.exec("ALTER TABLE account_lesson_progress DROP COLUMN completed_at; ALTER TABLE account_lesson_progress DROP COLUMN activity_order; PRAGMA user_version = 5;");
+
+  using migrated = openAccountDatabase(path);
+  assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 6);
+  assert.deepEqual(readProgress(migrated, accountId).lastOpened, { lessonId, sceneId: final });
+  assert.equal(buildProfileLearning(readLearningProgress(migrated, accountId), getMoscowDay()).completed, 1);
+  applyProgressMutation(migrated, accountId, { action: "finish", lessonId, sceneId: final });
+  assert.deepEqual(buildProfileLearning(readLearningProgress(migrated, accountId), getMoscowDay()).activity, {});
+});
 
 test("confirmations are idempotent and completion requires all previous slides", t => {
   const { db, read } = fixture(t);

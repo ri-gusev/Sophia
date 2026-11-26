@@ -1,0 +1,105 @@
+.card {
+  min-width: 0;
+  padding: clamp(14px, 3.4vw, 32px);
+  border-color: var(--line);
+  border-radius: var(--radius);
+  scroll-margin-top: 12px;
+}
+
+.title {
+  margin: 0 0 12px;
+  padding-inline: 8px;
+  font-size: clamp(19px, 3vw, 25px);
+  font-weight: 750;
+  letter-spacing: -.035em;
+}
+
+.panel { border-bottom: 1px solid var(--line); }
+
+.row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 8px;
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: start;
+  list-style: none;
+  cursor: pointer;
+  transition: background .18s ease;
+}
+
+.row::-webkit-details-marker { display: none; }
+.row:hover, .panel[open] > .row { background: #edf3eb; }
+.row:focus-visible { outline-offset: -2px; }
+
+.icon {
+  display: grid;
+  place-items: center;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--green);
+  background: #e4eee4;
+}
+
+.chevron { color: var(--green); transition: transform .18s ease; }
+.panel[open] .chevron { transform: rotate(180deg); }
+
+.content {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 10px 8px 16px 52px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.content > form { width: min(100%, 420px); }
+.email { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.email dt { font-size: 12px; font-weight: 700; }
+.email dd { color: var(--ink); }
+.legalLinks, .mailings { display: grid; justify-items: start; gap: 8px; }
+.link { color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
+
+.danger {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e8c9c1;
+  border-radius: 14px;
+  background: #fff7f3;
+}
+
+.danger h3 { color: #822f2a; font-size: 14px; font-weight: 750; }
+.danger button.dangerButton {
+  max-width: 100%;
+  color: #822f2a;
+  background: white;
+  border-color: #c38f83;
+  text-align: center;
+  white-space: normal;
+}
+
+.danger button.dangerButton:hover { background: #f8dfd8; }
+.danger form { max-width: 420px; }
+.logoutButton { border: 0; background: none; }
+.logout :global(.account-nav-error) {
+  position: static;
+  width: auto;
+  margin: 4px 8px 8px;
+}
+
+@media (max-width: 460px) {
+  .content { padding-inline: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row, .chevron { transition: none; }
+}

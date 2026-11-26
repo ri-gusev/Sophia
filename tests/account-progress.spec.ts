@@ -108,7 +108,7 @@ test("guest transfer merges with account progress and later lesson changes stay 
       await sameDeviceTab.goto(lessonPath("socrates"));
       await expect(sameDeviceTab.getByTestId("lesson-scene")).toHaveAttribute("data-scene-id", "socrates");
       await page.goto("/profile");
-      await page.getByRole("main").getByRole("button", { name: "Выйти" }).click();
+      await page.getByRole("main").getByRole("button", { name: "Выйти из аккаунта" }).click();
       await expect(page).toHaveURL(/\/$/);
       await expect(sameDeviceTab).toHaveURL(/\/learn$/);
       await expect(sameDeviceTab.getByTestId("lesson-introduction")).toHaveCount(0);
