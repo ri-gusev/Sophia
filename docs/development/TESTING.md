@@ -1,5 +1,10 @@
 # Стратегия проверок
 
+## Библиотека и читалка
+
+- `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/reader/reader-corpus.test.ts scripts/reader/reader-storage.test.ts` проверяет каталог, якоря, стабильные ID, локальное состояние, изоляцию и удаление данных аккаунта.
+- После production-сборки `npm.cmd test -- tests/reader.spec.ts tests/phase-two.spec.ts tests/account.spec.ts tests/account-progress.spec.ts` проверяет desktop и mobile Chromium, навигацию, возобновление, цитаты, оформление, закладки и аккаунты. Тест настроек сохраняет восемь снимков в каталоге Playwright. [Результаты и снимки](READER_IMPLEMENTATION.md)
+
 `npm.cmd run test:chat:integration` проверяет прямые HTTP-запросы при выключенном, отсутствующем и некорректном флаге, а также при `true` в режиме `proxy`. Запросы гостя и аккаунта с правом `ai_chat` получают 503 без записей в журнале и попыток обращения к OpenAI. Для включённого локального режима тот же набор проверяет RAG, SSE, бюджет и отмену с тестовым провайдером. Playwright запускает ту же сборку на двух соседних портах и проверяет статус на `/`, `/learn` и `/chat` в desktop и mobile Chromium.
 
 ## Образовательный профиль

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Compass, MessageCircle } from "lucide-react";
+import { ArrowUpRight, BookOpen, Compass, MessageCircle } from "lucide-react";
 import { MAIN_COURSE } from "@/content/landing";
 import { Button } from "@/components/ui/button";
 import { PhilosopherConversation } from "@/features/philosopher-conversation/philosopher-conversation";
@@ -37,9 +37,12 @@ export function DirectionChoice() {
           </article>
         </Reveal>
         <Reveal>
-          <article className="step-card step-3 direction-card direction-upcoming">
-            <h3>—</h3>
-            <span className="upcoming-status">Скоро</span>
+          <article className="step-card step-3 direction-card direction-reader">
+            <div className="step-top"><span className="step-icon"><BookOpen size={24} strokeWidth={1.5} aria-hidden="true" /></span><span className="step-number">03</span></div>
+            <span className="reader-label">Читалка</span>
+            <h3>Прикоснись к первоисточникам</h3>
+            <p>Читай великие философские произведения и открывай мысли, пережившие тысячелетия</p>
+            <Button asChild size="sm"><Link href="/library" prefetch={false}>Открыть библиотеку <ArrowUpRight size={16} aria-hidden="true" /></Link></Button>
           </article>
         </Reveal>
       </div>

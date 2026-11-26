@@ -19,12 +19,8 @@ test("landing contains exactly three agreed sections and three direction cards",
   await expect(cards.nth(0).getByRole("link", { name: "Начать курс" })).toHaveAttribute("href", "/learn");
   await expect(cards.nth(1).getByRole("heading")).toHaveText("Разговор с философом");
   await expect(cards.nth(1).getByRole("button", { name: "Разговор с философом", exact: true })).toBeEnabled();
-  for (const card of [cards.nth(2)]) {
-    await expect(card.getByRole("heading")).toHaveText("—");
-    await expect(card).toContainText("Скоро");
-    await expect(card.getByRole("link")).toHaveCount(0);
-    await expect(card.getByRole("button")).toHaveCount(0);
-  }
+  await expect(cards.nth(2).getByRole("heading")).toHaveText("Прикоснись к первоисточникам");
+  await expect(cards.nth(2).getByRole("link", { name: "Открыть библиотеку" })).toHaveAttribute("href", "/library");
   const contact = page.getByRole("contentinfo").getByRole("link", { name: "support.sophia@ro.ru", exact: true });
   await expect(contact).toHaveAttribute("href", "mailto:support.sophia@ro.ru");
 });

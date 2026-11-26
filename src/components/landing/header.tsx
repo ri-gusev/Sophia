@@ -24,6 +24,7 @@ export function Header() {
           <Link href="/#how-it-works" onClick={closeMenu}>Как это работает</Link>
           <Link href="/learn" onClick={closeMenu}>Обучение</Link>
           <Link href="/atlas" onClick={closeMenu}>Атлас</Link>
+          <Link href="/library" prefetch={false} onClick={closeMenu}>Библиотека</Link>
           <AccountNavigation onNavigate={closeMenu} />
           <Button asChild size="sm"><Link href="/learn" onClick={closeMenu}>Начать бесплатно <ArrowUpRight size={16} aria-hidden="true" /></Link></Button>
         </nav>

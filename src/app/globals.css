@@ -111,10 +111,9 @@ h2 span { color: #708873; }
 .direction-card { display: flex; flex-direction: column; align-items: flex-start; min-height: 305px; }
 .direction-card .step-top { width: 100%; }
 .direction-card .button { margin-top: 23px; }
-.direction-upcoming { align-items: center; justify-content: center; gap: 12px; }
-.direction-upcoming h3 { font-size: 29px; margin: 0; color: #5e675f; }
-.direction-upcoming:hover { transform: none; box-shadow: none; }
-.upcoming-status { border: 1px solid #a5ada3; color: #53604f; font-size: 11px; padding: 5px 12px; border-radius: 40px; }
+.direction-reader { background: linear-gradient(90deg, #f6f0db 18%, #f6f0dbeb 46%, #f6f0db55), #f6f0db url("/images/reader/home.webp") right center / cover no-repeat; }
+.direction-reader .step-top { margin-bottom: 12px; }
+.reader-label { font-size: 11px; color: #53634f; font-weight: 700; margin-bottom: 5px; }
 .how-section { border-top: 1px solid var(--line); padding-top: 66px; }
 .learning-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 16px; font-size: 12px; font-weight: 600; }
 .learning-nav > a { display: inline-block; padding-block: 12px; }
@@ -191,7 +190,6 @@ h2 span { color: #708873; }
   .hero-actions .button-ghost { padding-inline: 3px; font-size: 10px; gap: 7px; }
   .hero-note { font-size: 9px; }
   .direction-card { min-height: 270px; }
-  .direction-upcoming { min-height: 180px; }
   .learning-nav { font-size: 10px; }
   h2 { font-size: 30px; }
   .section-heading h2 { font-size: 29px; }

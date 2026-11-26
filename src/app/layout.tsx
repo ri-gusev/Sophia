@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await currentAccount().catch(() => undefined);
-  const viewer = user ? { id: user.id, displayName: user.displayName } : null;
+  const viewer = user ? { id: user.id, displayName: user.displayName } : user;
   const chatEnabled = isAiChatEnabled();
   let chatAllowed = false;
   if (chatEnabled && user) {

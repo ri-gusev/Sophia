@@ -1,4 +1,8 @@
-import { accountStoragePrefix as accountPrefix } from "../account/account-storage.ts";
+import {
+  accountStoragePrefix as accountPrefix,
+  canWriteAccountBrowserStorage,
+  suspendAccountBrowserStorage,
+} from "../account/account-storage.ts";
 
 // Exercises and scroll are local, with separate guest and account namespaces.
 const LEGACY_PREFIX = "sophia.lesson-resume.v1:";
@@ -14,18 +18,13 @@ const sceneKey = (lessonId: string, sceneId: string, accountId: string | null) =
 // One overlay per scene with a rejected reset, scoped to this document.
 // Never publish an old reset after recovery: another tab may have edited the scene.
 const temporaryScenes = new Map<string, Map<string, unknown>>();
-let suspendedAccountPrefix: string | undefined;
-
-export function suspendAccountLessonStorage(accountId: string) {
-  suspendedAccountPrefix = accountPrefix(accountId);
-}
 
 export function canSaveAccountLessonStorage(accountId: string) {
-  return suspendedAccountPrefix !== accountPrefix(accountId);
+  return canWriteAccountBrowserStorage(accountPrefix(accountId));
 }
 
 export function clearAccountLessonStorage(accountId: string) {
-  suspendAccountLessonStorage(accountId);
+  suspendAccountBrowserStorage(accountId);
   const prefix = accountPrefix(accountId);
   for (const key of temporaryScenes.keys()) {
     if (key.startsWith(prefix)) temporaryScenes.delete(key);
@@ -53,7 +52,7 @@ function legacy(lessonId: string, accountId: string | null, reader = read) {
 }
 
 function write(key: string, value: unknown) {
-  if (suspendedAccountPrefix && key.startsWith(suspendedAccountPrefix)) return false;
+  if (!canWriteAccountBrowserStorage(key)) return false;
   try {
     window.localStorage.setItem(key, JSON.stringify({ value }));
     return true;

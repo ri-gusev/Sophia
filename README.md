@@ -92,6 +92,7 @@ npm.cmd test
 | [UX_GUIDELINES.md](docs/design/UX_GUIDELINES.md) | Правила взаимодействия и доступности |
 | [CONVENTIONS.md](docs/development/CONVENTIONS.md) | Именование и организация кода |
 | [TESTING.md](docs/development/TESTING.md) | Стратегия и доступность проверок |
+| [READER_IMPLEMENTATION.md](docs/development/READER_IMPLEMENTATION.md) | Библиотека, читалка, источники корпуса и проверки |
 | [DAILY_QUESTIONS_AUDIT.md](docs/development/DAILY_QUESTIONS_AUDIT.md) | Сверка 250 ежедневных вопросов и ссылки на источники |
 | [CURRENT_STATE.md](docs/development/CURRENT_STATE.md) | Реализованное, планы, проблемы и следующий шаг |
 | [references/README.md](docs/references/README.md) | Учёт исходных материалов и референсов |

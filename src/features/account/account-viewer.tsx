@@ -1,17 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { clearAccountLessonStorage, suspendAccountLessonStorage } from "@/features/course-lesson/lesson-resume";
+import { clearAccountLessonStorage } from "@/features/course-lesson/lesson-resume";
 import { accountChangeKey, accountErasurePrefix, refreshAfterIdentityChange } from "./account-client";
+import { suspendAccountBrowserStorage } from "./account-storage";
 
 type Viewer = { id: string; displayName: string };
-const ViewerContext = createContext<Viewer | null>(null);
+const ViewerContext = createContext<Viewer | null | undefined>(null);
 
 function sessionMarker() {
   try { return localStorage.getItem(accountChangeKey); } catch { return null; }
 }
 
-export function AccountViewer({ viewer, children }: { viewer: Viewer | null; children: ReactNode }) {
+export function AccountViewer({ viewer, children }: { viewer: Viewer | null | undefined; children: ReactNode }) {
   useEffect(() => {
     const marker = sessionMarker();
     function onStorage(event: StorageEvent) {
@@ -23,7 +24,7 @@ export function AccountViewer({ viewer, children }: { viewer: Viewer | null; chi
     function onRestore(event: PageTransitionEvent) {
       if (!event.persisted) return;
       const identityChanged = sessionMarker() !== marker;
-      if (identityChanged && viewer) suspendAccountLessonStorage(viewer.id);
+      if (identityChanged && viewer) suspendAccountBrowserStorage(viewer.id);
       if (identityChanged || viewer) refreshAfterIdentityChange();
     }
     window.addEventListener("storage", onStorage);
@@ -36,4 +37,9 @@ export function AccountViewer({ viewer, children }: { viewer: Viewer | null; chi
   return <ViewerContext.Provider value={viewer}>{children}</ViewerContext.Provider>;
 }
 
-export const useAccountViewer = () => useContext(ViewerContext);
+export const useAccountViewer = () => useContext(ViewerContext) ?? null;
+
+export function useAccountViewerId() {
+  const viewer = useContext(ViewerContext);
+  return viewer === undefined ? undefined : viewer?.id ?? null;
+}
