@@ -83,6 +83,7 @@ button.cardButton:hover { background: #eef3e9; }
 .thought { margin: 20px 0 0; padding: 10px 16px; border-left: 2px solid #87a08a; color: var(--green); background: #f1f5eb; }
 .thought blockquote { font-size: 18px; font-weight: 650; }
 .thought figcaption { font-size: 11px; margin-top: 4px; }
+.continueAction { display: flex; margin-top: 24px; }
 .navigation { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line); }
 .navigation > :last-child { margin-left: auto; }
 @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

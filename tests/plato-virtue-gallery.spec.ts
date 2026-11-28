@@ -102,6 +102,36 @@ test("the gallery reverses its stages, restarts after leaving and supports repla
   await expect(page.getByTestId("philosopher-catalog")).toBeVisible();
 });
 
+for (const width of [360, 390, 1024, 1280, 1366, 1440, 1920]) {
+  test(`${width}px continue button aligns with the quote card`, async ({ page }, info) => {
+    if (Boolean(info.project.use.isMobile) !== (width < 768)) test.skip();
+    await page.setViewportSize({ width, height: width < 768 ? 800 : 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(secondUrl);
+    const scene = page.getByTestId("virtue-gallery-scene");
+    await scene.getByRole("button", { name: "Посмотреть примеры" }).click();
+    await examineExamples(scene);
+    await scene.getByRole("button", { name: "Что скажет Сократ?" }).click();
+    await scene.getByRole("button", { name: "Далее" }).click();
+    await scene.getByRole("button", { name: "Открыть объяснение" }).click();
+    const quote = scene.locator("figure").filter({ hasText: "Мысль урока · Sophia" });
+    const next = scene.getByRole("button", { name: "Продолжить урок", exact: true });
+    const card = await quote.boundingBox();
+    const button = await next.boundingBox();
+    expect(card).not.toBeNull();
+    expect(button).not.toBeNull();
+    expect({ leftOffset: button!.x - card!.x, gap: button!.y - card!.y - card!.height })
+      .toEqual({ leftOffset: 0, gap: 24 });
+    expect(button!.x + button!.width).toBeLessThanOrEqual(card!.x + card!.width);
+    if (width === 1366 || width === 390) {
+      await next.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: info.outputPath(`continue-${width}.png`), scale: "css" });
+    }
+    await next.click();
+    await expect(page).toHaveURL(/scene=virtue-swarm$/);
+  });
+}
+
 for (const width of [390, 768, 1024, 1440]) {
   test(`${width}px mosaic is readable with reduced motion`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });

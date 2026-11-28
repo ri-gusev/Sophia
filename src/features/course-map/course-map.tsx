@@ -245,7 +245,7 @@ export function CourseMap() {
                   </span>
                   </span>
                 </button>
-                <span className={styles.stepLabel} aria-hidden="true">{step.type === "branch" && <small>Дополнительно</small>}{step.title}</span>
+                <span className={styles.stepLabel} aria-hidden="true">{step.title}</span>
               </div>;
             })}
           </div>

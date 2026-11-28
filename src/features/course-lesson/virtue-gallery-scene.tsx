@@ -164,11 +164,13 @@ export function VirtueGalleryScene({ scene, active, onBack, onClose, onContinue 
             <blockquote>{content.thought}.</blockquote>
             <figcaption>Мысль урока · Sophia</figcaption>
           </figure>
+          <div className={styles.continueAction}>
+            <Button onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>
+          </div>
         </div>}</MotionRegion>
       </div>}
     </>}
 
-    {reflection && <Button onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>}
     <nav className={styles.navigation} aria-label="Навигация по слайду">
       <Button variant="ghost" size="sm" disabled={stage === "meno"} onClick={previousStep}><ArrowLeft size={15} aria-hidden="true" />Назад</Button>
       <Button variant="ghost" size="sm" onClick={onBack}>К предыдущему</Button>

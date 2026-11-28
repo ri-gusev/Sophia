@@ -99,6 +99,23 @@ test("Plato followers is smaller, above the route, and opens an honest preview",
   await expect(branch).toBeFocused();
 });
 
+test("the Plato followers label fits above its button in a compact map", async ({ page }, info) => {
+  await page.setViewportSize(info.project.use.isMobile ? { width: 320, height: 640 } : { width: 1366, height: 660 });
+  const viewport = page.getByTestId("course-map-viewport");
+  await viewport.scrollIntoViewIfNeeded();
+  const branch = page.locator('[data-node-id="plato-followers"]');
+  const label = page.locator('[data-node-id="plato-followers"] + span');
+  await expect(label).toContainText("Последователи Платона");
+  const mapBox = (await viewport.boundingBox())!;
+  const labelBox = (await label.boundingBox())!;
+  const branchBox = (await branch.boundingBox())!;
+  expect(labelBox.y).toBeGreaterThanOrEqual(mapBox.y + 4);
+  expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(branchBox.y - 8);
+  expect(labelBox.x).toBeGreaterThanOrEqual(mapBox.x + 4);
+  expect(labelBox.x + labelBox.width).toBeLessThanOrEqual(mapBox.x + mapBox.width - 4);
+  await viewport.screenshot({ path: info.outputPath("plato-followers-label.png"), scale: "css" });
+});
+
 test("Plato's seven blocks expand independently and scroll while the header stays visible", async ({ page }) => {
   await page.locator('[data-node-id="plato"]').click();
   const catalog = page.getByRole("dialog", { name: "Платон", exact: true });
