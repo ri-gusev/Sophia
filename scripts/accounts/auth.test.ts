@@ -10,6 +10,7 @@ import { legalAcceptance, legalVersions } from "../../tests/support/legal-confir
 import { cleanupAccounts } from "../../src/features/account/server/cleanup.ts";
 import { ACCOUNT_PROGRESS_SCHEMA } from "../../src/features/account/progress/server/schema.ts";
 import { ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA } from "../../src/features/legal/server/schema.ts";
+import { availableLegalVersions, legalReleaseReady, legalRevision, submittedMailingConsent } from "../../src/features/legal/server/revisions.ts";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
@@ -106,7 +107,7 @@ test("registration rejects a request without legal confirmations without creatin
 
 test("mailing consent is optional, versioned, confirmed by the email owner and withdrawable independently", async () => {
   const db = accountDb();
-  const mailing = { mailingConsentVersion: "1.0-draft.2" };
+  const mailing = { mailingConsentVersion: "1.0" };
   const email = "mailing-owner@mail.ru";
   const register = { ...legalAcceptance, email, displayName: "София" };
   const before = Date.now();
@@ -174,7 +175,7 @@ test("profile mailing consent supports repeated opt-in and revocation for a lega
   const session = cookieFrom(await login(email));
   const grant = "grant-mailing-consent";
   const withdraw = "withdraw-mailing-consent";
-  const choice = { accountId, mailingConsentVersion: "1.0-draft.2" };
+  const choice = { accountId, mailingConsentVersion: "1.0" };
   assert.equal(hasMailingConsent(accountId), false);
   assert.equal((await post(grant, choice)).status, 401);
   assert.equal((await post(grant, { ...choice, accountId: "another-account" }, { token: session })).status, 409);
@@ -267,7 +268,40 @@ test("an online snapshot can be restored without returning deleted accounts or s
   assert.deepEqual(restored.prepare("PRAGMA foreign_key_check").all(), []);
 });
 
-test("drafts block registration, resend and activation in proxy mode before issuing mail", async () => {
+test("production release and registration require explicit independent flags and an effective date", async t => {
+  const configuration = ["LEGAL_RELEASE_APPROVED", "LEGAL_RELEASE_EFFECTIVE_DATE", "ACCOUNT_REGISTRATION_ENABLED"] as const;
+  const previous = configuration.map(key => process.env[key]);
+  t.after(() => configuration.forEach((key, index) => {
+    if (previous[index] === undefined) delete process.env[key];
+    else process.env[key] = previous[index];
+  }));
+  t.mock.method(Date, "now", () => Date.parse("2026-11-28T00:00:00+03:00"));
+  await withSmtpSettings(async () => {
+    Object.assign(process.env, { LEGAL_RELEASE_APPROVED: "false", LEGAL_RELEASE_EFFECTIVE_DATE: "2026-11-28", ACCOUNT_REGISTRATION_ENABLED: "true" });
+    assert.equal(availableLegalVersions(), null);
+    assert.throws(() => submittedMailingConsent("1.0"), { status: 503 });
+    process.env.LEGAL_RELEASE_APPROVED = "true";
+    for (const date of ["", "2026-02-30", "2026-11-29"]) {
+      process.env.LEGAL_RELEASE_EFFECTIVE_DATE = date;
+      assert.equal(legalReleaseReady(), false);
+      assert.equal(availableLegalVersions(), null);
+    }
+    process.env.LEGAL_RELEASE_EFFECTIVE_DATE = "2026-11-28";
+    process.env.ACCOUNT_REGISTRATION_ENABLED = "false";
+    assert.equal(legalReleaseReady(), true);
+    assert.equal(availableLegalVersions(), null);
+    process.env.ACCOUNT_REGISTRATION_ENABLED = "true";
+    assert.deepEqual(availableLegalVersions(), { privacy: "1.0", terms: "1.0", consent: "1.0", age: "1.0" });
+    for (const kind of ["privacy", "terms", "consent", "mailings"] as const) {
+      assert.equal(legalRevision(kind).version, "1.0");
+      assert.equal(legalRevision(kind).effectiveDate, "2026-11-28");
+    }
+    assert.equal(submittedMailingConsent("1.0")?.effectiveDate, "2026-11-28");
+    assert.throws(() => submittedMailingConsent("1.0-draft.2"), { status: 409 });
+  });
+});
+
+test("unapproved texts block registration, resend and activation in proxy mode before issuing mail", async () => {
   const previous = process.env.CHAT_PROXY_SECRET;
   const secret = "f".repeat(64);
   const proxy = "https://example.test";

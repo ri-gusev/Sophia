@@ -12,6 +12,8 @@
 | `ACCOUNT_ORIGIN` | Точный HTTPS-origin Sophia без завершающего слеша |
 | `ACCOUNT_DB_PATH` | Абсолютный путь к постоянной базе аккаунтов |
 | `ACCOUNT_REGISTRATION_ENABLED` | `false` до отдельного допуска и вступления в силу выпущенных документов |
+| `LEGAL_RELEASE_APPROVED` | `false` до подтверждения оператором версии 1.0 и условий выпуска |
+| `LEGAL_RELEASE_EFFECTIVE_DATE` | Дата в формате `YYYY-MM-DD`, назначаемая оператором при выпуске |
 | `ACCOUNT_MAIL_TRANSPORT` | `smtp` |
 | `SMTP_HOST` | `postbox.cloud.yandex.net` |
 | `SMTP_PORT` | `587` |

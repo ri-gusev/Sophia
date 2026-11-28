@@ -14,26 +14,26 @@ export type LegalRevision = Readonly<{
   body: string;
 }>;
 
-// Publish a new version after the owner confirms the items in docs/legal/DATA_PROCESSING.md.
-const release: { approved: boolean; effectiveDates: Partial<Record<LegalDocumentKind, string>>; ageCategory: string | null } = {
-  approved: false,
-  effectiveDates: { privacy: "2026-11-28", consent: "2026-11-28" },
-  ageCategory: siteAgeCategory,
-};
-
 const publicKinds = ["privacy", "terms", "consent"] as const;
 export const revisionKinds = [...publicKinds, "age"] as const;
-const versions: LegalVersions = { privacy: "1.0-draft.4", terms: "1.0-draft.2", consent: "1.0-draft.4", age: "1.0" };
+const versions: LegalVersions = { privacy: "1.0", terms: "1.0", consent: "1.0", age: "1.0" };
+
+function configuredEffectiveDate(): string | null {
+  const date = process.env.LEGAL_RELEASE_EFFECTIVE_DATE;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null;
+}
 
 export function legalRevision(kind: LegalDocumentKind): LegalRevision {
-  const age = `Возрастная маркировка сайта Sophia и всех его образовательных материалов — ${release.ageCategory ?? "уточняется"}.
+  const age = `Возрастная маркировка сайта Sophia и всех его образовательных материалов — ${siteAgeCategory}.
 
 `;
   return {
     kind,
     version: kind === "mailings" ? mailingConsentVersion : versions[kind],
     title: `${legalDocuments[kind].title} Sophia`,
-    effectiveDate: release.effectiveDates[kind] ?? null,
+    effectiveDate: configuredEffectiveDate(),
     body: age + documentText[kind],
   };
 }
@@ -43,6 +43,7 @@ export function submittedMailingConsent(value: unknown): LegalRevision | null {
   if (value !== mailingConsentVersion) {
     throw new AccountError(409, "Обновите страницу и ознакомьтесь с текущей редакцией согласия на рассылки.");
   }
+  if (!availableLegalVersions()) throw new AccountError(503, registrationClosed);
   return legalRevision("mailings");
 }
 
@@ -53,15 +54,13 @@ export function registrationRevisions(): readonly LegalRevision[] {
 }
 
 export function legalReleaseReady(): boolean {
-  const now = Date.now();
-  return release.approved && /^(0|6|12|16|18)\+$/.test(release.ageCategory ?? "") &&
-    publicKinds.map(legalRevision).every(({ version, effectiveDate, body }) => {
-      if (!effectiveDate || !/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) return false;
-      const time = Date.parse(`${effectiveDate}T00:00:00+03:00`);
-      return Number.isFinite(time) && time <= now &&
-        new Date(Date.parse(`${effectiveDate}T00:00:00Z`)).toISOString().slice(0, 10) === effectiveDate &&
-        /^\d+\.\d+(?:\.\d+)?$/.test(version) && !/\[[^\]]+\]|уточняется|подлежат подтверждению/iu.test(body);
-    });
+  // Set only after the operator signs off on docs/legal/DATA_PROCESSING.md.
+  if (process.env.LEGAL_RELEASE_APPROVED !== "true") return false;
+  const date = configuredEffectiveDate();
+  return date !== null && Date.parse(`${date}T00:00:00+03:00`) <= Date.now() &&
+    /^(0|6|12|16|18)\+$/.test(siteAgeCategory) &&
+    [...publicKinds, "mailings" as const].map(legalRevision).every(({ version, body }) =>
+      /^\d+\.\d+(?:\.\d+)?$/.test(version) && !/\[[^\]]+\]|уточняется|подлежат подтверждению/iu.test(body));
 }
 
 export function availableLegalVersions(): LegalVersions | null {

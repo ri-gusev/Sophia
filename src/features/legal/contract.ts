@@ -19,5 +19,5 @@ export type LegalDocumentKind = keyof typeof legalDocuments;
 export type RevisionKind = LegalDocumentKind | "age";
 export type LegalVersions = Readonly<Record<Exclude<RevisionKind, "mailings">, string>>;
 export const mailingConsentLabel = "Согласен получать рекламные и информационные рассылки";
-export const mailingConsentVersion = "1.0-draft.2";
+export const mailingConsentVersion = "1.0";
 export const registrationClosed = "Регистрация пока недоступна.";

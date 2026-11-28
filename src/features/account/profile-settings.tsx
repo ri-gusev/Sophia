@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronDown, LogOut, Mail, ShieldCheck, UserRound, LockKeyhole, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { legalDocuments } from "@/features/legal/contract";
+import { availableLegalVersions } from "@/features/legal/server/revisions";
 import { LogoutButton } from "./account-navigation";
 import { ProfileName } from "./profile-name";
 import { ProfileMailings } from "./profile-mailings";
@@ -38,7 +39,7 @@ export function ProfileSettings({ accountId, displayName, email, mailingConsent 
       <Link className={styles.link} href="/forgot-password">Восстановить пароль</Link>
     </SettingsPanel>
     <SettingsPanel title="Рассылки" icon={Mail}>
-      <ProfileMailings accountId={accountId} consent={mailingConsent} />
+      <ProfileMailings accountId={accountId} consent={mailingConsent} canGrant={availableLegalVersions() !== null} />
     </SettingsPanel>
     <SettingsPanel title="Конфиденциальность" icon={LockKeyhole}>
       <div className={styles.legalLinks}>

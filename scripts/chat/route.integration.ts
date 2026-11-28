@@ -223,7 +223,8 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
       db.prepare("INSERT INTO account_rate_limits VALUES ('expired-fixture', 1, ?)").run(Date.now() - 1);
       const { origin: proxyServer } = await startChatServer({
         ACCOUNT_MODE: "proxy", ACCOUNT_ORIGIN: proxyOrigin, ACCOUNT_MAIL_TRANSPORT: "smtp",
-        ACCOUNT_REGISTRATION_ENABLED: "true",
+        ACCOUNT_REGISTRATION_ENABLED: "true", LEGAL_RELEASE_APPROVED: "false",
+        LEGAL_RELEASE_EFFECTIVE_DATE: "2026-11-28",
       });
       assert.equal(db.prepare("SELECT 1 FROM account_rate_limits WHERE bucket = 'expired-fixture'").get(), undefined);
       assert.ok(db.prepare("SELECT completed_at FROM account_cleanup WHERE id = 1").get());
@@ -261,6 +262,25 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
     } finally {
       db.close();
     }
+  });
+
+  await t.test("the same production build publishes approved version 1.0 while registration stays closed", async () => {
+    const { origin: approvedServer } = await startChatServer({
+      ACCOUNT_MODE: "proxy", ACCOUNT_ORIGIN: proxyOrigin, ACCOUNT_MAIL_TRANSPORT: "smtp",
+      LEGAL_RELEASE_APPROVED: "true", LEGAL_RELEASE_EFFECTIVE_DATE: "2025-01-01",
+      ACCOUNT_REGISTRATION_ENABLED: "false",
+    });
+    for (const path of ["/privacy", "/terms", "/consent", "/mailing-consent"]) {
+      const response = await fetch(approvedServer + path);
+      assert.equal(response.status, 200);
+      const html = (await response.text()).replaceAll("<!-- -->", "");
+      assert.match(html, /Редакция 1\.0\./);
+      assert.match(html, /Действует с <time datetime="2025-01-01">01\.01\.2025<\/time>/i);
+      assert.doesNotMatch(html, /Проект документа|content="noindex"/);
+    }
+    const registration = await fetch(approvedServer + "/register");
+    assert.equal(registration.status, 200);
+    assert.match(await registration.text(), /Регистрация пока недоступна/);
   });
 
   assert.equal((await chat({ cookie, scope: "stale-tab" })).status, 403);

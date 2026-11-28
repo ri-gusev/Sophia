@@ -17,6 +17,8 @@ function testServer({ port, origin, database, outbox }: ReturnType<typeof accoun
       ACCOUNT_ORIGIN: origin,
       ACCOUNT_DB_PATH: database,
       ACCOUNT_MAIL_TRANSPORT: "test",
+      LEGAL_RELEASE_APPROVED: "false",
+      LEGAL_RELEASE_EFFECTIVE_DATE: "",
       ACCOUNT_TEST_OUTBOX: outbox,
       SMTP_USER: "",
       SMTP_PASSWORD: "",
