@@ -3,6 +3,8 @@ import { FIRST_YEAR, LAST_YEAR, fromAxisYear, toAxisYear, isAliveAt, parseHistor
 import { HISTORICAL_ERAS, getHistoricalEra } from "../src/features/philosophy-atlas/historical-eras";
 import { PHILOSOPHERS } from "../src/features/philosophy-atlas/philosophers-data";
 
+const withheldPortraits = ["bacon", "camus", "foucault", "hobbes", "kuhn", "rawls", "russell"];
+
 test("independent historical fixtures cover all eight requested years", () => {
   const expected: Record<number, string[]> = {
     [-400]: ["socrates", "democritus", "plato", "diogenes"],
@@ -16,8 +18,24 @@ test("independent historical fixtures cover all eight requested years", () => {
   };
   for (const [year, ids] of Object.entries(expected)) expect(PHILOSOPHERS.filter(person => isAliveAt(person, Number(year))).map(person => person.id).sort(), year).toEqual(ids.sort());
   expect(PHILOSOPHERS.filter(person => person.deathYear === null)).toHaveLength(9);
-  expect(PHILOSOPHERS.filter(person => !person.portrait).map(person => person.id).sort()).toEqual(["dharmottara", "philoponus", "proclus", "wiredu"]);
+  expect(PHILOSOPHERS.filter(person => !person.portrait).map(person => person.id).sort()).toEqual([...withheldPortraits, "dharmottara", "philoponus", "proclus", "wiredu"].sort());
   expect(PHILOSOPHERS.find(person => person.id === "avicenna")?.approximateBirth).toBe(true);
+});
+
+test("withheld portraits have no public asset and the atlas offers their biographies", async ({ page, request }) => {
+  await Promise.all(withheldPortraits.map(async name => {
+    expect((await request.get(`/images/philosophers/modern/${name}.jpg`)).status()).toBe(404);
+  }));
+  await page.goto("/atlas");
+  await page.getByLabel("Точный год").fill("1950");
+  await page.getByLabel("Эра года").selectOption("ce");
+  await page.getByRole("button", { name: "Перейти", exact: true }).click();
+  const card = page.getByRole("complementary", { name: "Карточка философа" });
+  const catalog = page.locator("details").filter({ hasText: "Философы выбранного года" });
+  await catalog.locator("summary").click();
+  await catalog.getByRole("button", { name: /^Бертран Рассел/ }).click();
+  await expect(card.getByRole("heading")).toHaveText("Бертран Рассел");
+  await expect(card.getByRole("img", { name: "Инициалы: Бертран Рассел" })).toBeVisible();
 });
 
 test("modern historical time supports living people, exact input and the full nonzero range", () => {

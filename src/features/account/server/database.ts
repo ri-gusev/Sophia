@@ -58,6 +58,11 @@ const MIGRATIONS = [
   ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA,
   ACCOUNT_PROGRESS_HISTORY_SCHEMA,
   ACCOUNT_PROFILE_MAILING_REVISION_SCHEMA,
+  `CREATE TABLE account_deletion_binding (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    registry_id TEXT NOT NULL,
+    required_sequence INTEGER NOT NULL CHECK (required_sequence >= 0)
+  ) STRICT;`,
 ];
 
 export function accountTransaction<T>(db: DatabaseSync, run: () => T): T {

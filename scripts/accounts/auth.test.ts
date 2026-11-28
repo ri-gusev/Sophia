@@ -13,12 +13,14 @@ import { ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA } from "../../src/features/legal
 import { availableLegalVersions, legalReleaseReady, legalRevision, submittedMailingConsent } from "../../src/features/legal/server/revisions.ts";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
+import { initializeDeletionRegistry, deletionRegistryStatus, pruneDeletionRegistry } from "../../src/features/account/server/deletion-registry.ts";
+import { prepareAccountRestore } from "../../src/features/account/server/restore.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
 import { hashPassword, newToken, tokenHash } from "../../src/features/account/server/credentials.ts";
 import { readJson } from "../../src/features/account/server/http.ts";
 import { accountMailTransport } from "../../src/features/account/server/mail.ts";
 import { limitAccountRequests } from "../../src/features/account/server/rate-limits.ts";
-import { canUseAiChat, findSession, hasMailingConsent } from "../../src/features/account/server/store.ts";
+import { canUseAiChat, eraseAccountByOperator, findSession, hasMailingConsent } from "../../src/features/account/server/store.ts";
 import { createEmailService } from "../../src/lib/server/email-service.ts";
 
 const directory = await mkdtemp(join(tmpdir(), "sophia-accounts-"));
@@ -33,6 +35,7 @@ Object.assign(process.env, {
   ACCOUNT_MODE: "local", ACCOUNT_ORIGIN: origin, ACCOUNT_DB_PATH: join(directory, "account.sqlite"),
   ACCOUNT_MAIL_TRANSPORT: "test", ACCOUNT_TEST_OUTBOX: outbox,
 });
+delete process.env.ACCOUNT_DELETION_REGISTRY_PATH;
 
 beforeEach(() => accountDb().exec("DELETE FROM account_rate_limits"));
 after(async () => {
@@ -222,7 +225,7 @@ test("profile mailing consent supports repeated opt-in and revocation for a lega
 test("schema 6 mailing history keeps each timestamp, revision and account on migration", () => {
   const path = join(directory, "mailing-migration.sqlite");
   using old = openAccountDatabase(path, true);
-  old.exec(`DROP TABLE account_profile_mailing_consents; DROP TRIGGER account_mailing_revisions_no_delete;
+  old.exec(`DROP TABLE account_deletion_binding; DROP TABLE account_profile_mailing_consents; DROP TRIGGER account_mailing_revisions_no_delete;
     DROP TABLE account_mailing_revisions; ${ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA} PRAGMA user_version = 6;`);
   old.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)").run("history", "history@example.test", "Тест", "fixture", 1, 1, 1);
   old.exec(`INSERT INTO account_profile_mailing_consents VALUES
@@ -238,34 +241,127 @@ test("schema 6 mailing history keeps each timestamp, revision and account on mig
   assert.deepEqual(migrated.prepare("PRAGMA foreign_key_check").all(), []);
 });
 
-test("an online snapshot can be restored without returning deleted accounts or stale credentials", async () => {
-  const original = join(directory, "restore-source.sqlite");
+test("old online snapshots cannot restore self-deleted or operator-deleted accounts or old sessions", async () => {
+  const db = accountDb();
+  const registry = process.env.ACCOUNT_DB_PATH + ".deletions.sqlite";
+  initializeDeletionRegistry(db, process.env.ACCOUNT_DB_PATH!, registry);
+  const emails = ["restore-self@mail.ru", "restore-operator@mail.ru", "restore-active@mail.ru"];
+  const ids: string[] = [];
+  const sessions: string[] = [];
+  for (const email of emails) {
+    await activate(email);
+    const token = cookieFrom(await login(email));
+    const user = findSession(token);
+    assert.ok(user);
+    ids.push(user.id);
+    sessions.push(token);
+  }
   const snapshot = join(directory, "restore-snapshot.sqlite");
-  using source = openAccountDatabase(original, true);
-  const stored = await hashPassword(password);
-  const insert = source.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)");
-  insert.run("keep", "keep@example.test", "Тест", stored, 1, 1, 1);
-  insert.run("erased", "erased@example.test", "Тест", stored, 1, 1, 1);
-  source.exec(`INSERT INTO account_entitlements VALUES ('keep', 'ai_chat', 1);
-    INSERT INTO account_sessions VALUES ('${"a".repeat(64)}', 'keep', 1, 2);
-    INSERT INTO account_challenges (token_hash, kind, email, user_id, expires_at)
-      VALUES ('${"b".repeat(64)}', 'reset', 'keep@example.test', 'keep', 2);`);
-  await backup(source, snapshot);
-  source.exec("DELETE FROM account_users WHERE id = 'erased'");
-  const restore = await readFile("deploy/sql/prepare-account-restore.sql", "utf8");
+  const staleRegistry = join(directory, "stale-registry.sqlite");
+  await backup(db, snapshot);
+  using old = new DatabaseSync(registry, { readOnly: true });
+  await backup(old, staleRegistry);
+
+  assert.equal((await post("delete-account", { accountId: ids[0], password, confirm: true }, { token: sessions[0] })).status, 200);
+  assert.equal(eraseAccountByOperator(ids[1]), true);
+  assert.equal(eraseAccountByOperator(ids[1]), false);
+  for (const token of sessions.slice(0, 2)) assert.equal(findSession(token), null);
+  const { sequence } = deletionRegistryStatus(registry);
+  for (const unavailable of [join(directory, "missing.sqlite"), staleRegistry, snapshot]) {
+    assert.throws(() => prepareAccountRestore(snapshot, unavailable, ids, sequence));
+  }
   using restored = openAccountDatabase(snapshot);
-  assert.throws(() => restored.exec(restore), /retained_accounts/);
-  restored.exec("ROLLBACK");
-  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_users").get()?.total, 2);
-  restored.exec("CREATE TEMP TABLE retained_accounts (id TEXT PRIMARY KEY); INSERT INTO retained_accounts VALUES ('keep');");
-  restored.exec(restore);
+  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_users WHERE id IN (?, ?, ?)").get(...ids)?.total, 3);
+  prepareAccountRestore(snapshot, registry, ids, sequence);
   const users = restored.prepare("SELECT id, password_hash FROM account_users").all();
-  assert.deepEqual(users.map(row => [row.id, row.password_hash]), [["keep", "!restore-reset-required"]]);
-  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_entitlements").get()?.total, 0);
+  assert.deepEqual(users.map(row => [row.id, row.password_hash]), [[ids[2], "!restore-reset-required"]]);
   assert.equal(restored.prepare("SELECT count(*) AS total FROM account_sessions").get()?.total, 0);
   assert.equal(restored.prepare("SELECT count(*) AS total FROM account_challenges").get()?.total, 0);
-  assert.equal(restored.prepare("PRAGMA integrity_check").get()?.integrity_check, "ok");
   assert.deepEqual(restored.prepare("PRAGMA foreign_key_check").all(), []);
+  assert.equal(old.prepare("SELECT reason FROM account_deletion_events WHERE account_id = ?").get(ids[0])?.reason, "self");
+  assert.equal(old.prepare("SELECT reason FROM account_deletion_events WHERE account_id = ?").get(ids[1])?.reason, "operator");
+  const originalPath = process.env.ACCOUNT_DB_PATH!;
+  try {
+    process.env.ACCOUNT_DB_PATH = snapshot;
+    for (const token of sessions) assert.equal(findSession(token), null);
+    assert.equal((await login(emails[2])).status, 401);
+  } finally {
+    process.env.ACCOUNT_DB_PATH = originalPath;
+  }
+});
+
+test("an unavailable registry leaves the account and its existing session intact", async t => {
+  const email = "ledger-failure@mail.ru";
+  await activate(email);
+  const token = cookieFrom(await login(email));
+  const user = findSession(token);
+  assert.ok(user);
+  const configured = process.env.ACCOUNT_DELETION_REGISTRY_PATH;
+  process.env.ACCOUNT_DELETION_REGISTRY_PATH = join(directory, "missing-deletion-registry.sqlite");
+  t.after(() => {
+    if (configured === undefined) delete process.env.ACCOUNT_DELETION_REGISTRY_PATH;
+    else process.env.ACCOUNT_DELETION_REGISTRY_PATH = configured;
+  });
+  const response = await post("withdraw-consent", { accountId: user.id, password, confirm: true }, { token });
+  assert.equal(response.status, 503);
+  assert.equal(findSession(token)?.id, user.id);
+});
+
+test("a failed registry write rolls back account deletion; a failed account commit leaves a retryable deletion intent", async () => {
+  const db = accountDb();
+  const registry = process.env.ACCOUNT_DB_PATH + ".deletions.sqlite";
+  initializeDeletionRegistry(db, process.env.ACCOUNT_DB_PATH!, registry);
+  const email = "ledger-rollback@mail.ru";
+  await activate(email);
+  const token = cookieFrom(await login(email));
+  const user = findSession(token);
+  assert.ok(user);
+  const remove = () => post("delete-account", { accountId: user.id, password, confirm: true }, { token });
+  using journal = new DatabaseSync(registry);
+  journal.exec("CREATE TRIGGER reject_deletion BEFORE INSERT ON account_deletion_events BEGIN SELECT RAISE(ABORT, 'fixture fault'); END");
+  try {
+    assert.equal((await remove()).status, 503);
+    assert.equal(findSession(token)?.id, user.id);
+    assert.equal(journal.prepare("SELECT 1 FROM account_deletion_events WHERE account_id = ?").get(user.id), undefined);
+  } finally {
+    journal.exec("DROP TRIGGER reject_deletion");
+  }
+
+  db.exec(`CREATE TABLE deferred_delete_test (id TEXT REFERENCES account_users(id) DEFERRABLE INITIALLY DEFERRED)`);
+  db.prepare("INSERT INTO deferred_delete_test VALUES (?)").run(user.id);
+  try {
+    assert.equal((await remove()).status, 503);
+    assert.equal(findSession(token)?.id, user.id);
+    assert.equal(journal.prepare("SELECT count(*) AS total FROM account_deletion_events WHERE account_id = ?").get(user.id)?.total, 1);
+  } finally {
+    db.exec("DROP TABLE deferred_delete_test");
+  }
+  assert.equal((await remove()).status, 200);
+  assert.equal(findSession(token), null);
+  assert.equal(journal.prepare("SELECT count(*) AS total FROM account_deletion_events WHERE account_id = ?").get(user.id)?.total, 1);
+});
+
+test("restore rejects a gap and rejects snapshots older than pruned deletion history", async () => {
+  const db = accountDb();
+  const registry = process.env.ACCOUNT_DB_PATH + ".deletions.sqlite";
+  initializeDeletionRegistry(db, process.env.ACCOUNT_DB_PATH!, registry);
+  const email = "ledger-prune@mail.ru";
+  await activate(email);
+  const token = cookieFrom(await login(email));
+  const user = findSession(token);
+  assert.ok(user);
+  const snapshot = join(directory, "prune-snapshot.sqlite");
+  const damaged = join(directory, "gap-registry.sqlite");
+  await backup(db, snapshot);
+  assert.equal(eraseAccountByOperator(user.id), true);
+  using live = new DatabaseSync(registry, { readOnly: true });
+  await backup(live, damaged);
+  using damagedRegistry = new DatabaseSync(damaged);
+  damagedRegistry.prepare("DELETE FROM account_deletion_events WHERE account_id = ?").run(user.id);
+  const { sequence } = deletionRegistryStatus(registry);
+  assert.throws(() => prepareAccountRestore(snapshot, damaged, [user.id], sequence), /gaps/);
+  assert.equal(pruneDeletionRegistry(registry, Date.now() + 15 * 24 * 60 * 60_000), sequence);
+  assert.throws(() => prepareAccountRestore(snapshot, registry, [user.id], sequence), /coverage/);
 });
 
 test("production release and registration require explicit independent flags and an effective date", async t => {
@@ -471,7 +567,7 @@ test("migration removes a legacy verification link while preserving the account 
   legacy.close();
   const migrated = openAccountDatabase(path);
   try {
-    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 7);
+    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 8);
     assert.equal(migrated.prepare("SELECT COUNT(*) AS total FROM account_mailing_consents").get()?.total, 0);
     assert.equal(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'verify'").get(), undefined);
     assert.ok(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'reset'").get());
@@ -937,7 +1033,7 @@ test("a local operator can migrate, grant and revoke AI access for a verified ac
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);
-  assert.match(migration.stdout, /schema 7/);
+  assert.match(migration.stdout, /schema 8/);
   assert.equal(cli("grant-ai-chat", email).status, 1);
   await activate(email);
   const user = findSession(cookieFrom(await login(email)));

@@ -111,6 +111,7 @@ test("schema 5 progress migrates with unknown completion dates and the saved res
   for (const sceneId of scenes) addSlide.run(accountId, lessonId, sceneId);
   before.prepare("INSERT INTO account_last_opened_lesson VALUES (?, ?)").run(accountId, lessonId);
   before.exec(`ALTER TABLE account_lesson_progress DROP COLUMN completed_at;
+    DROP TABLE account_deletion_binding;
     ALTER TABLE account_lesson_progress DROP COLUMN activity_order;
     DROP TABLE account_profile_mailing_consents;
     DROP TRIGGER account_mailing_revisions_no_delete;
@@ -119,7 +120,7 @@ test("schema 5 progress migrates with unknown completion dates and the saved res
     PRAGMA user_version = 5;`);
 
   using migrated = openAccountDatabase(path);
-  assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 7);
+  assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 8);
   assert.deepEqual(readProgress(migrated, accountId).lastOpened, { lessonId, sceneId: final });
   assert.equal(buildProfileLearning(readLearningProgress(migrated, accountId), getMoscowDay()).completed, 1);
   applyProgressMutation(migrated, accountId, { action: "finish", lessonId, sceneId: final });

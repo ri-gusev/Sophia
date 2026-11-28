@@ -148,7 +148,7 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
     case "withdraw-consent":
       if (body.confirm !== true) throw new AccountError(400, "Подтверди удаление аккаунта.");
       if (!isLoginPassword(body.password)) throw new AccountError(400, "Укажи текущий пароль.");
-      await eraseAccount(sessionToken, body.accountId, body.password, network);
+      await eraseAccount(sessionToken, body.accountId, body.password, network, action === "withdraw-consent" ? "withdrawal" : "self");
       return ok(sessionCookie(""));
     case "forgot":
     case "resend-verification": {

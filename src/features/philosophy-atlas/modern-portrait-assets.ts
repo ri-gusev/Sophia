@@ -205,30 +205,6 @@ export const MODERN_PORTRAITS: Readonly<Record<string, PortraitAsset>> = {
       "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
     }
   },
-  "bacon": {
-    "path": "/images/philosophers/modern/bacon.jpg",
-    "position": "50% 30%",
-    "scale": 1,
-    "note": "Исторический художественный портрет; точность передачи внешности не гарантируется.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:Somer_Francis_Bacon.jpg",
-      "artist": "Paul van Somer I / Formerly attributed to Frans Pourbus the Younger",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
-    }
-  },
-  "hobbes": {
-    "path": "/images/philosophers/modern/hobbes.jpg",
-    "position": "50% 30%",
-    "scale": 1,
-    "note": "Исторический художественный портрет; точность передачи внешности не гарантируется.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:Thomas_Hobbes_by_John_Michael_Wright_(colour)_(3x4_cropped).jpg",
-      "artist": "John Michael Wright",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
-    }
-  },
   "descartes": {
     "path": "/images/philosophers/modern/descartes.jpg",
     "position": "50% 0%",
@@ -445,18 +421,6 @@ export const MODERN_PORTRAITS: Readonly<Record<string, PortraitAsset>> = {
       "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
     }
   },
-  "russell": {
-    "path": "/images/philosophers/modern/russell.jpg",
-    "position": "50% 30%",
-    "scale": 1,
-    "note": "Фотография философа; источник и автор указаны в реестре изображений.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:Bertrand_Russell_in_1936.jpg",
-      "artist": "Bassano Ltd",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
-    }
-  },
   "wittgenstein": {
     "path": "/images/philosophers/modern/wittgenstein.jpg",
     "position": "50% 0%",
@@ -529,18 +493,6 @@ export const MODERN_PORTRAITS: Readonly<Record<string, PortraitAsset>> = {
       "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
     }
   },
-  "camus": {
-    "path": "/images/philosophers/modern/camus.jpg",
-    "position": "50% 0%",
-    "scale": 1.25,
-    "note": "Фотография философа; источник и автор указаны в реестре изображений.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:Albert_Camus,_gagnant_de_prix_Nobel,_portrait_en_buste,_pos%C3%A9_au_bureau,_faisant_face_%C3%A0_gauche,_cigarette_de_tabagisme.jpg",
-      "artist": "Photograph by United Press International",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
-    }
-  },
   "adorno": {
     "path": "/images/philosophers/modern/adorno.jpg",
     "position": "50% 30%",
@@ -553,18 +505,6 @@ export const MODERN_PORTRAITS: Readonly<Record<string, PortraitAsset>> = {
       "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/"
     }
   },
-  "foucault": {
-    "path": "/images/philosophers/modern/foucault.jpg",
-    "position": "50% 15%",
-    "scale": 1.4,
-    "note": "Фотография философа; источник и автор указаны в реестре изображений.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:Photo_of_Michel_Foucault_on_1970_dustjacket_of_The_Order_of_Things.jpg",
-      "artist": "Jerry Bauer",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
-    }
-  },
   "derrida": {
     "path": "/images/philosophers/modern/derrida.png",
     "position": "50% 10%",
@@ -575,30 +515,6 @@ export const MODERN_PORTRAITS: Readonly<Record<string, PortraitAsset>> = {
       "artist": "Auto-épreuve",
       "license": "CC BY 4.0",
       "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
-    }
-  },
-  "rawls": {
-    "path": "/images/philosophers/modern/rawls.jpg",
-    "position": "50% 30%",
-    "scale": 1,
-    "note": "Фотография философа; источник и автор указаны в реестре изображений.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:John_Rawls_(1971_photo_portrait).jpg",
-      "artist": "Published by the Belknap Press of Harvard University Press . Photograph taken by Alec Rawls, John's son. The portrait was uncredited on the original dust jacket, but Alec is identified as its photographer on the copyright page of the 1994 German-language first edition of the book John Rawls by Thomas Pogge .",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
-    }
-  },
-  "kuhn": {
-    "path": "/images/philosophers/modern/kuhn.jpg",
-    "position": "50% 30%",
-    "scale": 1,
-    "note": "Фотография философа; источник и автор указаны в реестре изображений.",
-    "credit": {
-      "source": "https://commons.wikimedia.org/wiki/File:Thomas_Kuhn_(1977)_(cropped).jpg",
-      "artist": "Bob Bielk",
-      "license": "Public domain",
-      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
     }
   },
   "habermas": {

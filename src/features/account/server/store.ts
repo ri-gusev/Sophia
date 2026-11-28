@@ -6,6 +6,7 @@ import { UNSUPPORTED_ACCOUNT_EMAIL_MESSAGE, isApprovedAccountEmail, type Account
 import { accountDb, accountTransaction } from "./database.ts";
 import { matchesPassword, newToken, tokenHash, validToken } from "./credentials.ts";
 import { AccountError } from "./errors.ts";
+import { openRegistryForDeletion, recordAccountDeletion, type DeletionReason } from "./deletion-registry.ts";
 import { limitAccountRequests } from "./rate-limits.ts";
 
 export const ACCOUNT_SESSION_AGE = 30 * 24 * 60 * 60 * 1000;
@@ -212,7 +213,7 @@ export function setProfileMailingConsent(token: unknown, expected: unknown, revi
   });
 }
 
-export async function eraseAccount(token: unknown, expected: unknown, password: string, network: string): Promise<void> {
+export async function eraseAccount(token: unknown, expected: unknown, password: string, network: string, reason: "self" | "withdrawal"): Promise<void> {
   const unauthenticated = () => new AccountError(401, "Войди в аккаунт, чтобы подтвердить действие.");
   if (!validToken(token)) throw unauthenticated();
   const db = accountDb();
@@ -224,22 +225,39 @@ export async function eraseAccount(token: unknown, expected: unknown, password: 
     () => limitAccountRequests("erase", network, user.id))) {
     throw new AccountError(401, "Текущий пароль указан неверно.");
   }
+  using registry = openRegistryForDeletion(db);
   accountTransaction(db, () => {
     const session = sessionIn(db, token, Date.now());
     if (!session || session.id !== user.id || credentialsIn(db, user.email)?.passwordHash !== credentials.passwordHash) {
       throw unauthenticated();
     }
-    // Cascades remove progress, sessions, reset links, entitlements and linked legal evidence.
-    db.prepare("DELETE FROM account_users WHERE id = ?").run(user.id);
-    const emailHash = tokenHash(user.email);
-    db.prepare("DELETE FROM account_rate_limits WHERE bucket IN (?, ?, ?, ?)").run(
-      `register:email:${emailHash}`, `login:email:${emailHash}`, `forgot:email:${emailHash}`, `erase:email:${tokenHash(user.id)}`,
-    );
-    for (const action of ["login", "forgot"]) {
-      const prefix = `${action}:pair:${emailHash}:`;
-      db.prepare("DELETE FROM account_rate_limits WHERE bucket >= ? AND bucket < ?").run(prefix, prefix + "g");
-    }
+    deleteAccountData(db, registry, user.id, user.email, reason);
   });
+}
+
+export function eraseAccountByOperator(id: string): boolean {
+  const db = accountDb();
+  using registry = openRegistryForDeletion(db);
+  return accountTransaction(db, () => {
+    const email = db.prepare("SELECT email FROM account_users WHERE id = ?").get(id)?.email;
+    if (typeof email !== "string") return false;
+    deleteAccountData(db, registry, id, email, "operator");
+    return true;
+  });
+}
+
+function deleteAccountData(db: DatabaseSync, registry: DatabaseSync, id: string, email: string, reason: DeletionReason) {
+  // Cascades remove progress, sessions, reset links, entitlements and linked legal evidence.
+  db.prepare("DELETE FROM account_users WHERE id = ?").run(id);
+  const emailHash = tokenHash(email);
+  db.prepare("DELETE FROM account_rate_limits WHERE bucket IN (?, ?, ?, ?)").run(
+    `register:email:${emailHash}`, `login:email:${emailHash}`, `forgot:email:${emailHash}`, `erase:email:${tokenHash(id)}`,
+  );
+  for (const action of ["login", "forgot"]) {
+    const prefix = `${action}:pair:${emailHash}:`;
+    db.prepare("DELETE FROM account_rate_limits WHERE bucket >= ? AND bucket < ?").run(prefix, prefix + "g");
+  }
+  recordAccountDeletion(db, registry, id, reason);
 }
 
 export function revokeSession(token: unknown, expected: unknown): void {
