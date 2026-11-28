@@ -24,7 +24,7 @@ const forms = {
     description: "Сначала подтвердите почту. Пароль вы зададите по ссылке из письма.",
     success: "Проверьте почту. Если адрес можно зарегистрировать, мы отправим ссылку для подтверждения.",
   },
-  login: { title: "Вход в Sophia", action: "Войти", fields: ["email", "password"], success: "" },
+  login: { title: "Вход в «Софию»", action: "Войти", fields: ["email", "password"], success: "" },
   forgot: {
     title: "Восстановление доступа", action: "Отправить ссылку", fields: ["email"],
     success: "Если для этого email есть аккаунт, мы отправим ссылку для восстановления.",
@@ -32,7 +32,7 @@ const forms = {
   verify: {
     title: "Подтверждение email", action: "Подтвердить email", fields: ["password", "confirmPassword"],
     description: "Задайте пароль для аккаунта.",
-    success: "Email подтверждён. Теперь можно войти в Sophia.",
+    success: "Email подтверждён. Теперь можно войти в «Софию».",
   },
   reset: {
     title: "Новый пароль", action: "Сохранить пароль", fields: ["password", "confirmPassword"],
@@ -211,7 +211,7 @@ export function AccountForm({ mode, destination = "/profile", recoveryComplete =
         {failure && <p role="alert" className={styles.error}>{failure}</p>}
       </div>}
       <noscript><p className={styles.description}>Для работы с аккаунтом включите JavaScript.</p></noscript>
-      {needsToken && !closed && token !== undefined && !hasToken && !done && <p role="alert" className={styles.error}>Откройте ссылку целиком из письма Sophia.</p>}
+      {needsToken && !closed && token !== undefined && !hasToken && !done && <p role="alert" className={styles.error}>Откройте ссылку целиком из письма «Софии».</p>}
       <div className={styles.formLinks}>
         {mode === "login" ? <>
           <Link href="/forgot-password">Забыли пароль?</Link>

@@ -45,5 +45,5 @@ test("opening the chat URL as an entitled account cannot show a composer or send
   await main.getByRole("button", { name: "Платон Временно недоступен" }).press("Enter");
   await expectUnavailable(main);
   expect(requests).toEqual([]);
-  await expect(page.getByRole("link", { name: "Sophia — на главную" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "София — на главную" })).toBeVisible();
 });

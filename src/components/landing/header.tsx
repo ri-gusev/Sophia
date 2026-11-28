@@ -73,7 +73,7 @@ export function Header() {
       }}
     >
       <div className="header-inner container">
-        <Link className="wordmark" href="/" aria-label="Sophia — на главную" onClick={closeNavigation}>sophia<span>.</span></Link>
+        <Link className="wordmark" href="/" aria-label="София — на главную" onClick={closeNavigation}>софия<span>.</span></Link>
         <button
           className="menu-toggle"
           ref={mobileToggleRef}

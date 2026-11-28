@@ -6,7 +6,7 @@ import styles from "../account/account.module.css";
 
 export function legalMetadata(kind: LegalDocumentKind): Metadata {
   const document = legalRevision(kind);
-  return { title: `${document.title} — Sophia`, ...((!document.effectiveDate || !legalReleaseReady()) && { robots: { index: false } }) };
+  return { title: document.title, ...((!document.effectiveDate || !legalReleaseReady()) && { robots: { index: false } }) };
 }
 
 function emphasis(text: string) {

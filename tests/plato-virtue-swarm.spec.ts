@@ -72,7 +72,7 @@ test('swarm exploration, previous steps, retry and replay', async ({ page }, inf
   await expect(scene.getByRole('heading', { name: 'Множество пчёл — один вопрос об их природе' })).toBeVisible();
   await shot('08-bee-parallel.png');
   await scene.getByRole('button', { name: 'А добродетели?' }).click();
-  await expect(scene.getByText('Мысль урока · Sophia')).toBeVisible();
+  await expect(scene.getByText('Мысль урока · София')).toBeVisible();
   await shot('09-final.png');
   await previous.click();
   await expect(scene.getByRole('button', { name: 'А добродетели?' })).toBeVisible();

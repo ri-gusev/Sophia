@@ -19,7 +19,7 @@ test("the guest sees the Premium notice and free destinations without sending a 
   const trigger = page.getByRole("button", { name: "Разговор с философом", exact: true });
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: "Разговор с философом", exact: true });
-  await expect(dialog).toContainText("AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать бесплатные уроки и философский атлас.");
+  await expect(dialog).toContainText("ИИ-диалоги станут доступны с подпиской «София Премиум». Сейчас можно изучать бесплатные уроки и философский атлас.");
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: "Отправить сообщение" })).toHaveCount(0);
   const course = dialog.getByRole("link", { name: "бесплатные уроки" });
@@ -131,7 +131,7 @@ test("a stale tab discards the conversation when a different account owns the se
   const denied = page.waitForResponse(response => new URL(response.url()).pathname === "/api/philosopher-chat");
   await composer.press("Enter");
   expect((await denied).status()).toBe(403);
-  await expect(dialog.getByText(/AI-диалоги станут доступны/)).toBeVisible();
+  await expect(dialog.getByText(/ИИ-диалоги станут доступны/)).toBeVisible();
   await expect(dialog.getByRole("log")).toHaveCount(0);
   await expect(composer).toHaveCount(0);
 });
@@ -195,7 +195,7 @@ test("validated SSE delivery preserves structured user definitions for the next 
   await expect(composer).toBeEnabled();
 });
 
-test("safety handler replies are identified as Sophia rather than the historical persona", async ({ page }) => {
+test("safety handler replies are identified as София rather than the historical persona", async ({ page }) => {
   await loginEntitledChat(page);
   await page.route("**/api/philosopher-chat", route => route.fulfill({ json: { message: "Я не могу помочь с такими инструкциями. Можем обсудить этическую сторону вопроса.", memory: { summary: "", recent: [] }, sources: [], outcome: "safety" } }));
   await page.goto("/learn");
@@ -204,7 +204,7 @@ test("safety handler replies are identified as Sophia rather than the historical
   await dialog.getByRole("textbox", { name: "Сообщение", exact: true }).fill("Синтетический запрос безопасности");
   await dialog.getByRole("button", { name: "Отправить сообщение" }).click();
   await expect(dialog.getByRole("log")).toContainText("Я не могу помочь");
-  await expect(dialog.getByRole("log").getByText("Sophia", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("log").getByText("София", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("log").getByText("Платон · ИИ", { exact: true })).toHaveCount(0);
 });
 

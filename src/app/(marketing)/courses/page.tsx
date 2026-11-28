@@ -3,7 +3,7 @@ import { THEMATIC_COURSES } from "@/features/thematic-courses/catalog";
 import { CourseCatalog, COURSES_DESCRIPTION } from "@/features/thematic-courses/course-pages";
 
 export const metadata: Metadata = {
-  title: "Тематические курсы — Sophia",
+  title: "Тематические курсы — София",
   description: COURSES_DESCRIPTION,
 };
 

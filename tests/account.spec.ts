@@ -158,7 +158,7 @@ test("registration explains the email restriction and rejects unsupported domain
   await page.goto("/register");
   await page.getByRole("main").getByRole("link", { name: "Пользовательское соглашение" }).click();
   await expect(page).toHaveURL(/\/terms$/);
-  await expect(page.getByRole("heading", { name: "Пользовательское соглашение Sophia" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Пользовательское соглашение «София»" })).toBeVisible();
   await expect(page.getByRole("main")).toContainText("Редакция");
   await page.goBack();
 
@@ -202,7 +202,7 @@ test("the shared footer and readable legal drafts display the 18+ mark", async (
   for (const [path, label, section, footerLabel] of docs) {
     await footer.getByRole("link", { name: footerLabel ?? label }).click();
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByRole("heading", { level: 1, name: `${label} Sophia` })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: `${label} «София»` })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: new RegExp(section) })).toBeVisible();
     await expect(page.getByRole("main")).toContainText("Проект документа");
     await expect(page.getByRole("main")).toContainText("Редакция 1.0.");

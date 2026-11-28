@@ -7,7 +7,7 @@ import { PhilosopherConversation } from "@/features/philosopher-conversation/phi
 import styles from "@/features/course-map/course-map.module.css";
 
 export const metadata: Metadata = {
-  title: "Основной курс философии — Sophia",
+  title: "Основной курс философии — София",
   description: "Путешествие по пяти эпохам философии. Исследуйте карту тем от Античности до современности.",
 };
 

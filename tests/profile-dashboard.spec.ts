@@ -92,7 +92,7 @@ test("a new profile fits all target widths with real identity, zero statistics a
     await expect(page.getByRole("heading", { name: "Лидия Соколова", level: 1 })).toBeVisible();
     await expect(page.getByRole("main").getByText("Л", { exact: true })).toBeVisible();
     await expect(page.getByText("На пути к мудрости")).toBeVisible();
-    await expect(page.getByText("На Sophia с ноября 2026", { exact: true })).toBeVisible();
+    await expect(page.getByText("На платформе «София» с ноября 2026", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Настройки аккаунта" })).toHaveAttribute("href", "#account-settings");
     for (const key of ["streak", "record", "completed", "philosophers"] as const) await expectStat(page, key, 0);
     await expect(learning(page).getByRole("link", { name: "Перейти к карте курса" })).toHaveAttribute("href", "/learn");

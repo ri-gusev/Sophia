@@ -7,7 +7,7 @@ export default function LearningLayout({ children }: { children: ReactNode }) {
     <>
       <header className="site-header">
         <div className="header-inner container">
-          <Link className="wordmark" href="/" aria-label="Sophia — на главную">sophia<span>.</span></Link>
+          <Link className="wordmark" href="/" aria-label="София — на главную">софия<span>.</span></Link>
           <nav className="learning-nav" aria-label="Навигация курса">
             <Link href="/#how-it-works">Как это работает</Link>
             <AccountNavigation />

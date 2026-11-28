@@ -4,7 +4,7 @@ import { AccountForm } from "@/features/account/account-form";
 import { currentAccount } from "@/features/account/server/viewer";
 import { availableLegalVersions } from "@/features/legal/server/revisions";
 
-export const metadata: Metadata = { title: "Регистрация — Sophia" };
+export const metadata: Metadata = { title: "Регистрация — София" };
 
 export default async function RegisterPage() {
   if (await currentAccount().catch(() => null)) redirect("/profile");

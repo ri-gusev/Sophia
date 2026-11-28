@@ -130,7 +130,7 @@ export function VirtueSwarmScene({ scene, active, onBack, onClose, onContinue }:
         </>}
         {gathered && <>{!parallel ? <Button onClick={() => { shouldFocus.current = true; setParallel(true); }}>А добродетели?</Button> : <>
           <p className={styles.explanation}>{content.explanation}</p>
-          <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · Sophia</figcaption></figure>
+          <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · София</figcaption></figure>
           <Button className="mt-4" onClick={onContinue}>Продолжить урок</Button>
         </>}</>}
       </div></MotionRegion></div>

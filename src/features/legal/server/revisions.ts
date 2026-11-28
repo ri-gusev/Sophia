@@ -26,13 +26,13 @@ function configuredEffectiveDate(): string | null {
 }
 
 export function legalRevision(kind: LegalDocumentKind): LegalRevision {
-  const age = `Возрастная маркировка сайта Sophia и всех его образовательных материалов — ${siteAgeCategory}.
+  const age = `Возрастная маркировка сайта «София» и всех его образовательных материалов — ${siteAgeCategory}.
 
 `;
   return {
     kind,
     version: kind === "mailings" ? mailingConsentVersion : versions[kind],
-    title: `${legalDocuments[kind].title} Sophia`,
+    title: `${legalDocuments[kind].title} «София»`,
     effectiveDate: configuredEffectiveDate(),
     body: age + documentText[kind],
   };

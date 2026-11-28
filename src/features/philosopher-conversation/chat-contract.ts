@@ -19,7 +19,7 @@ export type ChatReply = { message: string; memory: ChatMemory; sources: CitedSou
 export type ChatRequest = { philosopherId: "plato"; message: string; memory: ChatMemory };
 export const EMPTY_CHAT_MEMORY: ChatMemory = { summary: "", recent: [] };
 export const CHAT_MEMORY_NOTICE = "Разговор хранится только в этой вкладке. После перезагрузки он исчезнет.";
-export const CHAT_ACCESS_NOTICE = "AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать бесплатные уроки и философский атлас.";
+export const CHAT_ACCESS_NOTICE = "ИИ-диалоги станут доступны с подпиской «София Премиум». Сейчас можно изучать бесплатные уроки и философский атлас.";
 export const CHAT_UNAVAILABLE_STATUS = "Временно недоступен";
 export const CHAT_UNAVAILABLE_NOTICE = "Мы совершенствуем ИИ-собеседника, чтобы сделать философские диалоги ещё глубже. Скоро он станет доступен";
 

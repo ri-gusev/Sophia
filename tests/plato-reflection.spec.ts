@@ -65,7 +65,7 @@ test("reflection explicitly saves completion, persists and returns to catalog",a
  expect(await page.evaluate(k=>localStorage.getItem(k),key)).toBeNull();
  await scene.getByRole('button',{name:'Посмотреть итоги'}).click();
  await expect(scene.getByRole('heading',{name:'Чему ты научился?'})).toBeVisible();
- await expect(scene).toContainText('Мысль урока · Sophia');
+ await expect(scene).toContainText('Мысль урока · София');
  await expect(scene).toContainText('Уточнять, что человек имеет в виду, и проверять его утверждения');
  await page.waitForTimeout(500);
  expect((await new AxeBuilder({page}).include('[data-testid="reflection-scene"]').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);

@@ -162,7 +162,7 @@ export function VirtueGalleryScene({ scene, active, onBack, onClose, onContinue 
           <blockquote>{content.closing}</blockquote>
           <figure className={styles.thought}>
             <blockquote>{content.thought}.</blockquote>
-            <figcaption>Мысль урока · Sophia</figcaption>
+            <figcaption>Мысль урока · София</figcaption>
           </figure>
           <div className={styles.continueAction}>
             <Button onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>

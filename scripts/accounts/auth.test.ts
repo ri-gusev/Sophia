@@ -778,9 +778,9 @@ test("sends both account templates through authenticated SMTP with mandatory STA
     const [verify, reset] = smtp.mock.calls.map(call => call.arguments[0].data);
     assert.equal(verify.from, smtpSettings.SMTP_FROM);
     assert.deepEqual(smtp.mock.calls[0].arguments[0].message.getEnvelope().to, [to]);
-    assert.equal(verify.subject, "Подтверди почту в Sophia");
+    assert.equal(verify.subject, "Подтверди почту в «Софии»");
     assert.equal(verify.text, "Перейди по ссылке, чтобы подтвердить почту и установить пароль. Ссылка действует в пределах 24 часов с момента подачи заявки.\nhttps://sophia.example.net/verify-email#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
-    assert.equal(reset.subject, "Восстановление доступа к Sophia");
+    assert.equal(reset.subject, "Восстановление доступа к «Софии»");
     assert.equal(reset.text, "Перейди по ссылке, чтобы установить новый пароль. Ссылка действует 30 минут.\nhttps://sophia.example.net/reset-password#token=fixture\n\nЕсли ты не отправлял этот запрос, просто проигнорируй письмо.");
   });
 });

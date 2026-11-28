@@ -100,7 +100,7 @@ test("complete eight-scene journey checks answers, retains work and returns to t
   await expect(lesson.getByTestId("exercise-feedback")).toContainText("Отлично!");
   await next().click();
   await expect(heading).toHaveText("Почему мы изучаем Платона?");
-  await expect(lesson).toContainText("Авторская формулировка Sophia");
+  await expect(lesson).toContainText("Авторская формулировка «София»");
   await lesson.getByRole("button", { name: "Завершить урок", exact: true }).click();
   await expect(heading).toHaveText("Знакомство состоялось!");
   await expect(lesson.getByRole("list", { name: "Что ты узнал" }).getByRole("listitem")).toHaveCount(4);

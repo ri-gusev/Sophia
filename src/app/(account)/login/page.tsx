@@ -4,7 +4,7 @@ import { AccountForm } from "@/features/account/account-form";
 import { accountReturnPath } from "@/features/account/return-path";
 import { currentAccount } from "@/features/account/server/viewer";
 
-export const metadata: Metadata = { title: "Вход — Sophia" };
+export const metadata: Metadata = { title: "Вход — София" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[]; reset?: string | string[] }> }) {
   const query = await searchParams;

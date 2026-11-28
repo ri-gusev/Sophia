@@ -13,7 +13,7 @@ import { getMoscowDay } from "@/features/philosophy-question/daily-calendar";
 import { readerCatalog } from "@/features/reader/reader-catalog";
 import styles from "@/features/account/profile-dashboard.module.css";
 
-export const metadata: Metadata = { title: "Профиль — Sophia", robots: { index: false } };
+export const metadata: Metadata = { title: "Профиль — София", robots: { index: false } };
 
 const registrationDate = new Intl.DateTimeFormat("ru", {
   day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow",
@@ -48,7 +48,7 @@ export default async function ProfilePage() {
       <div className={styles.identityCopy}>
         <h1>{user.displayName}</h1>
         <p className={styles.motto}>На пути к мудрости</p>
-        <p className={styles.date}>На Sophia с <time dateTime={new Date(user.createdAt).toISOString()}>{month} {year}</time></p>
+        <p className={styles.date}>На платформе «София» с <time dateTime={new Date(user.createdAt).toISOString()}>{month} {year}</time></p>
       </div>
       <a className={styles.settingsLink} href="#account-settings" aria-label="Настройки аккаунта">
         <Settings size={20} aria-hidden="true" />

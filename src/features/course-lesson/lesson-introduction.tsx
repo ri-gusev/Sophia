@@ -303,7 +303,7 @@ function LessonSources({ scene, lesson }: { scene: LessonSceneData; lesson: Intr
         Изображение: <a href={item.portrait.sourceUrl} target="_blank" rel="noreferrer">{item.portrait.title}</a>
         {" — "}{item.portrait.credit}{", "}<a href={item.portrait.licenseUrl} target="_blank" rel="noreferrer">{item.portrait.license}</a>.
       </p>)}
-      <p>Иллюстрации сцен — художественные интерпретации, созданные для Sophia, а не документальные изображения.</p>
+      <p>Иллюстрации сцен — художественные интерпретации, созданные для «Софии», а не документальные изображения.</p>
       <a href="/images/lessons/plato/README.md" target="_blank" rel="noreferrer">Происхождение иллюстраций</a>
     </details>;
 }

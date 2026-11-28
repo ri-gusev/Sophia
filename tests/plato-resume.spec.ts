@@ -155,7 +155,7 @@ test("swarm restores modes, retries, final parallel and replay", async ({ page }
   await scene.getByRole("button", { name: "Открыть общую мысль" }).click();
   await scene.getByRole("button", { name: "А добродетели?" }).click();
   await reload(page);
-  await expect(scene.getByText("Мысль урока · Sophia")).toBeVisible();
+  await expect(scene.getByText("Мысль урока · София")).toBeVisible();
   await scene.getByRole("button", { name: "Повторить сцену" }).click();
   await reload(page);
   await expect(scene.getByRole("heading", { name: "Неожиданная аналогия" })).toBeVisible();

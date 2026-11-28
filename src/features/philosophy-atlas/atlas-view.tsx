@@ -93,7 +93,7 @@ export function AtlasView() {
     <div className={styles.page}>
       <header className="site-header">
         <div className={`header-inner container ${styles.header}`}>
-          <Link className="wordmark" href="/" aria-label="Sophia — на главную">sophia<span>.</span></Link>
+          <Link className="wordmark" href="/" aria-label="София — на главную">софия<span>.</span></Link>
           <nav className={styles.headerActions} aria-label="Навигация Атласа">
             <AccountNavigation />
             <Button asChild variant="outline" size="sm"><Link href="/"><ArrowLeft size={16} aria-hidden="true" />Вернуться на главную</Link></Button>
@@ -102,7 +102,7 @@ export function AtlasView() {
       </header>
       <main id="main" className={styles.main}>
         <div className={styles.intro}>
-          <span className="eyebrow"><Globe2 size={14} aria-hidden="true" />Sophia Atlas</span>
+          <span className="eyebrow"><Globe2 size={14} aria-hidden="true" />Атлас «Софии»</span>
           <h1>Философский атлас</h1>
           <p>Мир, открытый для исследования.</p>
         </div>

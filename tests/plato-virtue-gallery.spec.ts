@@ -114,7 +114,7 @@ for (const width of [360, 390, 1024, 1280, 1366, 1440, 1920]) {
     await scene.getByRole("button", { name: "Что скажет Сократ?" }).click();
     await scene.getByRole("button", { name: "Далее" }).click();
     await scene.getByRole("button", { name: "Открыть объяснение" }).click();
-    const quote = scene.locator("figure").filter({ hasText: "Мысль урока · Sophia" });
+    const quote = scene.locator("figure").filter({ hasText: "Мысль урока · София" });
     const next = scene.getByRole("button", { name: "Продолжить урок", exact: true });
     const card = await quote.boundingBox();
     const button = await next.boundingBox();

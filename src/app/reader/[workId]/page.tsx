@@ -12,7 +12,7 @@ interface ReaderPageProps {
 export async function generateMetadata({ params }: ReaderPageProps): Promise<Metadata> {
   const work = findReaderWork((await params).workId);
   if (!work?.sections.length) notFound();
-  return { title: work.title + " — Читалка Sophia", description: work.description };
+  return { title: work.title + " — Читалка София", description: work.description };
 }
 
 export default async function ReaderPage({ params, searchParams }: ReaderPageProps) {

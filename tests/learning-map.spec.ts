@@ -183,7 +183,7 @@ test("the map scrolls inside its viewport without overflowing narrow or wide pag
     const frameBox = await page.getByTestId("course-map-frame").boundingBox();
     const mapBox = await viewport.boundingBox();
     const headerBox = await page.locator("header .container").boundingBox();
-    const logoBox = await page.getByRole("link", { name: "Sophia — на главную", exact: true }).boundingBox();
+    const logoBox = await page.getByRole("link", { name: "София — на главную", exact: true }).boundingBox();
     const scrollbarBox = await page.getByRole("slider", { name: "Прокрутка карты", exact: true }).boundingBox();
     expect(frameBox).not.toBeNull();
     expect(mapBox).not.toBeNull();

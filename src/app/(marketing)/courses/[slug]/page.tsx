@@ -20,7 +20,7 @@ async function getCourse(params: Props["params"]) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const course = await getCourse(params);
-  return { title: `${course.title} — Sophia`, description: course.description };
+  return { title: `${course.title} — София`, description: course.description };
 }
 
 export default async function ThematicCoursePage({ params }: Props) {

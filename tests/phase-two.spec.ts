@@ -39,7 +39,7 @@ test("all course entry points lead to learn and return navigation works", async 
     await expect(page).toHaveURL(/\/$/);
   }
   await page.goto("/learn");
-  await page.getByRole("link", { name: "Sophia — на главную" }).click();
+  await page.getByRole("link", { name: "София — на главную" }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 

@@ -203,7 +203,7 @@ export function VirtueDefinitionPracticeScene({ scene, active, onBack, onClose, 
           const Icon = icons[item.icon];
           return <li key={item.title}><Icon aria-hidden="true" size={25} /><h3>{item.title}</h3><p>{item.text}</p></li>;
         })}</ol>
-        <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · Sophia</figcaption></figure>
+        <figure className={styles.thought}><blockquote>{content.thought}</blockquote><figcaption>Мысль урока · София</figcaption></figure>
         <p className={styles.note}>{content.conclusionNote}</p>
         <Button className="mt-4" onClick={onContinue}>Продолжить урок<ArrowRight size={16} aria-hidden="true" /></Button>
       </div>}

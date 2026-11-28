@@ -96,7 +96,7 @@ test("finale resumes, preserves other completions, saves idempotently and shows 
   await press(scene, "Посмотреть итоги");
   await expect(scene.getByRole("listitem")).toHaveCount(3);
   await expect(scene.getByRole("radio")).toHaveCount(0);
-  await expect(scene.getByText("Мысль урока · Sophia")).toBeVisible();
+  await expect(scene.getByText("Мысль урока · София")).toBeVisible();
   await shot("07-summary.png");
   await scene.getByRole("button", { name: "Завершить урок", exact: true }).screenshot({ path: info.outputPath("08-finish.png"), animations: "disabled" });
   expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), key)).toEqual(["plato-socratic-question"]);

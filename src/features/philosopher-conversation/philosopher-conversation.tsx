@@ -55,7 +55,7 @@ export function PhilosopherConversation({ variant = "outline", standalone = fals
   const content = visible && <>
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>Sophia · Пространство диалога</span>
+          <span className={styles.eyebrow}>София · Пространство диалога</span>
           <Heading id={titleId}>Разговор с философом</Heading>
           <p id={descriptionId}>Большие вопросы начинаются с простого разговора.</p>
         </div>
@@ -98,14 +98,14 @@ export function PhilosopherConversation({ variant = "outline", standalone = fals
             {!chat.allowed ? <div className={styles.empty}>
               <div className={styles.portrait}><Image src={selected.image} alt={`Скульптурный портрет: ${selected.name}`} width={126} height={126} unoptimized /></div>
               {!chat.enabled && <p>{CHAT_UNAVAILABLE_NOTICE}</p>}
-              <p className={styles.accessNotice}>{chat.enabled ? "AI-диалоги станут доступны с Sophia Premium. Сейчас можно изучать " : "Можно изучать "}
+              <p className={styles.accessNotice}>{chat.enabled ? "ИИ-диалоги станут доступны с подпиской «София Премиум». Сейчас можно изучать " : "Можно изучать "}
                 <Link href="/learn" prefetch={false} onClick={closeConversation}>бесплатные уроки</Link> и{" "}
                 <Link href="/atlas" prefetch={false} onClick={closeConversation}>философский атлас</Link>.
               </p>
             </div> : selected.draftAvailable && (chat.messages.length > 0 || chat.pending !== null) ? <div className={styles.messages} role="log" aria-label="Переписка с Платоном" aria-live="polite" aria-relevant="additions text">
               {chat.trimmed && <p className={styles.historyNotice}>Показана последняя часть переписки.</p>}
               {chat.messages.map(message => <div key={message.id} className={`${styles.message} ${message.role === "user" ? styles.userMessage : styles.assistantMessage}`}>
-                <span className={styles.messageAuthor}>{message.role === "user" ? "Вы" : message.outcome === "safety" ? "Sophia" : "Платон · ИИ"}</span>
+                <span className={styles.messageAuthor}>{message.role === "user" ? "Вы" : message.outcome === "safety" ? "София" : "Платон · ИИ"}</span>
                 <p>{message.content}</p>
               </div>)}
               {chat.pending !== null && <><div className={`${styles.message} ${styles.userMessage}`}><span className={styles.messageAuthor}>Вы</span><p>{chat.pending}</p></div>{chat.streamed ? <div className={styles.message}><span className={styles.messageAuthor}>Платон · ИИ</span><p>{chat.streamed}</p></div> : <p className={styles.waiting} role="status">Платон размышляет…</p>}</>}

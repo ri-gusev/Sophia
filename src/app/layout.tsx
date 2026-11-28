@@ -13,8 +13,8 @@ import { legalDocuments, siteAgeCategory } from "@/features/legal/contract";
 const SUPPORT_EMAIL = "support.sophia@ro.ru";
 
 export const metadata: Metadata = {
-  title: "Sophia — Большие вопросы. Маленькие уроки.",
-  description: "Философия начинается с любопытства. Попробуй интерактивный вопрос и познакомься с идеей Sophia — платформы для самостоятельного мышления.",
+  title: "София — Большие вопросы. Маленькие уроки.",
+  description: "Философия начинается с любопытства. Попробуй интерактивный вопрос и познакомься с идеей «Софии» — платформы для самостоятельного мышления.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
