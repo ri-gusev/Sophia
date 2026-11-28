@@ -9,7 +9,9 @@ import { parseProgressMutation } from "../../src/features/account/progress/contr
 import { collectGuestProgress } from "../../src/features/account/progress/client/guest-progress.ts";
 import { ACCOUNT_PROGRESS_HISTORY_SCHEMA, ACCOUNT_PROGRESS_SCHEMA } from "../../src/features/account/progress/server/schema.ts";
 import { applyProgressMutation, readLearningProgress, readProgress } from "../../src/features/account/progress/server/store.ts";
+import { limitProgressRequests } from "../../src/features/account/progress/server/rate-limits.ts";
 import { openAccountDatabase } from "../../src/features/account/server/database.ts";
+import { ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA } from "../../src/features/legal/server/schema.ts";
 import { buildProfileLearning } from "../../src/features/account/profile-learning-data.ts";
 import { getMoscowDay } from "../../src/features/philosophy-question/daily-calendar.ts";
 
@@ -20,6 +22,17 @@ const scenes = INTRO_LESSONS[lessonId].scenes.map(scene => scene.id);
 const [first, second] = scenes;
 const final = scenes.at(-1)!;
 const position = { lessonId, sceneId: second } as const;
+
+test("progress quotas separate reads and writes, bound account, network and server, and expire", () => {
+  for (let index = 0; index < 30; index++) limitProgressRequests("write", "one", accountId, 1);
+  assert.throws(() => limitProgressRequests("write", "two", accountId, 1), { status: 429, retryAfter: 60 });
+  assert.doesNotThrow(() => limitProgressRequests("read", "one", accountId, 1));
+  for (let index = 0; index < 15; index++) limitProgressRequests("write", "one", otherId, 1);
+  assert.throws(() => limitProgressRequests("write", "one", "third", 1), { status: 429 });
+  for (let index = 0; index < 75; index++) limitProgressRequests("write", `network-${index}`, `user-${index}`, 1);
+  assert.throws(() => limitProgressRequests("write", "new-network", "new-user", 1), { status: 429 });
+  assert.doesNotThrow(() => limitProgressRequests("write", "one", accountId, 60_001));
+});
 
 function fixture(t: TestContext) {
   const db = new DatabaseSync(":memory:");
@@ -97,10 +110,16 @@ test("schema 5 progress migrates with unknown completion dates and the saved res
   const addSlide = before.prepare("INSERT INTO account_slide_progress (user_id, lesson_id, scene_id) VALUES (?, ?, ?)");
   for (const sceneId of scenes) addSlide.run(accountId, lessonId, sceneId);
   before.prepare("INSERT INTO account_last_opened_lesson VALUES (?, ?)").run(accountId, lessonId);
-  before.exec("ALTER TABLE account_lesson_progress DROP COLUMN completed_at; ALTER TABLE account_lesson_progress DROP COLUMN activity_order; PRAGMA user_version = 5;");
+  before.exec(`ALTER TABLE account_lesson_progress DROP COLUMN completed_at;
+    ALTER TABLE account_lesson_progress DROP COLUMN activity_order;
+    DROP TABLE account_profile_mailing_consents;
+    DROP TRIGGER account_mailing_revisions_no_delete;
+    DROP TABLE account_mailing_revisions;
+    ${ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA}
+    PRAGMA user_version = 5;`);
 
   using migrated = openAccountDatabase(path);
-  assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 6);
+  assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 7);
   assert.deepEqual(readProgress(migrated, accountId).lastOpened, { lessonId, sceneId: final });
   assert.equal(buildProfileLearning(readLearningProgress(migrated, accountId), getMoscowDay()).completed, 1);
   applyProgressMutation(migrated, accountId, { action: "finish", lessonId, sceneId: final });

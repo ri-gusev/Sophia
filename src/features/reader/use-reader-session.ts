@@ -14,6 +14,7 @@ type Destination = {
   record?: boolean;
   quote?: ReaderQuote;
   missing?: boolean;
+  savedTarget?: ReaderSavedTarget;
 };
 
 type LoadedSection = { sectionId: string; paragraphs: ReaderParagraph[] };
@@ -24,22 +25,30 @@ function sectionForReference(work: ReaderWork, reference: string) {
 }
 
 function urlReference() {
-  if (window.location.hash === "#main") return "";
+  if (window.location.hash === "#main" || window.location.hash.startsWith("#saved-")) return "";
   try { return decodeURIComponent(window.location.hash.slice(1)).toLowerCase(); } catch { return ""; }
 }
 
-function clearReference(clearSaved = false) {
+function savedTargetFromFragment(): ReaderSavedTarget | undefined {
+  const match = /^#saved-(quote|bookmark)=([^&]+)$/.exec(location.hash);
+  if (!match || match[2].length > 6144) return;
+  try {
+    const id = decodeURIComponent(match[2]);
+    const kind = match[1] === "quote" ? "quote" : "bookmark";
+    if (id.length <= (kind === "quote" ? 2048 : 512)) return { kind, id };
+  } catch {
+    // Ignore malformed client-side selectors.
+  }
+}
+
+function clearReference() {
   const url = new URL(location.href);
   url.hash = "";
-  if (clearSaved) {
-    url.searchParams.delete("quote");
-    url.searchParams.delete("bookmark");
-  }
   if (url.href !== location.href) history.replaceState(history.state, "", url.pathname + url.search);
 }
 
 export function useReaderSession(
-  work: ReaderWork, pane: RefObject<HTMLDivElement | null>, savedTarget?: ReaderSavedTarget,
+  work: ReaderWork, pane: RefObject<HTMLDivElement | null>,
 ) {
   const storage = useReaderStorage();
   const activity = storage.works[work.id];
@@ -51,6 +60,7 @@ export function useReaderSession(
   const canRecord = useRef(false);
   const pending = useRef<{ timer: ReturnType<typeof setTimeout>; maximum: number; commit: () => void } | null>(null);
   const sectionId = destination?.sectionId;
+  const savedTarget = destination?.savedTarget;
   const active = loaded && loaded.sectionId === sectionId ? loaded : null;
   const unknownReference = destination?.reference && !sectionForReference(work, destination.reference);
   const focusedQuote = active && destination?.quote &&
@@ -67,6 +77,7 @@ export function useReaderSession(
 
   const restoreDestination = useEffectEvent(() => {
     flush();
+    const savedTarget = savedTargetFromFragment();
     const reference = urlReference();
     const citedSection = sectionForReference(work, reference);
     const saved = activity?.position ?? undefined;
@@ -81,6 +92,7 @@ export function useReaderSession(
       position: targetSection ? bookmark : citedSection ? undefined : saved,
       quote: targetSection ? quote : undefined,
       missing: Boolean(savedTarget && !targetSection),
+      savedTarget,
       reference: reference || undefined,
       record: !savedTarget && !reference && !saved,
     });
@@ -93,7 +105,7 @@ export function useReaderSession(
     const onHashChange = () => { if (location.hash !== "#main") restore(); };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [storage.ready, savedTarget]);
+  }, [storage.ready]);
 
   useEffect(() => {
     if (!sectionId || active) return;
@@ -257,7 +269,7 @@ export function useReaderSession(
       timer: setTimeout(flush, 180),
       maximum,
       commit: () => {
-        if (reference && urlReference() === reference || savedTarget?.kind === "bookmark") clearReference(true);
+        if (reference && urlReference() === reference || savedTarget?.kind === "bookmark") clearReference();
         storage.savePosition(work.id, next, maximum, current);
       },
     };
@@ -265,7 +277,7 @@ export function useReaderSession(
 
   function navigate(next: Destination) {
     flush();
-    clearReference(true);
+    clearReference();
     setFailed(null);
     setDestination(next);
   }

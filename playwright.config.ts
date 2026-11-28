@@ -4,11 +4,13 @@ import { join } from "node:path";
 import { accountTestSettings } from "./tests/support/account-test-settings";
 
 process.env.SOPHIA_PLAYWRIGHT_RUN ??= randomUUID();
-const { port, origin, database, outbox, disabledChatPort, disabledChatOrigin } = accountTestSettings();
+const desktop = accountTestSettings("desktop");
+const mobile = accountTestSettings("mobile");
+const disabledChat = accountTestSettings("disabled-chat");
 
-function testServer(port: number, origin: string, aiChatEnabled: "true" | "false") {
+function testServer({ port, origin, database, outbox }: ReturnType<typeof accountTestSettings>, aiChatEnabled: "true" | "false") {
   return {
-    command: `${process.platform === "win32" ? "npm.cmd" : "npm"} run start -- --port ${port}`,
+    command: `node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${port}`,
     url: origin,
     env: {
       ACCOUNT_MODE: "local",
@@ -34,10 +36,10 @@ export default defineConfig({
   fullyParallel: true,
   workers: 2,
   reporter: "list",
-  use: { baseURL: origin, trace: "retain-on-failure" },
+  use: { trace: "retain-on-failure" },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" } },
+    { name: "desktop", use: { ...devices["Desktop Chrome"], baseURL: desktop.origin } },
+    { name: "mobile", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium", baseURL: mobile.origin } },
   ],
-  webServer: [testServer(port, origin, "true"), testServer(disabledChatPort, disabledChatOrigin, "false")],
+  webServer: [testServer(desktop, "true"), testServer(mobile, "true"), testServer(disabledChat, "false")],
 });

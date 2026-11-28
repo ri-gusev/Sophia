@@ -46,5 +46,5 @@ export function readerHref(workId: string, reference?: string, lesson?: ReaderLe
 }
 
 export function readerSavedHref(workId: string, kind: ReaderSavedTarget["kind"], id: string) {
-  return readerHref(workId) + "?" + new URLSearchParams({ [kind]: id });
+  return readerHref(workId) + "#saved-" + kind + "=" + encodeURIComponent(id);
 }

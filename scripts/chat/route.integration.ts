@@ -15,6 +15,7 @@ import { readChatResponse } from "../../src/features/philosopher-conversation/ch
 import { ragConfig } from "../../src/features/philosopher-conversation/server/rag/config.ts";
 import { indexKnowledge } from "../../src/features/philosopher-conversation/server/rag/index-store.ts";
 import { legalAcceptance } from "../../tests/support/legal-confirmations.ts";
+import type { ProgressResponse } from "../../src/features/account/progress/contract.ts";
 
 const proxyOrigin = "https://sophia.example";
 const proxyToken = "ab".repeat(32);
@@ -62,8 +63,8 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
     links.push(link);
   }
   for (const name of ["next.config.ts", "package.json"]) copyFileSync(join(root, name), join(directory, name));
-  const accountDb = join(directory, "accounts.sqlite");
-  const outbox = join(directory, "outbox.jsonl");
+  const accountDb = join(directory, "artifacts", "accounts", "accounts.sqlite");
+  const outbox = join(directory, "artifacts", "accounts", "outbox.jsonl");
   const ledger = join(directory, "ledger.sqlite");
   const providerLog = join(directory, "provider.log");
   writeFileSync(ledger, "");
@@ -222,6 +223,7 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
       db.prepare("INSERT INTO account_rate_limits VALUES ('expired-fixture', 1, ?)").run(Date.now() - 1);
       const { origin: proxyServer } = await startChatServer({
         ACCOUNT_MODE: "proxy", ACCOUNT_ORIGIN: proxyOrigin, ACCOUNT_MAIL_TRANSPORT: "smtp",
+        ACCOUNT_REGISTRATION_ENABLED: "true",
       });
       assert.equal(db.prepare("SELECT 1 FROM account_rate_limits WHERE bucket = 'expired-fixture'").get(), undefined);
       assert.ok(db.prepare("SELECT completed_at FROM account_cleanup WHERE id = 1").get());
@@ -237,13 +239,23 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
         assert.match(html, /Регистрация пока недоступна/);
         assert.doesNotMatch(html, /name="password"/);
       }
-      const response = await fetch(`${proxyServer}/api/account/register`, {
-        method: "POST", headers: { origin: proxyOrigin, "content-type": "application/json",
-          "x-sophia-proxy-token": proxyToken, "x-sophia-client-ip": "192.0.2.1" },
-        body: JSON.stringify({ ...accountData, ...legalAcceptance, email: "closed@mail.ru" }),
-      });
-      assert.equal(response.status, 503);
-      assert.deepEqual(await response.json(), { error: "Регистрация пока недоступна." });
+      const ingress = { "x-sophia-proxy-token": proxyToken, "x-sophia-client-ip": "192.0.2.1" };
+      for (const [action, data] of [
+        ["register", { ...accountData, ...legalAcceptance, email: "closed@mail.ru" }],
+        ["resend-verification", { email: "closed@mail.ru" }],
+        ["verify", { ...legalAcceptance, token: "a".repeat(43), password, confirmPassword: password }],
+      ] as const) {
+        const response = await fetch(`${proxyServer}/api/account/${action}`, {
+          method: "POST", headers: { ...ingress, origin: proxyOrigin, "content-type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        assert.equal(response.status, 503);
+        assert.deepEqual(await response.json(), { error: "Регистрация пока недоступна." });
+      }
+      assert.equal((await fetch(`${proxyServer}/api/progress`, { headers: { cookie } })).status, 503);
+      const protectedProgress = await fetch(`${proxyServer}/api/progress`, { method: "HEAD", headers: ingress });
+      assert.equal(protectedProgress.status, 401);
+      assert.match(protectedProgress.headers.get("cache-control") ?? "", /private, no-store/);
       assert.equal(db.prepare("SELECT 1 FROM account_challenges WHERE email = 'closed@mail.ru'").get(), undefined);
       assert.equal(readFileSync(providerLog, "utf8"), "");
     } finally {
@@ -294,6 +306,43 @@ test("the production chat route gates paid work and keeps quotas, SSE, billing a
   setEntitlement("revoke-ai-chat");
   assert.equal((await chat({ cookie })).status, 403);
   assert.deepEqual(calls(), ["turn_analysis", "embedding", "plato_draft", "grounding_validation", "turn_analysis", "aborted"]);
+
+  await t.test("progress quota rejects writes before a new revision is committed", async () => {
+    const endpoint = `${origin}/api/progress`;
+    const write = (sceneId: string) => fetch(endpoint, {
+      method: "POST", headers: { cookie, origin, "content-type": "application/json" },
+      body: JSON.stringify({ expectedAccountId: accountId, action: "resume", lessonId: "plato-introduction", sceneId }),
+    });
+    let previous: ProgressResponse | undefined;
+    for (let index = 0; index < 30; index++) {
+      const response = await write("journey");
+      assert.equal(response.status, 200);
+      previous = await response.json() as ProgressResponse;
+    }
+    const denied = await write("athens");
+    assert.equal(denied.status, 429);
+    assert.ok(Number(denied.headers.get("retry-after")) > 0);
+    const retained = await (await fetch(endpoint, { headers: { cookie } })).json() as ProgressResponse;
+    assert.deepEqual(retained, previous);
+  });
+
+  await t.test("personalized HTML and RSC are private and carry security headers", async () => {
+    for (const kind of ["html", "rsc"]) {
+      const headers = new Headers(kind === "rsc" ? { RSC: "1" } : {});
+      for (const authenticated of [false, true, false]) {
+        if (authenticated) headers.set("cookie", cookie);
+        else headers.delete("cookie");
+        const response = await fetch(`${origin}/learn`, { headers });
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get("cache-control") ?? "", /private.*no-store/);
+        assert.match(response.headers.get("vary") ?? "", /\brsc\b/i);
+        assert.match(response.headers.get("content-type") ?? "", kind === "rsc" ? /text\/x-component/ : /text\/html/);
+        assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+        assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+        assert.equal((await response.text()).includes(accountId), authenticated);
+      }
+    }
+  });
 
   await t.test("a session database error keeps private pages and learning writes away from the guest scope", async () => {
     const fault = new DatabaseSync(accountDb, { timeout: 250 });

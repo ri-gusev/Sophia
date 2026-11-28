@@ -73,3 +73,37 @@ export const ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA = `
   CREATE UNIQUE INDEX account_profile_mailing_consents_active
     ON account_profile_mailing_consents(user_id) WHERE withdrawn_at IS NULL;
 `;
+
+export const ACCOUNT_PROFILE_MAILING_REVISION_SCHEMA = `
+  CREATE TABLE account_mailing_revisions (
+    id INTEGER PRIMARY KEY,
+    version TEXT NOT NULL,
+    document TEXT NOT NULL,
+    UNIQUE (version, document)
+  ) STRICT;
+  INSERT INTO account_mailing_revisions (version, document)
+    SELECT DISTINCT version, document FROM account_profile_mailing_consents;
+  ALTER TABLE account_profile_mailing_consents RENAME TO account_profile_mailing_consents_old;
+  CREATE TABLE account_profile_mailing_consents (
+    id INTEGER PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES account_users(id) ON DELETE CASCADE,
+    revision_id INTEGER NOT NULL REFERENCES account_mailing_revisions(id),
+    confirmed_at INTEGER NOT NULL,
+    withdrawn_at INTEGER CHECK (withdrawn_at >= confirmed_at)
+  ) STRICT;
+  INSERT INTO account_profile_mailing_consents
+    SELECT c.id, c.user_id, r.id, c.confirmed_at, c.withdrawn_at
+    FROM account_profile_mailing_consents_old AS c
+    JOIN account_mailing_revisions AS r ON r.version = c.version AND r.document = c.document;
+  DROP TABLE account_profile_mailing_consents_old;
+  CREATE INDEX account_profile_mailing_consents_user ON account_profile_mailing_consents(user_id, confirmed_at);
+  CREATE UNIQUE INDEX account_profile_mailing_consents_active
+    ON account_profile_mailing_consents(user_id) WHERE withdrawn_at IS NULL;
+  CREATE TRIGGER account_mailing_revisions_no_update BEFORE UPDATE ON account_mailing_revisions
+    BEGIN SELECT RAISE(ABORT, 'Mailing revisions are immutable'); END;
+  CREATE TRIGGER account_mailing_revisions_no_delete BEFORE DELETE ON account_mailing_revisions
+    BEGIN SELECT RAISE(ABORT, 'Mailing revisions are immutable'); END;
+  CREATE TRIGGER account_mailing_revisions_no_replace BEFORE INSERT ON account_mailing_revisions
+    WHEN EXISTS (SELECT 1 FROM account_mailing_revisions WHERE id = NEW.id)
+    BEGIN SELECT RAISE(ABORT, 'Mailing revisions are immutable'); END;
+`;

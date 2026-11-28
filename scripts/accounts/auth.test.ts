@@ -5,16 +5,18 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, beforeEach, test } from "node:test";
-import { DatabaseSync } from "node:sqlite";
+import { backup, DatabaseSync } from "node:sqlite";
 import { legalAcceptance, legalVersions } from "../../tests/support/legal-confirmations.ts";
 import { cleanupAccounts } from "../../src/features/account/server/cleanup.ts";
 import { ACCOUNT_PROGRESS_SCHEMA } from "../../src/features/account/progress/server/schema.ts";
+import { ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA } from "../../src/features/legal/server/schema.ts";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { accountDb, openAccountDatabase } from "../../src/features/account/server/database.ts";
 import { handleAccountRequest } from "../../src/features/account/server/account-http.ts";
 import { hashPassword, newToken, tokenHash } from "../../src/features/account/server/credentials.ts";
 import { readJson } from "../../src/features/account/server/http.ts";
 import { accountMailTransport } from "../../src/features/account/server/mail.ts";
+import { limitAccountRequests } from "../../src/features/account/server/rate-limits.ts";
 import { canUseAiChat, findSession, hasMailingConsent } from "../../src/features/account/server/store.ts";
 import { createEmailService } from "../../src/lib/server/email-service.ts";
 
@@ -181,8 +183,9 @@ test("profile mailing consent supports repeated opt-in and revocation for a lega
   assert.equal((await post(grant, { ...choice, mailingConsentVersion: "1.0-draft.1" }, { token: session })).status, 409);
   assert.equal(hasMailingConsent(accountId), false);
 
-  const rows = db.prepare(`SELECT version, document, confirmed_at, withdrawn_at
-    FROM account_profile_mailing_consents WHERE user_id = ? ORDER BY id`);
+  const rows = db.prepare(`SELECT s.version, s.document, c.confirmed_at, c.withdrawn_at
+    FROM account_profile_mailing_consents c JOIN account_mailing_revisions s ON s.id = c.revision_id
+    WHERE c.user_id = ? ORDER BY c.id`);
   assert.equal((await post(grant, choice, { token: session })).status, 200);
   assert.equal(hasMailingConsent(accountId), true);
   assert.equal((await post(grant, choice, { token: session })).status, 200);
@@ -201,9 +204,67 @@ test("profile mailing consent supports repeated opt-in and revocation for a lega
   assert.deepEqual(rows.get(accountId), first);
   assert.equal(rows.all(accountId).length, 2);
   assert.equal(rows.all(accountId)[1].withdrawn_at, null);
+  for (let index = 0; index < 2; index++) {
+    assert.equal((await post(withdraw, { accountId }, { token: session })).status, 200);
+    assert.equal((await post(grant, choice, { token: session })).status, 200);
+  }
+  assert.equal((await post(withdraw, { accountId }, { token: session })).status, 200);
+  assert.equal((await post(grant, choice, { token: session })).status, 429);
+  assert.equal(hasMailingConsent(accountId), false);
+  assert.equal(rows.all(accountId).length, 4);
+  assert.equal(db.prepare("SELECT count(*) AS total FROM account_mailing_revisions").get()?.total, 1);
   assert.equal(findSession(session)?.id, accountId);
   assert.equal((await post("delete-account", { accountId, password, confirm: true }, { token: session })).status, 200);
   assert.equal(rows.all(accountId).length, 0);
+});
+
+test("schema 6 mailing history keeps each timestamp, revision and account on migration", () => {
+  const path = join(directory, "mailing-migration.sqlite");
+  using old = openAccountDatabase(path, true);
+  old.exec(`DROP TABLE account_profile_mailing_consents; DROP TRIGGER account_mailing_revisions_no_delete;
+    DROP TABLE account_mailing_revisions; ${ACCOUNT_PROFILE_MAILING_CONSENT_SCHEMA} PRAGMA user_version = 6;`);
+  old.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)").run("history", "history@example.test", "Тест", "fixture", 1, 1, 1);
+  old.exec(`INSERT INTO account_profile_mailing_consents VALUES
+    (8, 'history', 'fixture-v1', 'old snapshot', 10, 12), (9, 'history', 'fixture-v1', 'old snapshot', 20, NULL);`);
+  using migrated = openAccountDatabase(path);
+  const rows = migrated.prepare(`SELECT c.id, c.user_id, r.version, r.document, c.confirmed_at, c.withdrawn_at
+    FROM account_profile_mailing_consents c JOIN account_mailing_revisions r ON r.id = c.revision_id ORDER BY c.id`)
+    .all().map(row => Object.values(row));
+  assert.deepEqual(rows, [
+    [8, "history", "fixture-v1", "old snapshot", 10, 12], [9, "history", "fixture-v1", "old snapshot", 20, null],
+  ]);
+  assert.equal(migrated.prepare("SELECT COUNT(*) AS total FROM account_mailing_revisions").get()?.total, 1);
+  assert.deepEqual(migrated.prepare("PRAGMA foreign_key_check").all(), []);
+});
+
+test("an online snapshot can be restored without returning deleted accounts or stale credentials", async () => {
+  const original = join(directory, "restore-source.sqlite");
+  const snapshot = join(directory, "restore-snapshot.sqlite");
+  using source = openAccountDatabase(original, true);
+  const stored = await hashPassword(password);
+  const insert = source.prepare("INSERT INTO account_users VALUES (?, ?, ?, ?, ?, ?, ?)");
+  insert.run("keep", "keep@example.test", "Тест", stored, 1, 1, 1);
+  insert.run("erased", "erased@example.test", "Тест", stored, 1, 1, 1);
+  source.exec(`INSERT INTO account_entitlements VALUES ('keep', 'ai_chat', 1);
+    INSERT INTO account_sessions VALUES ('${"a".repeat(64)}', 'keep', 1, 2);
+    INSERT INTO account_challenges (token_hash, kind, email, user_id, expires_at)
+      VALUES ('${"b".repeat(64)}', 'reset', 'keep@example.test', 'keep', 2);`);
+  await backup(source, snapshot);
+  source.exec("DELETE FROM account_users WHERE id = 'erased'");
+  const restore = await readFile("deploy/sql/prepare-account-restore.sql", "utf8");
+  using restored = openAccountDatabase(snapshot);
+  assert.throws(() => restored.exec(restore), /retained_accounts/);
+  restored.exec("ROLLBACK");
+  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_users").get()?.total, 2);
+  restored.exec("CREATE TEMP TABLE retained_accounts (id TEXT PRIMARY KEY); INSERT INTO retained_accounts VALUES ('keep');");
+  restored.exec(restore);
+  const users = restored.prepare("SELECT id, password_hash FROM account_users").all();
+  assert.deepEqual(users.map(row => [row.id, row.password_hash]), [["keep", "!restore-reset-required"]]);
+  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_entitlements").get()?.total, 0);
+  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_sessions").get()?.total, 0);
+  assert.equal(restored.prepare("SELECT count(*) AS total FROM account_challenges").get()?.total, 0);
+  assert.equal(restored.prepare("PRAGMA integrity_check").get()?.integrity_check, "ok");
+  assert.deepEqual(restored.prepare("PRAGMA foreign_key_check").all(), []);
 });
 
 test("drafts block registration, resend and activation in proxy mode before issuing mail", async () => {
@@ -376,7 +437,7 @@ test("migration removes a legacy verification link while preserving the account 
   legacy.close();
   const migrated = openAccountDatabase(path);
   try {
-    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 6);
+    assert.equal(migrated.prepare("PRAGMA user_version").get()?.user_version, 7);
     assert.equal(migrated.prepare("SELECT COUNT(*) AS total FROM account_mailing_consents").get()?.total, 0);
     assert.equal(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'verify'").get(), undefined);
     assert.ok(migrated.prepare("SELECT 1 FROM account_challenges WHERE kind = 'reset'").get());
@@ -585,15 +646,54 @@ test("limits repeated password attempts", async () => {
   assert.ok(Number(response.headers.get("retry-after")) > 0);
 });
 
-test("registration fails safely when configured test delivery fails", async () => {
+test("login and recovery quotas isolate the address and network pair and honor the expiry", () => {
+  const now = Date.now();
+  for (const [action, count, expiry] of [["login", 6, 900_000], ["forgot", 3, 3_600_000]] as const) {
+    for (let index = 0; index < count; index++) limitAccountRequests(action, "source-a", "owner@example.test", now);
+    assert.throws(() => limitAccountRequests(action, "source-a", "owner@example.test", now), { status: 429 });
+    assert.doesNotThrow(() => limitAccountRequests(action, "source-b", "owner@example.test", now));
+    assert.doesNotThrow(() => limitAccountRequests(action, "source-a", "owner@example.test", now + expiry));
+  }
+});
+
+test("a login declined by the password worker pool leaves account quotas unused", async () => {
+  const work = [hashPassword(password), hashPassword(password)];
+  try {
+    const response = await login("busy@example.test");
+    assert.equal(response.status, 429);
+    assert.equal(response.headers.get("retry-after"), "2");
+    assert.equal(accountDb().prepare("SELECT count(*) AS total FROM account_rate_limits WHERE bucket LIKE 'login:%'").get()?.total, 0);
+  } finally {
+    await Promise.all(work);
+  }
+});
+
+test("registration acknowledges the same request before deferred delivery for new and active addresses", async () => {
   const email = "no-delivery@mail.ru";
+  const active = "active-delivery@mail.ru";
+  await activate(active);
   process.env.ACCOUNT_TEST_OUTBOX = directory;
   try {
-    assert.equal((await post("register", { ...legalAcceptance, email, displayName: "София" })).status, 503);
+    const results = [];
+    const deferred: (() => Promise<void>)[] = [];
+    for (const address of [email, active]) {
+      const response = await handleAccountRequest(new Request(origin, {
+        method: "POST", headers: { origin, "content-type": "application/json" },
+        body: JSON.stringify({ ...legalAcceptance, email: address, displayName: "София" }),
+      }), "register", () => undefined, callback => deferred.push(callback));
+      results.push([response.status, [...response.headers], await response.json()]);
+    }
+    assert.equal(results[0][0], 200);
+    assert.deepEqual(results[0], results[1]);
+    assert.equal(deferred.length, 2);
     assert.equal(accountDb().prepare("SELECT count(*) AS count FROM account_challenges WHERE email = ?").get(email)?.count, 0);
+    await Promise.all(deferred.map(callback => callback()));
+    assert.equal(accountDb().prepare("SELECT count(*) AS count FROM account_challenges WHERE email = ?").get(email)?.count, 1);
   } finally {
     process.env.ACCOUNT_TEST_OUTBOX = outbox;
   }
+  assert.equal((await post("resend-verification", { email })).status, 200);
+  assert.ok(await tokenFromMail(email, "verify"));
 });
 
 const smtpSettings = {
@@ -803,7 +903,7 @@ test("a local operator can migrate, grant and revoke AI access for a verified ac
   const cli = (...args: string[]) => spawnSync(process.execPath, ["scripts/accounts/cli.ts", ...args], { encoding: "utf8" });
   const migration = cli("migrate");
   assert.equal(migration.status, 0, migration.stderr);
-  assert.match(migration.stdout, /schema 6/);
+  assert.match(migration.stdout, /schema 7/);
   assert.equal(cli("grant-ai-chat", email).status, 1);
   await activate(email);
   const user = findSession(cookieFrom(await login(email)));

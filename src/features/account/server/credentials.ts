@@ -10,11 +10,12 @@ export const newToken = () => randomBytes(32).toString("base64url");
 export const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 export const validToken = (token: unknown): token is string => typeof token === "string" && /^[A-Za-z0-9_-]{43}$/.test(token);
 
-async function derive(password: string, salt: Buffer): Promise<Buffer> {
+async function derive(password: string, salt: Buffer, onAdmission?: () => void): Promise<Buffer> {
   // Two bounded worker tasks reserve at most 128 MiB per server process for hashing.
   if (activeHashes >= 2) throw new AccountError(429, "Слишком много запросов. Попробуй чуть позже.", 2);
   activeHashes++;
   try {
+    onAdmission?.();
     return await new Promise((resolve, reject) => {
       argon2("argon2id", { message: password, nonce: salt, memory: 65536, passes: 3, parallelism: 1, tagLength: 32 },
         (error, hash) => error ? reject(error) : resolve(hash));
@@ -30,8 +31,8 @@ export async function hashPassword(password: string): Promise<string> {
   return ARGON_VERSION + salt.toString("base64").replace(/=+$/, "") + "$" + hash.toString("base64").replace(/=+$/, "");
 }
 
-export async function matchesPassword(password: string, stored?: string): Promise<boolean> {
+export async function matchesPassword(password: string, stored?: string, onAdmission?: () => void): Promise<boolean> {
   const encoded = stored?.startsWith(ARGON_VERSION) ? HASH_PATTERN.exec(stored.slice(ARGON_VERSION.length)) : null;
-  const derived = await derive(password, encoded ? Buffer.from(encoded[1], "base64") : DUMMY_SALT);
+  const derived = await derive(password, encoded ? Buffer.from(encoded[1], "base64") : DUMMY_SALT, onAdmission);
   return encoded !== null && timingSafeEqual(derived, Buffer.from(encoded[2], "base64"));
 }

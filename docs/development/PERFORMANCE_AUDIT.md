@@ -150,45 +150,45 @@ Chromium подтвердил ответ на вопрос дня, перехо�
 
 ```bash
 npm ci
-node scripts/performance/run.mjs build .perf-build
-node scripts/performance/metrics.mjs .perf-build
+node scripts/performance/run.mjs build artifacts/.perf-build
+node scripts/performance/metrics.mjs artifacts/.perf-build
 systemd-run --user --scope -p CPUQuota=200% -p MemoryMax=4G -p MemorySwapMax=2G \
-  node scripts/performance/run.mjs start .perf-2cpu-4g 3469
+  node scripts/performance/run.mjs start artifacts/.perf-2cpu-4g 3469
 ```
 
 Во втором терминале выполнить следующие команды.
 
 ```bash
-node scripts/performance/seed.mjs --server .perf-2cpu-4g/server.json \
-  --output .perf-2cpu-4g/fixtures.json --count 200
-node scripts/performance/suite.mjs .perf-2cpu-4g/server.json .perf-2cpu-4g/fixtures.json
-node scripts/performance/metrics.mjs .perf-2cpu-4g
+node scripts/performance/seed.mjs --server artifacts/.perf-2cpu-4g/server.json \
+  --output artifacts/.perf-2cpu-4g/fixtures.json --count 200
+node scripts/performance/suite.mjs artifacts/.perf-2cpu-4g/server.json artifacts/.perf-2cpu-4g/fixtures.json
+node scripts/performance/metrics.mjs artifacts/.perf-2cpu-4g
 ```
 
 Для профилей 2/2 и 4/8 указать соответственно `CPUQuota=200%`, `MemoryMax=2G` и `CPUQuota=400%`, `MemoryMax=8G`, каждый раз использовать новый каталог. Процесс нагрузки держать вне scope. На отдельной машине генератор можно подключить через локальный SSH-туннель на стенд с тем же loopback-портом. Для сценария регистрации нужен общий доступ к тестовому outbox. Локальная копия манифеста должна указывать абсолютные пути в каталоге манифеста запуска. Прямой замер на собственной тестовой Ubuntu-ВМ точнее по характеристикам CPU и диска. Для измерения вкладов Nginx/TLS использовать отдельный staging-контур.
 
-Генератор выдерживает 3–8 секунд между действиями смешанного профиля. Пропорции 25/20/25/15/10/5 относятся к действиям, каждое действие может отправить несколько запросов. HTTP-сценарий проверяет идентификатор аккаунта, содержимое HTML/JSON, запись и чтение позиции урока и активацию через локальное письмо. Сетевые окна лимитов сохраняются между ступенями. Если все запросы операции отклонены, пропускную способность успешных операций по этой ступени оценить нельзя.
+Генератор выдерживает 3–8 секунд между действиями смешанного профиля. Пропорции 25/20/25/15/10/5 относятся к действиям, каждое действие может отправить несколько запросов. HTTP-сценарий проверяет идентификатор аккаунта, содержимое HTML/JSON, запись и чтение позиции урока и активацию через локальное письмо. Генератор ждёт письмо из файлового outbox отдельно от замера HTTP-подтверждения регистрации. Ответы 429 с Retry-After учитываются как ограниченные операции. Сетевые окна лимитов сохраняются между ступенями. Если все запросы операции отклонены, пропускную способность успешных операций по этой ступени оценить нельзя.
 
 Для отдельных сценариев запустить свежий стенд на другом порту вне окна смешанного теста. Можно применить тот же systemd scope. Переменная `SOPHIA_PERF_SAMPLE_MS=150` полезна для измерения коротких браузерных действий. На HTTP-сериях рекомендуется секундная выборка по умолчанию.
 
 ```bash
-node scripts/performance/run.mjs start .perf-focused 3470
+node scripts/performance/run.mjs start artifacts/.perf-focused 3470
 # В другом терминале
-node scripts/performance/seed.mjs --server .perf-focused/server.json \
-  --output .perf-focused/fixtures.json --count 200
-node scripts/performance/load.mjs --server .perf-focused/server.json \
-  --fixtures .perf-focused/fixtures.json --output .perf-focused/login-25-120.json \
+node scripts/performance/seed.mjs --server artifacts/.perf-focused/server.json \
+  --output artifacts/.perf-focused/fixtures.json --count 200
+node scripts/performance/load.mjs --server artifacts/.perf-focused/server.json \
+  --fixtures artifacts/.perf-focused/fixtures.json --output artifacts/.perf-focused/login-25-120.json \
   --mode login --users 25 --seconds 120
-node scripts/performance/load.mjs --server .perf-focused/server.json \
-  --fixtures .perf-focused/fixtures.json --output .perf-focused/write-50-120.json \
+node scripts/performance/load.mjs --server artifacts/.perf-focused/server.json \
+  --fixtures artifacts/.perf-focused/fixtures.json --output artifacts/.perf-focused/write-50-120.json \
   --mode write --users 50 --seconds 120
-node scripts/performance/metrics.mjs .perf-focused
+node scripts/performance/metrics.mjs artifacts/.perf-focused
 npx playwright install chromium
-node scripts/performance/browser.mjs .perf-focused/server.json \
-  .perf-focused/fixtures.json .perf-focused/browser-interactions.json
+node scripts/performance/browser.mjs artifacts/.perf-focused/server.json \
+  artifacts/.perf-focused/fixtures.json artifacts/.perf-focused/browser-interactions.json
 curl -sS -o /dev/null -w '%{http_code}\n' -H 'Origin: http://127.0.0.1:3470' \
   -H 'Content-Type: application/json' --data '{}' http://127.0.0.1:3470/api/philosopher-chat
-node --input-type=module -e "import {DatabaseSync} from 'node:sqlite'; const db = new DatabaseSync(process.argv[1], {readOnly:true}); console.log(db.prepare('PRAGMA quick_check').all()); db.close()" .perf-focused/accounts.sqlite
+node --input-type=module -e "import {DatabaseSync} from 'node:sqlite'; const db = new DatabaseSync(process.argv[1], {readOnly:true}); console.log(db.prepare('PRAGMA quick_check').all()); db.close()" artifacts/.perf-focused/accounts.sqlite
 ```
 
 ## Стоимость

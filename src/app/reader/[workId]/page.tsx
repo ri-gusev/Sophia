@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { Reader } from "@/features/reader/reader";
 import { findReaderWork } from "@/features/reader/reader-catalog";
 import { INTRO_LESSONS } from "@/features/course-lesson/lesson-data";
-import type { ReaderSavedTarget } from "@/features/reader/reader-types";
 
 interface ReaderPageProps {
   params: Promise<{ workId: string }>;
@@ -24,9 +23,5 @@ export default async function ReaderPage({ params, searchParams }: ReaderPagePro
   const scene = lesson?.scenes.find(item => item.id === query.scene);
   const lessonReturn = lesson && scene
     ? "/learn#" + new URLSearchParams({ lesson: lesson.id, scene: scene.id }) : undefined;
-  const savedTarget: ReaderSavedTarget | undefined = typeof query.quote === "string" && query.quote.length <= 2048
-    ? { kind: "quote", id: query.quote }
-    : typeof query.bookmark === "string" && query.bookmark.length <= 512
-      ? { kind: "bookmark", id: query.bookmark } : undefined;
-  return <Reader key={work.id} work={work} lessonReturn={lessonReturn} savedTarget={savedTarget} />;
+  return <Reader key={work.id} work={work} lessonReturn={lessonReturn} />;
 }

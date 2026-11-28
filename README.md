@@ -10,7 +10,7 @@
 
 Атлас доступен на `/atlas` через существующий пункт верхнего меню. Историческая шкала **650 до н. э. — 2026 н. э.** показывает 80 философов в годы их жизни. Есть семь быстрых переходов по эпохам, точный ввод года с выбором эры и общий ползунок; исторического нуля нет. Близкие портреты раскрываются списком, карточки содержат даты, традицию, биографию и тип географической связи. Датировки и точки городов могут быть приблизительными ([прежние записи](docs/references/ATLAS_HISTORY.md), [новые биографии](docs/references/ATLAS_MODERN_HISTORY.md)). Живущие имеют открытые даты жизни. Поддерживаются мышь, сенсорные жесты и клавиатура (стрелки, `+`/`-`, `Home` после фокуса на глобусе). Светлое оформление Sophia и глобус без рамки сохранены. Текстура NASA и 78 портретов локальны; два отсутствующих портрета и ошибки загрузки заменяются инициалами. [Текстура](public/textures/earth/README.md), [изображения и лицензии](public/images/philosophers/README.md).
 
-Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite; Three.js, React Three Fiber и Drei для атласа. Требуется Node.js >=24.7.0 и npm; для VPS используйте актуальный Node.js 24 LTS. Точные версии закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
+Стек: Next.js App Router, React, TypeScript strict, Tailwind CSS, кнопка на основе shadcn/ui, Lucide Icons, Motion, встроенный SQLite; Three.js, React Three Fiber и Drei для атласа. Требуется Node.js >=24.22.3 и npm. Поставка на VPS использует проверенный Node.js 24 LTS. Точные версии зависимостей закреплены в `package.json` и `package-lock.json`. Подробности — в [TECH_STACK.md](docs/architecture/TECH_STACK.md).
 
 ## Установка и запуск
 
@@ -87,6 +87,8 @@ npm.cmd test
 | [ACCOUNTS_AND_PROGRESS.md](docs/architecture/ACCOUNTS_AND_PROGRESS.md) | Авторизация, схема аккаунтов и правила синхронизации |
 | [CROSS_BORDER_DATA_TRANSFERS.md](docs/audits/CROSS_BORDER_DATA_TRANSFERS.md) | Проверка почтовых доменов и аудит потенциальных трансграничных передач |
 | [DATA_PROCESSING.md](docs/legal/DATA_PROCESSING.md) | Аудит персональных данных, сроки хранения и условия публичной регистрации |
+| [SECURITY_REMEDIATION.md](SECURITY_REMEDIATION.md) | Статус исправлений и обязательные проверки до запуска |
+| [UBUNTU_PRODUCTION.md](deploy/UBUNTU_PRODUCTION.md) | Nginx, systemd, сеть и приёмка VPS |
 | [PHILOSOPHER_CHAT.md](docs/architecture/PHILOSOPHER_CHAT.md) | API чата, память вкладки, лимиты и безопасность |
 | [PLATO_RAG.md](docs/architecture/PLATO_RAG.md) | Историческая роль, семантический индекс, safety, проверка ответов и запуск |
 | [PLATO_DIALOGUE.md](docs/architecture/PLATO_DIALOGUE.md) | Первое лицо, сократическая беседа, generation policy, проверка стиля и реальные сценарии |

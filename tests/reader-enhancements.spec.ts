@@ -83,6 +83,8 @@ test("profile opens exact saved ranges and bookmarks without losing the normal r
   await menu(page).getByRole("button", { name: "Сохранить цитату" }).click();
   const before = await readActivity();
   await page.goto("/profile");
+  const networkUrls: string[] = [];
+  page.on("request", request => networkUrls.push(request.url()));
   await page.getByText("Мой цитатник", { exact: true }).click();
   await page.getByRole("group", { name: "Мой цитатник" }).getByRole("link", { name: "Открыть в книге" }).click();
   await expect.poll(() => page.evaluate(() => CSS.highlights.get("sophia-quote-focus")?.size)).toBe(2);
@@ -92,6 +94,9 @@ test("profile opens exact saved ranges and bookmarks without losing the normal r
   await page.getByText("Мои закладки", { exact: true }).click();
   await page.getByRole("group", { name: "Мои закладки" }).getByRole("link", { name: "Открыть в книге" }).click();
   await expect(page.locator("[data-bookmarked]")).toBeInViewport();
+  expect(new URL(page.url()).search).toBe("");
+  expect(networkUrls.some(url => new URL(url).pathname === "/api/reader/crito/part-1")).toBe(true);
+  expect(networkUrls.some(url => /[?&](quote|bookmark)=|#saved-/.test(url))).toBe(false);
 });
 
 test("lesson source opens the exact fragment and returns to the same interactive stage", async ({ page }, info) => {

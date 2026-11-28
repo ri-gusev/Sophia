@@ -2,7 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 import { accountTestSettings } from "./support/account-test-settings";
 import { loginEntitledChat } from "./support/chat-account";
 
-test.use({ baseURL: accountTestSettings().disabledChatOrigin });
+test.use({ baseURL: accountTestSettings("disabled-chat").origin });
 
 async function expectUnavailable(workspace: Locator) {
   const plato = workspace.getByRole("button", { name: "Платон Временно недоступен", exact: true });

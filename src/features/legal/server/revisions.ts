@@ -23,7 +23,7 @@ const release: { approved: boolean; effectiveDate: string | null; ageCategory: s
 
 const publicKinds = ["privacy", "terms", "consent"] as const;
 export const revisionKinds = [...publicKinds, "age"] as const;
-const versions: LegalVersions = { privacy: "1.0-draft.2", terms: "1.0-draft.2", consent: "1.0-draft.2", age: "1.0" };
+const versions: LegalVersions = { privacy: "1.0-draft.3", terms: "1.0-draft.2", consent: "1.0-draft.3", age: "1.0" };
 
 export function legalRevision(kind: LegalDocumentKind): LegalRevision {
   const age = `Возрастная маркировка сайта Sophia и всех его образовательных материалов — ${release.ageCategory ?? "уточняется"}.
@@ -68,7 +68,7 @@ export function availableLegalVersions(): LegalVersions | null {
   try {
     const { mode } = accountSettings();
     if (mode === "local" && process.env.ACCOUNT_MAIL_TRANSPORT === "test") return versions;
-    return legalReleaseReady() ? versions : null;
+    return process.env.ACCOUNT_REGISTRATION_ENABLED === "true" && legalReleaseReady() ? versions : null;
   } catch (error) {
     if (error instanceof AccountError) return null;
     throw error;

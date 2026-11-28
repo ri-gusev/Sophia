@@ -75,12 +75,35 @@ async function sendChallenge(kind: "verify" | "reset", email: string, send: Retu
     await send({ to: email, kind, url: mailLink(kind, token) });
   } catch {
     try {
-      deleteChallenge(token);
+      // Preserve the pending registration so resend can issue a new link.
+      if (kind === "reset") deleteChallenge(token);
     } catch {
       console.error("Could not remove failed account email challenge");
     }
     console.error(`Account email delivery failed (${kind})`);
-    throw accountUnavailable();
+  }
+}
+
+const mailPending = { verify: 0, reset: 0 };
+
+function deferChallenge(defer: Defer, kind: "verify" | "reset", email: string,
+  send: ReturnType<typeof accountMailTransport>, issue: () => string | null) {
+  if (mailPending[kind] >= 8) throw new AccountError(429, "Слишком много запросов. Попробуй чуть позже.", 10);
+  mailPending[kind]++;
+  try {
+    defer(async () => {
+      try {
+        const token = issue();
+        if (token) await sendChallenge(kind, email, send, token);
+      } catch (error) {
+        if (!(error instanceof AccountError)) console.error(`Could not prepare account email (${kind})`);
+      } finally {
+        mailPending[kind]--;
+      }
+    });
+  } catch (error) {
+    mailPending[kind]--;
+    throw error;
   }
 }
 
@@ -94,16 +117,16 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
       const mailingConsent = submittedMailingConsent(body.mailingConsentVersion);
       const send = accountMailTransport();
       limitAccountRequests(action, network, email);
-      const token = issueChallenge("verify", email, { displayName, revisions, mailingConsent });
-      if (token) await sendChallenge("verify", email, send, token);
+      deferChallenge(defer, "verify", email, send, () =>
+        issueChallenge("verify", email, { displayName, revisions, mailingConsent }));
       return ok();
     }
     case "login": {
       const email = emailField(body.email);
-      limitAccountRequests(action, network, email);
       if (!isLoginPassword(body.password)) throw invalidLogin();
       const credentials = credentialsForEmail(email);
-      if (!await matchesPassword(body.password, credentials?.passwordHash) || !credentials) throw invalidLogin();
+      if (!await matchesPassword(body.password, credentials?.passwordHash, () => limitAccountRequests(action, network, email)) ||
+          !credentials) throw invalidLogin();
       return ok(sessionCookie(replaceSession(email, credentials, sessionToken)));
     }
     case "logout":
@@ -138,15 +161,7 @@ async function execute(action: Action, body: Record<string, unknown>, network: s
       const send = accountMailTransport();
       const kind = recovery ? "reset" : "verify";
       limitAccountRequests(recovery ? "forgot" : "register", network, email);
-      // Schedule the same work boundary for both valid and unknown addresses.
-      defer(async () => {
-        try {
-          const token = issueChallenge(kind, email);
-          if (token) await sendChallenge(kind, email, send, token);
-        } catch (error) {
-          if (!(error instanceof AccountError)) console.error(`Could not prepare account email (${kind})`);
-        }
-      });
+      deferChallenge(defer, kind, email, send, () => issueChallenge(kind, email));
       return ok();
     }
     case "verify":
@@ -177,6 +192,9 @@ export async function handleAccountRequest(
     if (!request.body?.locked) void request.body?.cancel().catch(() => undefined);
     if (!(error instanceof AccountError)) console.error("Account request failed");
     const failure = error instanceof AccountError ? error : accountUnavailable();
+    if (failure.status === 429 && (action === "login" || action === "forgot" || action === "grant-mailing-consent")) {
+      console.warn(`Account request rate limited (${action})`);
+    }
     const headers = new Headers({ "cache-control": "no-store" });
     if (failure.retryAfter) headers.set("retry-after", String(failure.retryAfter));
     return Response.json({ error: failure.message }, { status: failure.status, headers });

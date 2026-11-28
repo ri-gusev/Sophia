@@ -20,7 +20,7 @@
 | OpenAI Responses API | Серверный чат Платона и сжатие памяти | Встроенный fetch, `store:false`; по умолчанию `gpt-5.4-mini`, reasoning none |
 | OpenAI Embeddings + SQLite FTS5 | Индекс исторического Платона | `text-embedding-3-small`/1536, JSON vectors + exact cosine, без нового сервиса; реальный индекс создан с согласия пользователя. [Устройство](PLATO_RAG.md) |
 
-Окружение требует Node.js >=24.7.0 из-за встроенного Argon2id. Локально проверяется на Node.js 24.22.1 и npm 11.19.1. Зависимости закреплены точными версиями в `package.json` и `package-lock.json`. ESLint 9.39.5 с `eslint-config-next` 16.4.3 проверяется отдельной командой.
+Окружение требует Node.js >=24.22.3 с исправлениями безопасности и встроенным Argon2id. Поставка VPS использует исправленный Node.js 24 LTS. Зависимости закреплены в `package.json` и `package-lock.json`. ESLint 9.39.5 с `eslint-config-next` 16.4.3 проверяется отдельной командой.
 
 Manrope Variable 5.3.0 поставляется через Fontsource с локальными WOFF2, `font-display: swap` и Unicode ranges: браузер загружает нужные подмножества без Google Fonts. Playwright 1.64.1 и axe-core используются только при разработке для браузерных проверок. На 2026-11-08 `npm.cmd audit --omit=dev --json` сообщает 0 уязвимостей production-зависимостей; установка сообщает 8 moderate с учётом dev-зависимостей. Автоматические major-обновления вне задачи не выполнялись.
 

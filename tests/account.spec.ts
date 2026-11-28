@@ -207,7 +207,12 @@ test("the shared footer and readable legal drafts display the 18+ mark", async (
     await expect(page.getByRole("main")).toContainText("Проект документа");
     await expect(page.getByRole("main").getByText(/Возрастная маркировка .*18\+/)).toBeVisible();
     await expect(page.getByRole("main")).not.toContainText("Приложение для владельца");
-    if (path === "/privacy") await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(8);
+    if (path === "/privacy" || path === "/consent") {
+      await expect(page.getByRole("main")).toContainText("Yandex Compute Cloud");
+      await expect(page.getByRole("main")).toContainText("Yandex Cloud Postbox");
+      await expect(page.getByRole("main")).not.toContainText(/timeweb|таймвэб/i);
+    }
+    if (path === "/privacy") await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(7);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()).violations).toEqual([]);
   }

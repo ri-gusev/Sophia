@@ -70,7 +70,7 @@ test("saved bookmarks can be searched, filtered, opened and deleted from the acc
   await notes.getByRole("searchbox").clear();
   await notes.getByLabel("Произведение").selectOption("apology");
   await expect(notes.getByText("Речь к афинянам")).toBeVisible();
-  await expect(notes.getByRole("link", { name: "Открыть в книге" })).toHaveAttribute("href", `/reader/apology?bookmark=${apologyParagraph}`);
+  await expect(notes.getByRole("link", { name: "Открыть в книге" })).toHaveAttribute("href", `/reader/apology#saved-bookmark=${encodeURIComponent(apologyParagraph)}`);
   await notes.getByRole("button", { name: "Удалить закладку" }).click();
   await expect(notes.getByText("Речь к афинянам")).toBeHidden();
   await page.reload();
@@ -103,7 +103,7 @@ test("the quote collection sorts, filters, copies a citation and updates the quo
   await quotes.getByRole("searchbox").clear();
   await quotes.getByLabel("Произведение").selectOption("crito");
   await expect(quotes.locator("blockquote")).toHaveText([early.text]);
-  await expect(quotes.getByRole("link", { name: "Открыть в книге" })).toHaveAttribute("href", /^\/reader\/crito\?quote=/);
+  await expect(quotes.getByRole("link", { name: "Открыть в книге" })).toHaveAttribute("href", /^\/reader\/crito#saved-quote=/);
   await quotes.getByRole("button", { name: "Скопировать с источником" }).click();
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
   for (const value of [early.text, "Платон", "Критон", "Карпов", "43a"]) expect(clipboard).toContain(value);

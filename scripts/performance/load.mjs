@@ -57,7 +57,7 @@ async function request(path, account, { data, check, allow429 = false } = {}) {
 const lessonId = 'plato-introduction';
 const writeTurns = new Map();
 const progress = (account, check = body => body.accountId === account.accountId && Array.isArray(body.progress?.lessons)) =>
-  request('/api/progress', account, { check: text => check(JSON.parse(text)) });
+  request('/api/progress', account, { allow429: true, check: text => check(JSON.parse(text)) });
 
 async function write(account) {
   const turn = writeTurns.get(account.accountId) ?? 0;
@@ -65,11 +65,12 @@ async function write(account) {
   const sceneId = turn % 2 ? 'socrates' : 'journey';
   const contains = body => body.accountId === account.accountId && body.progress?.lastOpened?.lessonId === lessonId
     && body.progress.lastOpened.sceneId === sceneId;
-  await request('/api/progress', account, {
+  const result = await request('/api/progress', account, {
     data: { action: 'resume', expectedAccountId: account.accountId, lessonId, sceneId },
+    allow429: true,
     check: text => contains(JSON.parse(text)),
   });
-  await progress(account, contains);
+  if (result === 'ok') await progress(account, contains);
 }
 
 function login(account) {
@@ -88,9 +89,24 @@ async function register() {
     allow429: true, check: text => JSON.parse(text).ok === true,
   });
   if (result !== 'ok') return;
-  const outbox = await readFile(manifest.outbox, 'utf8');
-  const mail = outbox.trim().split('\n').map(line => JSON.parse(line)).find(row => row.to === email && row.kind === 'verify');
-  const token = mail && new URLSearchParams(new URL(mail.url).hash.slice(1)).get('token');
+  const mailStart = performance.now();
+  let token;
+  while (!token && performance.now() - mailStart < 5000) {
+    const outbox = await readFile(manifest.outbox, 'utf8').catch(error => {
+      if (error.code === 'ENOENT') return '';
+      throw error;
+    });
+    const complete = outbox.slice(0, outbox.lastIndexOf('\n') + 1);
+    const mail = complete.trim().split('\n').filter(Boolean).map(line => JSON.parse(line))
+      .find(row => row.to === email && row.kind === 'verify');
+    token = mail && new URLSearchParams(new URL(mail.url).hash.slice(1)).get('token');
+    if (!token) await pause(50);
+  }
+  if (!token) {
+    samples.push({ path: 'test-outbox', result: 'timeout', ms: performance.now() - mailStart });
+    if (samples.slice(-50).filter(row => ['error', 'timeout'].includes(row.result)).length >= 5) stopped = true;
+    return;
+  }
   await request('/api/account/verify', undefined, {
     data: { token, password, confirmPassword: password, ...terms },
     allow429: true, check: text => JSON.parse(text).ok === true,

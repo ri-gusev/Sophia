@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Bookmark, BookmarkPlus, BookOpen, Check, List, Q
 import { useAccountViewer } from "@/features/account/account-viewer";
 import { READER_FONT_SIZE, READER_LINE_HEIGHT, type ReaderTheme } from "./reader-storage";
 import { useReaderSession } from "./use-reader-session";
-import type { ReaderSavedTarget, ReaderWork } from "./reader-types";
+import type { ReaderWork } from "./reader-types";
 import { paragraphText } from "./reader-quotes";
 import { paragraphElement, textPoint } from "./reader-text-range";
 import { ReaderSelection } from "./reader-selection";
@@ -37,17 +37,17 @@ function ReaderPanel({ name, panel, children }: {
   </dialog>;
 }
 
-type ReadingProps = { work: ReaderWork; lessonReturn?: string; savedTarget?: ReaderSavedTarget };
+type ReadingProps = { work: ReaderWork; lessonReturn?: string };
 
 export function Reader(props: ReadingProps) {
   const viewer = useAccountViewer();
   return <ReadingView key={viewer?.id ?? "guest"} {...props} />;
 }
 
-function ReadingView({ work, lessonReturn, savedTarget }: ReadingProps) {
+function ReadingView({ work, lessonReturn }: ReadingProps) {
   const pane = useRef<HTMLDivElement>(null);
   const textRoot = useRef<HTMLDivElement>(null);
-  const session = useReaderSession(work, pane, savedTarget);
+  const session = useReaderSession(work, pane);
   const { active, settings, activity } = session;
   const [notice, setNotice] = useState<{ text: string } | null>(null);
   const toc = useRef<HTMLDialogElement>(null);

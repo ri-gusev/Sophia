@@ -67,6 +67,12 @@ export function issueChallenge(kind: ChallengeKind, email: string, registration?
     const user = credentialsIn(db, email);
     if ((kind === "verify" && user) || (kind === "reset" && !user)) return null;
     const now = Date.now();
+    if (kind === "reset") {
+      // Previously delivered links remain valid until use or expiry, even across sources.
+      const active = db.prepare(`SELECT count(*) AS total FROM account_challenges
+        WHERE email = ? AND kind = 'reset' AND expires_at > ?`).get(email, now);
+      if (Number(active?.total) >= 3) return null;
+    }
     let displayName: string | null = null;
     let registrationId: string | null = null;
     let expiresAt = now + 30 * 60_000;
@@ -179,10 +185,23 @@ export function setProfileMailingConsent(token: unknown, expected: unknown, revi
     if (!user) throw unauthenticated();
     checkAccount(user, expected);
     if (revision) {
-      if (!mailingConsentIn(db, user.id)) {
-        db.prepare(`INSERT INTO account_profile_mailing_consents (user_id, version, document, confirmed_at)
-          VALUES (?, ?, ?, ?)`).run(user.id, revision.version, JSON.stringify(revision), now);
+      if (mailingConsentIn(db, user.id)) return;
+      const day = 86_400_000;
+      const cap = db.prepare(`SELECT count(*) AS total, count(CASE WHEN confirmed_at > ? THEN 1 END) AS recent,
+        min(CASE WHEN confirmed_at > ? THEN confirmed_at END) AS earliest
+        FROM account_profile_mailing_consents WHERE user_id = ?`).get(now - day, now - day, user.id);
+      if (Number(cap?.total) >= 365) throw new AccountError(409, "Не удалось включить рассылку. Обратись в поддержку.");
+      if (Number(cap?.recent) >= 4) throw new AccountError(429, "Слишком много изменений. Попробуй чуть позже.",
+        Math.ceil((Number(cap?.earliest) + day - now) / 1000));
+      const document = JSON.stringify(revision);
+      if (db.prepare("SELECT 1 FROM account_mailing_revisions WHERE version = ? AND document <> ?").get(revision.version, document)) {
+        throw new Error("Mailing revision content changed under an existing version.");
       }
+      db.prepare("INSERT INTO account_mailing_revisions (version, document) VALUES (?, ?) ON CONFLICT DO NOTHING")
+        .run(revision.version, document);
+      db.prepare(`INSERT INTO account_profile_mailing_consents (user_id, revision_id, confirmed_at)
+        SELECT ?, id, ? FROM account_mailing_revisions WHERE version = ? AND document = ?`)
+        .run(user.id, now, revision.version, document);
       return;
     }
     db.prepare(`UPDATE account_mailing_consents SET withdrawn_at = MAX(confirmed_at, ?)
@@ -200,9 +219,9 @@ export async function eraseAccount(token: unknown, expected: unknown, password: 
   const user = sessionIn(db, token, Date.now());
   if (!user) throw unauthenticated();
   checkAccount(user, expected);
-  limitAccountRequests("erase", network, user.id);
   const credentials = credentialsIn(db, user.email);
-  if (!credentials || !await matchesPassword(password, credentials.passwordHash)) {
+  if (!credentials || !await matchesPassword(password, credentials.passwordHash,
+    () => limitAccountRequests("erase", network, user.id))) {
     throw new AccountError(401, "Текущий пароль указан неверно.");
   }
   accountTransaction(db, () => {
@@ -216,6 +235,10 @@ export async function eraseAccount(token: unknown, expected: unknown, password: 
     db.prepare("DELETE FROM account_rate_limits WHERE bucket IN (?, ?, ?, ?)").run(
       `register:email:${emailHash}`, `login:email:${emailHash}`, `forgot:email:${emailHash}`, `erase:email:${tokenHash(user.id)}`,
     );
+    for (const action of ["login", "forgot"]) {
+      const prefix = `${action}:pair:${emailHash}:`;
+      db.prepare("DELETE FROM account_rate_limits WHERE bucket >= ? AND bucket < ?").run(prefix, prefix + "g");
+    }
   });
 }
 

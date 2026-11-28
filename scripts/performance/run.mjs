@@ -11,7 +11,7 @@ if (!['build', 'start'].includes(operation) || !directoryArgument || !/^\d+$/.te
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const directory = resolve(directoryArgument);
-mkdirSync(directory, { recursive: true });
+mkdirSync(directory, { recursive: true, mode: 0o700 });
 if (readdirSync(directory).length > 0) throw new Error('Choose an empty performance directory.');
 
 const isBuild = operation === 'build';
