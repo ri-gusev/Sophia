@@ -16,13 +16,18 @@ function emphasis(text: string) {
 
 export function LegalPage({ kind }: { kind: LegalDocumentKind }) {
   const document = legalRevision(kind);
+  const date = document.effectiveDate && <time dateTime={document.effectiveDate}>
+    {document.effectiveDate.split("-").reverse().join(".")}
+  </time>;
   const blocks = document.body.replace(/^(## .+)\n(?!\n)/gm, "$1\n\n").split("\n\n");
   return <main id="main" className={`container ${styles.profilePage}`}>
     <article className={`glass ${styles.card} ${styles.legalArticle}`}>
       <h1>{document.title}</h1>
-      <p className={styles.hint}>Редакция {document.version}. {legalReleaseReady() && document.effectiveDate
-        ? <>Действует с <time dateTime={document.effectiveDate}>{document.effectiveDate.split("-").reverse().join(".")}</time>.</>
-        : "Проект документа. Дата вступления в силу не утверждена."}</p>
+      <p className={styles.hint}>Редакция {document.version}. {legalReleaseReady() && date
+        ? <>Действует с {date}.</>
+        : <>Проект документа. {date
+          ? <>Дата вступления в силу по проекту — {date}.</>
+          : "Дата вступления в силу не утверждена."}</>}</p>
       {blocks.map((block, index) => block.startsWith("## ") ? <h2 key={index}>{block.slice(3)}</h2> :
         block.startsWith("- ") ? <ul key={index}>{block.split("\n").map(line => <li key={line}>{emphasis(line.slice(2))}</li>)}</ul> :
           <p key={index}>{emphasis(block)}</p>)}

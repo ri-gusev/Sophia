@@ -15,15 +15,15 @@ export type LegalRevision = Readonly<{
 }>;
 
 // Publish a new version after the owner confirms the items in docs/legal/DATA_PROCESSING.md.
-const release: { approved: boolean; effectiveDate: string | null; ageCategory: string | null } = {
+const release: { approved: boolean; effectiveDates: Partial<Record<LegalDocumentKind, string>>; ageCategory: string | null } = {
   approved: false,
-  effectiveDate: null,
+  effectiveDates: { privacy: "2026-11-28", consent: "2026-11-28" },
   ageCategory: siteAgeCategory,
 };
 
 const publicKinds = ["privacy", "terms", "consent"] as const;
 export const revisionKinds = [...publicKinds, "age"] as const;
-const versions: LegalVersions = { privacy: "1.0-draft.3", terms: "1.0-draft.2", consent: "1.0-draft.3", age: "1.0" };
+const versions: LegalVersions = { privacy: "1.0-draft.4", terms: "1.0-draft.2", consent: "1.0-draft.4", age: "1.0" };
 
 export function legalRevision(kind: LegalDocumentKind): LegalRevision {
   const age = `Возрастная маркировка сайта Sophia и всех его образовательных материалов — ${release.ageCategory ?? "уточняется"}.
@@ -33,7 +33,7 @@ export function legalRevision(kind: LegalDocumentKind): LegalRevision {
     kind,
     version: kind === "mailings" ? mailingConsentVersion : versions[kind],
     title: `${legalDocuments[kind].title} Sophia`,
-    effectiveDate: kind === "mailings" ? null : release.effectiveDate,
+    effectiveDate: release.effectiveDates[kind] ?? null,
     body: age + documentText[kind],
   };
 }

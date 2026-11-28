@@ -210,8 +210,17 @@ test("the shared footer and readable legal drafts display the 18+ mark", async (
     if (path === "/privacy" || path === "/consent") {
       await expect(page.getByRole("main")).toContainText("Yandex Compute Cloud");
       await expect(page.getByRole("main")).toContainText("Yandex Cloud Postbox");
+      await expect(page.getByRole("main")).toContainText("Редакция 1.0-draft.4");
+      await expect(page.getByRole("main")).toContainText("ООО «Яндекс.Облако»");
+      await expect(page.getByRole("main")).toContainText("Юридический адрес: 119021, г. Москва, ул. Льва Толстого, д. 16, помещ. 528.");
+      await expect(page.getByRole("main")).toContainText("ИНН: 7704458262. ОГРН: 1187746678580.");
+      await expect(page.locator("main time[datetime='2026-11-28']")).toHaveText("28.11.2026");
       await expect(page.getByRole("main")).not.toContainText(/timeweb|таймвэб/i);
+    } else {
+      await expect(page.getByRole("main")).toContainText("Редакция 1.0-draft.2");
+      await expect(page.locator("main time")).toHaveCount(0);
     }
+    await expect(page.locator("meta[name='robots']")).toHaveAttribute("content", "noindex");
     if (path === "/privacy") await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(7);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()).violations).toEqual([]);
